@@ -1,0 +1,38 @@
+﻿# Backup
+mobile_Backup_20261106/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Flutter
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/Generated.xcconfig
+**/ephemeral/
+**/coverage/
+
+# Android
+**/android/local.properties
+**/android/key.properties
+**/*.jks
+**/*.keystore
+
+# Node.js
+**/node_modules/
+**/dist/
+**/npm-debug.log*
+
+# IDE
+**/.idea/
+**/.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

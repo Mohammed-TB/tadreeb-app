@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
-
+import '../../../core/mock_data/institutes_data.dart';
 import '../../courses/models/course_model.dart';
 
 class CourseDetailsScreen extends StatefulWidget {
@@ -26,6 +26,16 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
   late final TabController _tabController;
 
   CourseModel get course => widget.course;
+
+  String get instituteName {
+  for (final institute in institutes) {
+    if (institute.id == course.instituteID) {
+      return institute.name;
+    }
+  }
+
+  return 'معهد غير معروف';
+}
 
   @override
   void initState() {
@@ -202,7 +212,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
 
             Expanded(
               child: Text(
-                course.instituteName,
+                instituteName,
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),

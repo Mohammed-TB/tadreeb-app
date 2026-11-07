@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../core/widgets/textFiled.dart';
+import 'text_filed.dart';
 
 class Search extends StatelessWidget {
   const Search({

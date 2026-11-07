@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -20,11 +19,9 @@ class InstituteCard extends StatelessWidget {
 
   final InstituteModel institute;
 
-  // الأبعاد
   final double width;
   final double imageHeight;
 
-  // السلوك
   final VoidCallback? onTap;
   final bool showDetailsButton;
   final String buttonText;
@@ -64,7 +61,7 @@ class InstituteCard extends StatelessWidget {
       height: imageHeight,
       width: double.infinity,
       child: Image.asset(
-        institute.instituteImageUrl ?? 'assets/images/institute1.png',
+        institute.imageUrl ?? 'assets/images/institute1.png',
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
@@ -89,7 +86,7 @@ class InstituteCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            institute.instituteName,
+            institute.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.titleSmall,
@@ -107,7 +104,7 @@ class InstituteCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.xxs),
               Expanded(
                 child: Text(
-                  institute.instituteAddress,
+                  institute.address,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.bodySmall,

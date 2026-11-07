@@ -6,7 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/widgets/TextFiledForm.dart';
+import '../../../core/widgets/text_filed_form.dart';
 import '../../../core/widgets/button.dart';
 import '../screens/login_screen.dart';
 

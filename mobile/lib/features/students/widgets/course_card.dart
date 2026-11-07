@@ -5,6 +5,7 @@ import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/widgets/button.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
+import '../../../core/mock_data/institutes_data.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
@@ -29,6 +30,17 @@ class CourseCard extends StatelessWidget {
   // زر التفاصيل
   final bool showDetailsButton;
   final String buttonText;
+
+
+  String get instituteName {
+  for (final institute in institutes) {
+    if (institute.id == course.instituteID) {
+      return institute.name;
+    }
+  }
+
+  return 'معهد غير معروف';
+}
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +201,7 @@ class CourseCard extends StatelessWidget {
 
           // اسم المعهد
           Text(
-            course.instituteName,
+            instituteName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             softWrap: false,

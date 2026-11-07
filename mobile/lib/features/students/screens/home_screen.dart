@@ -6,9 +6,8 @@ import 'package:project_1/features/students/widgets/header_home.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
 import 'package:project_1/features/students/widgets/most_popular_courses.dart';
 import 'package:project_1/features/students/widgets/most_popular_institutes.dart';
-
+import '../../../core/mock_data/categories_data.dart';
 import '../../courses/models/course_model.dart';
-import '../models/student_model.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {

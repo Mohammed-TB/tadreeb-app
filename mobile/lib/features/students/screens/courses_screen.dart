@@ -7,9 +7,9 @@ import 'package:project_1/features/courses/controllers/course_controller.dart';
 import 'package:project_1/features/students/widgets/course_card.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
 import 'package:provider/provider.dart';
-
+import '../../../app/theme/app_spacing.dart';
+import '../../../core/mock_data/categories_data.dart';
 import '../../courses/models/course_model.dart';
-import '../models/student_model.dart';
 import 'package:go_router/go_router.dart';
 
 class CoursesScreen extends StatefulWidget {
@@ -110,7 +110,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: courses.length,
                     separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
+                    const SizedBox(height:AppSpacing.cardGap),
                     itemBuilder: (context, index) {
                       final course = courses[index];
 

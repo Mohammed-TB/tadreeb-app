@@ -1,13 +1,11 @@
 import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'package:project_1/features/auth/widgets/form_register.dart';
-
 import '../controllers/auth_controller.dart';
-import '../models/user_model.dart';
-import '../widgets/topHeader.dart';
-import 'package:go_router/go_router.dart';
+import '../widgets/form_register.dart';
+import '../widgets/top_header.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,59 +15,69 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-
   Future<void> _register({
     required String name,
     required String email,
     required String password,
     required String passwordConfirm,
   }) async {
+    // التحقق من تطابق كلمتي المرور
+    if (password != passwordConfirm) {
+      await _showMessage(
+        'كلمتا المرور غير متطابقتين',
+        isSuccess: false,
+      );
+      return;
+    }
+
     final authController = context.read<AuthController>();
 
-    final user = UserModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final success = await authController.register(
       name: name,
       email: email,
       password: password,
     );
 
-    final success = await authController.register(user);
-
     if (!mounted) return;
 
     if (success) {
-      // الانتقال إلى الصفحة الرئيسية عبر GoRouter
+      await _showMessage(
+        'تم إنشاء الحساب بنجاح',
+        isSuccess: true,
+      );
+
+      if (!mounted) return;
+
       context.go('/home_screen');
-
-      // عرض رسالة النجاح
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        Flushbar(
-          message: 'تم إنشاء الحساب بنجاح',
-          icon: const Icon(
-            Icons.check_circle,
-            color: Colors.white,
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-          borderRadius: BorderRadius.circular(12),
-          margin: const EdgeInsets.all(16),
-          flushbarPosition: FlushbarPosition.TOP,
-        ).show(context);
-      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authController.errorMessage ??
-                'حدث خطأ أثناء إنشاء الحساب',
-          ),
-        ),
+      await _showMessage(
+        authController.errorMessage ??
+            'حدث خطأ أثناء إنشاء الحساب',
+        isSuccess: false,
       );
     }
   }
 
+  Future<void> _showMessage(
+    String message, {
+    required bool isSuccess,
+  }) async {
+    await Flushbar(
+      message: message,
+      icon: Icon(
+        isSuccess
+            ? Icons.check_circle
+            : Icons.error_outline,
+        color: Colors.white,
+      ),
+      backgroundColor:
+          isSuccess ? Colors.green : Colors.red.shade700,
+      duration: const Duration(seconds: 2),
+      borderRadius: BorderRadius.circular(12),
+      margin: const EdgeInsets.all(16),
+      flushbarPosition: FlushbarPosition.TOP,
+    ).show(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Stack(
                 children: [
-                  TopHeader(
+                  const TopHeader(
                     title: 'إنشاء حساب',
                     subTitle: 'أنشئ حسابًا واكتشف الدورات',
                   ),
@@ -88,22 +96,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     top: 20,
                     right: 20,
                     child: InkWell(
-                      onTap: Navigator.of(context).pop,
+                      onTap: () => context.pop(),
                       child: Container(
                         width: 30,
                         height: 30,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
-                          shape: BoxShape.circle
-
+                          shape: BoxShape.circle,
                         ),
-                         child: Icon(Icons.arrow_back,size: 20,),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          size: 20,
                         ),
+                      ),
                     ),
-                    ),
+                  ),
                 ],
               ),
-
               FormRegister(register: _register),
             ],
           ),

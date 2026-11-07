@@ -5,7 +5,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 
 import '../models/onboarding.models.dart';
-import '../widgets/onBoardingButton.dart';
+import '../widgets/on_boarding_button.dart';
 import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends StatefulWidget {

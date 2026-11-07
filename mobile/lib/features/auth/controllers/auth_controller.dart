@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../courses/services/course_service.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -17,13 +16,22 @@ class AuthController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<bool> register(UserModel user) async {
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _currentUser = await _authService.register(user);
+      _currentUser = await _authService.register(
+        name: name,
+        email: email,
+        password: password,
+      );
+
       return true;
     } catch (error) {
       _errorMessage = error.toString();

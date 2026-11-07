@@ -1,14 +1,15 @@
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/features/students/widgets/header_home.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
 import 'package:project_1/features/students/widgets/most_popular_courses.dart';
 import 'package:project_1/features/students/widgets/most_popular_institutes.dart';
+
 import '../../../core/mock_data/categories_data.dart';
 import '../../courses/models/course_model.dart';
-import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,42 +26,46 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openDrawer() {
+    Scaffold.of(context).openDrawer();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const HeaderHome(),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          HeaderHome(
+            onMenuTap: _openDrawer,
+          ),
 
-            const SizedBox(
-              height: AppSpacing.lg,
-            ),
+          const SizedBox(
+            height: AppSpacing.lg,
+          ),
 
-            ListCategory(
-              categories: categories,
-            ),
+          ListCategory(
+            categories: categories,
+          ),
 
-            const SizedBox(
-              height: AppSpacing.sectionGap,
-            ),
+          const SizedBox(
+            height: AppSpacing.sectionGap,
+          ),
 
-            MostPopularCourses(
-              showDetailsCourse: _showDetailsCourse,
-            ),
+          MostPopularCourses(
+            showDetailsCourse: _showDetailsCourse,
+          ),
 
-            const SizedBox(
-              height: AppSpacing.sectionGap,
-            ),
+          const SizedBox(
+            height: AppSpacing.sectionGap,
+          ),
 
-            const MostPopularInstitutes(),
+          const MostPopularInstitutes(),
 
-            const SizedBox(
-              height: AppSpacing.xl,
-            ),
-          ],
-        ),
+          const SizedBox(
+            height: AppSpacing.xl,
+          ),
+        ],
       ),
     );
   }

@@ -1,16 +1,25 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/search.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class HeaderHome extends StatelessWidget {
-  const HeaderHome({super.key});
+  const HeaderHome({
+    super.key,
+    required this.onMenuTap,
+  });
+
+  final VoidCallback onMenuTap;
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthController>().currentUser;
+
     return Container(
       width: double.infinity,
       height: 165,
@@ -29,19 +38,17 @@ class HeaderHome extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // الجزء العلوي: الترحيب والأيقونات
+          // Welcome and actions
           Row(
             children: [
               Expanded(
                 child: Row(
                   children: [
                     _buildProfileIcon(),
-
                     const SizedBox(width: AppSpacing.sm),
-
                     Expanded(
                       child: Text(
-                        'صباح الخير، محمد',
+                        'صباح الخير، ${user?.name ?? 'طالبنا العزيز'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.titleMedium.copyWith(
@@ -56,10 +63,11 @@ class HeaderHome extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
 
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     onPressed: () {
-                      // الانتقال إلى المفضلة
+                      // الانتقال إلى المفضلة لاحقاً
                     },
                     icon: const Icon(
                       Icons.favorite_outline,
@@ -68,6 +76,15 @@ class HeaderHome extends StatelessWidget {
                   ),
 
                   _buildNotificationButton(),
+
+                  IconButton(
+                    onPressed: onMenuTap,
+                    tooltip: 'القائمة',
+                    icon: const Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -75,12 +92,10 @@ class HeaderHome extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.md),
 
-          // حقل البحث
+          // Search field
           Search(
             hinText: 'ابحث عن دورة أو معهد',
             isBorder: false,
-
-
           ),
         ],
       ),
@@ -106,7 +121,7 @@ class HeaderHome extends StatelessWidget {
   Widget _buildNotificationButton() {
     return IconButton(
       onPressed: () {
-        // فتح الإشعارات
+        // فتح الإشعارات لاحقاً
       },
       icon: Stack(
         clipBehavior: Clip.none,
@@ -115,7 +130,6 @@ class HeaderHome extends StatelessWidget {
             Icons.notifications_outlined,
             color: Colors.white,
           ),
-
           Positioned(
             top: -4,
             right: -4,

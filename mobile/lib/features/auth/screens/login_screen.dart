@@ -1,12 +1,13 @@
+
 import 'package:flutter/material.dart';
 import 'package:project_1/features/auth/widgets/form_login.dart';
 import 'package:project_1/features/auth/widgets/top_header.dart';
 import 'package:provider/provider.dart';
-
-import '../controllers/auth_controller.dart';
-
 import 'package:go_router/go_router.dart';
 import 'package:another_flushbar/flushbar.dart';
+
+import '../controllers/auth_controller.dart';
+import '../models/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,16 +33,27 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // الانتقال إلى الصفحة الرئيسية
-      context.go('/home_screen');
+      final user = authController.currentUser;
 
-      // رسالة نجاح تسجيل الدخول
+      if (user == null) return;
+
+      final destination = switch (user.role) {
+        UserRole.student => '/home_screen',
+        UserRole.instituteOwner => '/institute_dashboard',
+        UserRole.admin => '/admin_dashboard',
+      };
+
+      context.go(destination);
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
 
         Flushbar(
-          message: 'تم تسجيل الدخول بنجاح، أهلاً بك!',
-          icon: const Icon(Icons.check_circle, color: Colors.white),
+          message: 'تم تسجيل الدخول بنجاح، أهلاً ${user.name}!',
+          icon: const Icon(
+            Icons.check_circle,
+            color: Colors.white,
+          ),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 3),
           borderRadius: BorderRadius.circular(12),
@@ -50,12 +62,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ).show(context);
       });
     } else {
-      // رسالة فشل تسجيل الدخول
       Flushbar(
-        message:
-            authController.errorMessage ??
+        message: authController.errorMessage ??
             'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-        icon: const Icon(Icons.error_outline, color: Colors.white),
+        icon: const Icon(
+          Icons.error_outline,
+          color: Colors.white,
+        ),
         backgroundColor: Colors.red.shade700,
         duration: const Duration(seconds: 3),
         borderRadius: BorderRadius.circular(12),
@@ -73,7 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              TopHeader(title: 'تسجيل الدخول', subTitle: 'سجل دخولك للمتابعة'),
+              TopHeader(
+                title: 'تسجيل الدخول',
+                subTitle: 'سجل دخولك للمتابعة',
+              ),
               FormLogin(login: _login),
             ],
           ),

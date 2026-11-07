@@ -9,7 +9,7 @@ final List<CourseModel> courses = [
     price: 10000,
     category: 'برمجة',
     capacity: 20,
-    enrolled: 20,
+    enrolled: 15,
     isFavourite: true,
     courseImageUrl: 'assets/images/english1_course.png',
     whatWillLearn: [
@@ -31,7 +31,7 @@ final List<CourseModel> courses = [
     depositPercentage: 50,
     category: 'صيانة',
     capacity: 25,
-    enrolled: 25,
+    enrolled: 15,
     isFavourite: false,
     courseImageUrl: 'assets/images/english2_course.png',
     whatWillLearn: [

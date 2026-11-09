@@ -1,50 +1,44 @@
-
 import 'package:flutter/material.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
-import '../../../core/mock_data/institutes_data.dart';
 import '../../courses/models/course_model.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../institutes/controllers/institute_controller.dart';
 
 class CourseDetailsScreen extends StatefulWidget {
-  const CourseDetailsScreen({
-    super.key,
-    required this.course,
-  });
+  const CourseDetailsScreen({super.key, required this.course});
 
   final CourseModel course;
 
   @override
-  State<CourseDetailsScreen> createState() =>
-      _CourseDetailsScreenState();
+  State<CourseDetailsScreen> createState() => _CourseDetailsScreenState();
 }
 
 class _CourseDetailsScreenState extends State<CourseDetailsScreen>
     with SingleTickerProviderStateMixin {
-
   late final TabController _tabController;
 
   CourseModel get course => widget.course;
 
   String get instituteName {
-  for (final institute in institutes) {
-    if (institute.id == course.instituteID) {
-      return institute.name;
+    final institutes = context.watch<InstituteController>().institutes;
+    for (final institute in institutes) {
+      if (institute.id == course.instituteID) {
+        return institute.name;
+      }
     }
-  }
 
-  return 'معهد غير معروف';
-}
+    return 'معهد غير معروف';
+  }
 
   @override
   void initState() {
     super.initState();
 
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-    );
+    _tabController = TabController(length: 2, vsync: this);
 
     _tabController.addListener(_onTabChanged);
   }
@@ -70,9 +64,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       appBar: AppBar(
         title: Text(
           'تفاصيل الدورة',
-          style: AppTypography.titleLarge.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: AppColors.surface,
@@ -88,46 +80,34 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
             _buildCourseImage(),
 
             Padding(
-              padding: const EdgeInsets.all(
-                AppSpacing.md,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // العنوان والمعهد
                   _buildCourseHeader(),
 
-                  const SizedBox(
-                    height: AppSpacing.lg,
-                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // إحصائيات الدورة
                   _buildCourseStats(),
 
-                  const SizedBox(
-                    height: AppSpacing.xl,
-                  ),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // وصف الدورة
                   _buildDescription(),
 
-                  const SizedBox(
-                    height: AppSpacing.xl,
-                  ),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // التبويبات
                   _buildTabs(),
 
-                  const SizedBox(
-                    height: AppSpacing.lg,
-                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // محتوى التبويب الحالي
                   _buildSelectedTabContent(),
 
-                  const SizedBox(
-                    height: AppSpacing.xl,
-                  ),
+                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
@@ -149,8 +129,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       height: 230,
       width: double.infinity,
       child: Image.asset(
-        course.courseImageUrl ??
-            'assets/images/english2_course.png',
+        course.courseImageUrl ?? 'assets/images/english2_course.png',
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
@@ -183,9 +162,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
           ),
         ),
 
-        const SizedBox(
-          height: AppSpacing.xs,
-        ),
+        const SizedBox(height: AppSpacing.xs),
 
         Text(
           course.name,
@@ -194,9 +171,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
           ),
         ),
 
-        const SizedBox(
-          height: AppSpacing.xs,
-        ),
+        const SizedBox(height: AppSpacing.xs),
 
         Row(
           children: [
@@ -206,9 +181,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
               color: AppColors.textSecondary,
             ),
 
-            const SizedBox(
-              width: AppSpacing.xs,
-            ),
+            const SizedBox(width: AppSpacing.xs),
 
             Expanded(
               child: Text(
@@ -248,25 +221,15 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
         ),
 
         Expanded(
-          child: _statItem(
-            Icons.category_outlined,
-            'التصنيف',
-            course.category,
-          ),
+          child: _statItem(Icons.category_outlined, 'التصنيف', course.category),
         ),
       ],
     );
   }
 
-  Widget _statItem(
-      IconData icon,
-      String title,
-      String value,
-      ) {
+  Widget _statItem(IconData icon, String title, String value) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xxs,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.md,
         horizontal: AppSpacing.xxs,
@@ -274,21 +237,13 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 22,
-          ),
+          Icon(icon, color: AppColors.primary, size: 22),
 
-          const SizedBox(
-            height: AppSpacing.xs,
-          ),
+          const SizedBox(height: AppSpacing.xs),
 
           Text(
             title,
@@ -297,9 +252,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
             ),
           ),
 
-          const SizedBox(
-            height: AppSpacing.xxs,
-          ),
+          const SizedBox(height: AppSpacing.xxs),
 
           Text(
             value,
@@ -326,14 +279,10 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       children: [
         Text(
           'عن الدورة',
-          style: AppTypography.titleLarge.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
 
-        const SizedBox(
-          height: AppSpacing.sm,
-        ),
+        const SizedBox(height: AppSpacing.sm),
 
         Text(
           course.description,
@@ -356,22 +305,16 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       children: [
         Text(
           'تفاصيل ومحتوى الدورة',
-          style: AppTypography.titleLarge.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
 
-        const SizedBox(
-          height: AppSpacing.md,
-        ),
+        const SizedBox(height: AppSpacing.md),
 
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.border,
-            ),
+            border: Border.all(color: AppColors.border),
           ),
           child: TabBar(
             controller: _tabController,
@@ -384,12 +327,8 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
               fontWeight: FontWeight.bold,
             ),
             tabs: const [
-              Tab(
-                text: 'ماذا ستتعلم؟',
-              ),
-              Tab(
-                text: 'مميزات الدورة',
-              ),
+              Tab(text: 'ماذا ستتعلم؟'),
+              Tab(text: 'مميزات الدورة'),
             ],
           ),
         ),
@@ -404,34 +343,24 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
   Widget _buildSelectedTabContent() {
     final isLearningTab = _tabController.index == 0;
 
-    final items = isLearningTab
-        ? course.whatWillLearn
-        : course.features;
+    final items = isLearningTab ? course.whatWillLearn : course.features;
 
     final icon = isLearningTab
         ? Icons.check_circle_outline
         : Icons.star_outline;
 
-    return _buildItemsList(
-      items,
-      icon,
-    );
+    return _buildItemsList(items, icon);
   }
 
   // ------------------------------------------
   // قائمة العناصر
   // ------------------------------------------
 
-  Widget _buildItemsList(
-      List<String> items,
-      IconData icon,
-      ) {
+  Widget _buildItemsList(List<String> items, IconData icon) {
     if (items.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(
-          AppSpacing.xl,
-        ),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -450,38 +379,21 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
       children: items.map((item) {
         return Container(
           width: double.infinity,
-          margin: const EdgeInsets.only(
-            bottom: AppSpacing.sm,
-          ),
-          padding: const EdgeInsets.all(
-            AppSpacing.md,
-          ),
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: AppColors.border,
-            ),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                color: AppColors.primary,
-                size: 20,
-              ),
+              Icon(icon, color: AppColors.primary, size: 20),
 
-              const SizedBox(
-                width: AppSpacing.sm,
-              ),
+              const SizedBox(width: AppSpacing.sm),
 
-              Expanded(
-                child: Text(
-                  item,
-                  style: AppTypography.bodyMedium,
-                ),
-              ),
+              Expanded(child: Text(item, style: AppTypography.bodyMedium)),
             ],
           ),
         );
@@ -495,9 +407,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
 
   Widget _buildEnrollButton(bool isFull) {
     return Container(
-      padding: const EdgeInsets.all(
-        AppSpacing.md,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         boxShadow: [
@@ -516,8 +426,8 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
             onPressed: isFull
                 ? null
                 : () {
-              // سنربط عملية التسجيل لاحقًا
-            },
+                    context.push('/course-registration', extra: course);
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.textOnPrimary,
@@ -527,9 +437,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen>
               ),
             ),
             child: Text(
-              isFull
-                  ? 'الدورة مكتملة'
-                  : 'التسجيل في الدورة',
+              isFull ? 'الدورة مكتملة' : 'التسجيل في الدورة',
               style: AppTypography.titleMedium.copyWith(
                 color: isFull
                     ? AppColors.textSecondary

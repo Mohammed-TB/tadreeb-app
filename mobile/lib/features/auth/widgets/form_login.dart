@@ -1,6 +1,6 @@
-
 import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -8,19 +8,13 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/text_filed_form.dart';
 import '../../../core/widgets/button.dart';
-import '../screens/register_screen.dart';
 
 class FormLogin extends StatefulWidget {
-  const FormLogin({
-    super.key,
-    required this.login,
-  });
+  const FormLogin({super.key, required this.login, required this.googleLogin});
 
-  final Future<void> Function({
-  required String email,
-  required String password,
-  required bool rememberMe,
-  }) login;
+  final Future<void> Function({required String email, required String password})
+  login;
+  final Future<void> Function() googleLogin;
 
   @override
   State<FormLogin> createState() => _FormLoginState();
@@ -32,7 +26,6 @@ class _FormLoginState extends State<FormLogin> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _rememberMe = false;
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
@@ -50,7 +43,6 @@ class _FormLoginState extends State<FormLogin> {
       await widget.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        rememberMe: _rememberMe,
       );
     } catch (error) {
       if (!mounted) return;
@@ -75,29 +67,15 @@ class _FormLoginState extends State<FormLogin> {
     });
   }
 
-  // تغيير حالة تذكرني
-  void _toggleRememberMe(bool? value) {
-    setState(() {
-      _rememberMe = value ?? false;
-    });
-  }
-
   // الرسائل
-  void _showMessage({
-    required String message,
-    bool isError = false,
-  }) {
+  void _showMessage({required String message, bool isError = false}) {
     Flushbar(
       message: message,
       icon: Icon(
-        isError
-            ? Icons.error_outline
-            : Icons.info_outline,
+        isError ? Icons.error_outline : Icons.info_outline,
         color: Colors.white,
       ),
-      backgroundColor: isError
-          ? AppColors.error
-          : AppColors.accent,
+      backgroundColor: isError ? AppColors.error : AppColors.accent,
       duration: const Duration(seconds: 3),
       borderRadius: BorderRadius.circular(12),
       margin: const EdgeInsets.all(16),
@@ -107,26 +85,25 @@ class _FormLoginState extends State<FormLogin> {
 
   // نسيت كلمة المرور
   void _handleForgotPassword() {
-    _showMessage(
-      message: 'سيتم تفعيل استعادة كلمة المرور قريباً',
-    );
+    _showMessage(message: 'سيتم تفعيل استعادة كلمة المرور قريباً');
   }
 
-  // التسجيل عبر Google
-  void _handleGoogleLogin() {
-    _showMessage(
-      message: 'سيتم تفعيل تسجيل الدخول عبر Google قريباً',
-    );
+  Future<void> _handleGoogleLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.googleLogin();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(message: error.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // الانتقال إلى التسجيل
   void _goToRegister() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const RegisterScreen(),
-      ),
-    );
+    context.go('/register');
   }
 
   @override
@@ -152,9 +129,7 @@ class _FormLoginState extends State<FormLogin> {
           ),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border.all(
-              color: AppColors.border,
-            ),
+            border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -232,47 +207,22 @@ class _FormLoginState extends State<FormLogin> {
 
                 const SizedBox(height: AppSpacing.xs),
 
-                // تذكرني ونسيت كلمة المرور
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          materialTapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
-                          value: _rememberMe,
-                          activeColor: AppColors.primary,
-                          onChanged: _toggleRememberMe,
-                        ),
-
-                        Text(
-                          'تذكرني',
-                          style: AppTypography.labelMedium.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _handleForgotPassword,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                        ),
-                        child: Text(
-                          'نسيت كلمة المرور؟',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _handleForgotPassword,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'نسيت كلمة المرور؟',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
 
                 const SizedBox(height: AppSpacing.xs),
@@ -291,10 +241,7 @@ class _FormLoginState extends State<FormLogin> {
                 Row(
                   children: [
                     const Expanded(
-                      child: Divider(
-                        color: AppColors.border,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.border, thickness: 1),
                     ),
 
                     Padding(
@@ -310,10 +257,7 @@ class _FormLoginState extends State<FormLogin> {
                     ),
 
                     const Expanded(
-                      child: Divider(
-                        color: AppColors.border,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.border, thickness: 1),
                     ),
                   ],
                 ),
@@ -325,15 +269,11 @@ class _FormLoginState extends State<FormLogin> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : _handleGoogleLogin,
+                    onPressed: _isLoading ? null : _handleGoogleLogin,
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.surface,
                       foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(
-                        color: AppColors.border,
-                      ),
+                      side: const BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -377,9 +317,7 @@ class _FormLoginState extends State<FormLogin> {
                       behavior: HitTestBehavior.opaque,
                       onTap: _goToRegister,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           'إنشاء حساب',
                           style: AppTypography.bodyMedium.copyWith(

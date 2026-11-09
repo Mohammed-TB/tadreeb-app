@@ -60,10 +60,10 @@ class HeaderHome extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: AppSpacing.md),
 
               Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     onPressed: () {

@@ -1,4 +1,3 @@
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:project_1/features/courses/controllers/course_controller.dart';
@@ -49,16 +48,12 @@ void main() {
 
       expect(success, isTrue);
 
-      final updatedCourse =
-          courseController.getCourseById(course.id)!;
+      final updatedCourse = courseController.getCourseById(course.id)!;
 
       expect(updatedCourse.enrolled, initialEnrolled);
       expect(updatedCourse.reservedSeats, initialReserved + 1);
 
-      expect(
-        updatedCourse.availableSeats,
-        course.availableSeats - 1,
-      );
+      expect(updatedCourse.availableSeats, course.availableSeats - 1);
     });
 
     test('rejecting payment keeps the seat reserved', () async {
@@ -70,8 +65,7 @@ void main() {
         settings: settings,
       );
 
-      final enrollment =
-          enrollmentController.studentEnrollments.first;
+      final enrollment = enrollmentController.studentEnrollments.first;
 
       final success = await enrollmentController.rejectPayment(
         enrollmentId: enrollment.id,
@@ -81,12 +75,50 @@ void main() {
 
       expect(success, isTrue);
 
-      final updatedCourse =
-          courseController.getCourseById(course.id)!;
+      final updatedCourse = courseController.getCourseById(course.id)!;
 
       expect(updatedCourse.reservedSeats, 1);
       expect(updatedCourse.enrolled, course.enrolled);
+
+      final rejectedEnrollment = await repository.getEnrollmentById(
+        enrollment.id,
+      );
+      final rejectedPayments = await repository.getEnrollmentPayments(
+        enrollment.id,
+      );
+
+      expect(rejectedEnrollment?.status, EnrollmentStatus.rejected);
+      expect(rejectedEnrollment?.lastRejectionReason, 'Receipt is unclear');
+      expect(rejectedPayments.single.status, PaymentStatus.rejected);
+      expect(rejectedPayments.single.rejectionReason, 'Receipt is unclear');
     });
+
+    test(
+      'rejecting payment reports invalid reasons without changing state',
+      () async {
+        await enrollmentController.createEnrollment(
+          studentId: 'student_1',
+          course: course,
+          paymentType: PaymentType.deposit,
+          receiptUrl: 'mock://receipt.jpg',
+          settings: settings,
+        );
+
+        final enrollment = enrollmentController.studentEnrollments.first;
+        final success = await enrollmentController.rejectPayment(
+          enrollmentId: enrollment.id,
+          reason: '   ',
+          settings: settings,
+        );
+
+        expect(success, isFalse);
+        expect(enrollmentController.errorMessage, contains('سبب الرفض'));
+        expect(
+          (await repository.getEnrollmentById(enrollment.id))?.status,
+          EnrollmentStatus.pendingReview,
+        );
+      },
+    );
 
     test('approving payment moves seat from reserved to enrolled', () async {
       await enrollmentController.createEnrollment(
@@ -97,16 +129,13 @@ void main() {
         settings: settings,
       );
 
-      final enrollment =
-          enrollmentController.studentEnrollments.first;
+      final enrollment = enrollmentController.studentEnrollments.first;
 
-      final success =
-          await enrollmentController.approvePayment(enrollment.id);
+      final success = await enrollmentController.approvePayment(enrollment.id);
 
       expect(success, isTrue);
 
-      final updatedCourse =
-          courseController.getCourseById(course.id)!;
+      final updatedCourse = courseController.getCourseById(course.id)!;
 
       expect(updatedCourse.enrolled, course.enrolled + 1);
       expect(updatedCourse.reservedSeats, 0);
@@ -124,8 +153,7 @@ void main() {
       await enrollmentController.getStudentEnrollments('student_1');
       await enrollmentController.getStudentEnrollments('student_1');
 
-      final updatedCourse =
-          courseController.getCourseById(course.id)!;
+      final updatedCourse = courseController.getCourseById(course.id)!;
 
       expect(updatedCourse.enrolled, course.enrolled);
       expect(updatedCourse.reservedSeats, 1);
@@ -166,11 +194,9 @@ void main() {
 
       await enrollmentController.getStudentEnrollments('student_1');
 
-      final savedEnrollment =
-          await repository.getEnrollmentById(enrollment.id);
+      final savedEnrollment = await repository.getEnrollmentById(enrollment.id);
 
-      final updatedCourse =
-          courseController.getCourseById(course.id)!;
+      final updatedCourse = courseController.getCourseById(course.id)!;
 
       expect(savedEnrollment!.status, EnrollmentStatus.expired);
       expect(updatedCourse.reservedSeats, 0);

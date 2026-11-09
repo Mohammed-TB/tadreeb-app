@@ -1,6 +1,6 @@
-
 import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -8,20 +8,22 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/text_filed_form.dart';
 import '../../../core/widgets/button.dart';
-import '../screens/login_screen.dart';
 
 class FormRegister extends StatefulWidget {
   const FormRegister({
     super.key,
     required this.register,
+    required this.googleRegister,
   });
 
   final Future<void> Function({
-  required String name,
-  required String email,
-  required String password,
-  required String passwordConfirm,
-  }) register;
+    required String name,
+    required String email,
+    required String password,
+    required String passwordConfirm,
+  })
+  register;
+  final Future<void> Function() googleRegister;
 
   @override
   State<FormRegister> createState() => _FormRegisterState();
@@ -86,21 +88,14 @@ class _FormRegisterState extends State<FormRegister> {
   }
 
   // رسالة للمستخدم
-  void _showMessage({
-    required String message,
-    bool isError = false,
-  }) {
+  void _showMessage({required String message, bool isError = false}) {
     Flushbar(
       message: message,
       icon: Icon(
-        isError
-            ? Icons.error_outline
-            : Icons.check_circle_outline,
+        isError ? Icons.error_outline : Icons.check_circle_outline,
         color: Colors.white,
       ),
-      backgroundColor: isError
-          ? AppColors.error
-          : AppColors.success,
+      backgroundColor: isError ? AppColors.error : AppColors.success,
       duration: const Duration(seconds: 3),
       borderRadius: BorderRadius.circular(12),
       margin: const EdgeInsets.all(16),
@@ -108,21 +103,22 @@ class _FormRegisterState extends State<FormRegister> {
     ).show(context);
   }
 
-  // التسجيل عبر Google
-  void _handleGoogleRegister() {
-    _showMessage(
-      message: 'سيتم تفعيل التسجيل عبر Google قريباً',
-    );
+  Future<void> _handleGoogleRegister() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.googleRegister();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(message: error.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // الانتقال إلى تسجيل الدخول
   void _goToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
-      ),
-    );
+    context.go('/login');
   }
 
   @override
@@ -151,9 +147,7 @@ class _FormRegisterState extends State<FormRegister> {
           ),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border.all(
-              color: AppColors.border,
-            ),
+            border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -306,10 +300,7 @@ class _FormRegisterState extends State<FormRegister> {
                 Row(
                   children: [
                     const Expanded(
-                      child: Divider(
-                        color: AppColors.border,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.border, thickness: 1),
                     ),
 
                     Padding(
@@ -325,10 +316,7 @@ class _FormRegisterState extends State<FormRegister> {
                     ),
 
                     const Expanded(
-                      child: Divider(
-                        color: AppColors.border,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.border, thickness: 1),
                     ),
                   ],
                 ),
@@ -340,15 +328,11 @@ class _FormRegisterState extends State<FormRegister> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : _handleGoogleRegister,
+                    onPressed: _isLoading ? null : _handleGoogleRegister,
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.surface,
                       foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(
-                        color: AppColors.border,
-                      ),
+                      side: const BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -392,9 +376,7 @@ class _FormRegisterState extends State<FormRegister> {
                       behavior: HitTestBehavior.opaque,
                       onTap: _goToLogin,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           'تسجيل الدخول',
                           style: AppTypography.bodyMedium.copyWith(

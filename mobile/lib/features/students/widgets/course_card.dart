@@ -5,7 +5,10 @@ import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/widgets/button.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
-import '../../../core/mock_data/institutes_data.dart';
+import 'package:provider/provider.dart';
+
+import '../../institutes/controllers/institute_controller.dart';
+import '../../institutes/models/institute_model.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
@@ -31,26 +34,28 @@ class CourseCard extends StatelessWidget {
   final bool showDetailsButton;
   final String buttonText;
 
-
-  String get instituteName {
-  for (final institute in institutes) {
-    if (institute.id == course.instituteID) {
-      return institute.name;
+  String _instituteName(List<InstituteModel> institutes) {
+    for (final institute in institutes) {
+      if (institute.id == course.instituteID) {
+        return institute.name;
+      }
     }
-  }
 
-  return 'معهد غير معروف';
-}
+    return 'معهد غير معروف';
+  }
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(12);
+    final instituteName = _instituteName(
+      context.watch<InstituteController>().institutes,
+    );
 
     return Container(
       width: width ?? (isHorizontal ? 320 : 200),
       margin: EdgeInsets.only(
-        right: isHorizontal ? 0 : AppSpacing.xs,
-        bottom: isHorizontal ? AppSpacing.xs : 0,
+        right: isHorizontal ? 0 : AppSpacing.xxs,
+        bottom: isHorizontal ? 1 : 0,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -66,13 +71,15 @@ class CourseCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: radius,
-        child: isHorizontal ? _buildHorizontalCard() : _buildVerticalCard(),
+        child: isHorizontal
+            ? _buildHorizontalCard(instituteName)
+            : _buildVerticalCard(instituteName),
       ),
     );
   }
 
   // البطاقة العمودية
-  Widget _buildVerticalCard() {
+  Widget _buildVerticalCard(String instituteName) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -82,32 +89,25 @@ class CourseCard extends StatelessWidget {
           width: double.infinity,
           child: _buildImage(),
         ),
-        _buildDetails(),
+        _buildDetails(instituteName),
       ],
     );
   }
 
   // البطاقة الأفقية
 
-  Widget _buildHorizontalCard() {
+  Widget _buildHorizontalCard(String instituteName) {
     return SizedBox(
       height: height ?? 160,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            flex: 2,
-            child: _buildImage(),
-          ),
-          Expanded(
-            flex: 3,
-            child: _buildDetails(),
-          ),
+          Expanded(flex: 2, child: _buildImage()),
+          Expanded(flex: 3, child: _buildDetails(instituteName)),
         ],
       ),
     );
   }
-
 
   // صورة الدورة
   Widget _buildImage() {
@@ -177,11 +177,9 @@ class CourseCard extends StatelessWidget {
 
   // تفاصيل الدورة
 
-  Widget _buildDetails() {
+  Widget _buildDetails(String instituteName) {
     return Padding(
-      padding: EdgeInsets.all(
-        isHorizontal ? AppSpacing.xs : AppSpacing.sm,
-      ),
+      padding: EdgeInsets.all(isHorizontal ? AppSpacing.xs : AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: isHorizontal
@@ -248,5 +246,4 @@ class CourseCard extends StatelessWidget {
       ),
     );
   }
-
 }

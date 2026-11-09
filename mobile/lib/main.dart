@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app/app.dart';
 
+import 'core/network/api_client.dart';
+import 'core/network/token_storage_service.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/services/auth_service.dart';
 
@@ -21,8 +25,24 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        // Authentication
-        ChangeNotifierProvider(create: (_) => AuthController(AuthService())),
+        Provider<TokenStorageService>(create: (_) => TokenStorageService()),
+        Provider<ApiClient>(
+          create: (context) =>
+              ApiClient(tokenStorage: context.read<TokenStorageService>()),
+        ),
+        Provider<AuthService>(
+          create: (context) => AuthService(
+            apiClient: context.read<ApiClient>(),
+            tokenStorage: context.read<TokenStorageService>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            final controller = AuthController(context.read<AuthService>());
+            unawaited(controller.restoreSession());
+            return controller;
+          },
+        ),
 
         // Courses
         ChangeNotifierProvider(

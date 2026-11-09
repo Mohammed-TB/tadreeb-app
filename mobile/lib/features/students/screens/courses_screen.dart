@@ -51,10 +51,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
     return Column(
       children: [
         // Page header
-        SafeArea(
-          bottom: false,
-          child: Container(
-            height: 56,
+
+Container(
+  padding: EdgeInsets.fromLTRB(AppSpacing.sm,40,AppSpacing.sm,AppSpacing.sm),
+            height: 110,
             width: double.infinity,
             color: AppColors.primary,
             child: Stack(
@@ -81,7 +81,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
               ],
             ),
           ),
-        ),
+
 
         // Page content
         Expanded(

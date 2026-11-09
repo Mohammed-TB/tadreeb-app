@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -24,62 +23,29 @@ class AppDrawer extends StatelessWidget {
 
     final menuItems = switch (role) {
       'student' => [
-        _DrawerItem(
-          icon: Icons.person_outline,
-          title: 'الملف الشخصي',
-        ),
-        _DrawerItem(
-          icon: Icons.notifications_outlined,
-          title: 'الإشعارات',
-        ),
-        _DrawerItem(
-          icon: Icons.settings_outlined,
-          title: 'الإعدادات',
-        ),
+        _DrawerItem(icon: Icons.person_outline, title: 'الملف الشخصي'),
+        _DrawerItem(icon: Icons.notifications_outlined, title: 'الإشعارات'),
+        _DrawerItem(icon: Icons.settings_outlined, title: 'الإعدادات'),
         _DrawerItem(
           icon: Icons.support_agent_outlined,
           title: 'المساعدة والتواصل',
         ),
       ],
       'instituteOwner' => [
-        _DrawerItem(
-          icon: Icons.business_outlined,
-          title: 'بيانات المعهد',
-        ),
+        _DrawerItem(icon: Icons.business_outlined, title: 'بيانات المعهد'),
         _DrawerItem(
           icon: Icons.payments_outlined,
           title: 'إعدادات الحجز والدفع',
         ),
-        _DrawerItem(
-          icon: Icons.bar_chart_outlined,
-          title: 'التقارير',
-        ),
-        _DrawerItem(
-          icon: Icons.person_outline,
-          title: 'الملف الشخصي',
-        ),
-        _DrawerItem(
-          icon: Icons.settings_outlined,
-          title: 'الإعدادات',
-        ),
+        _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
+        _DrawerItem(icon: Icons.person_outline, title: 'الملف الشخصي'),
+        _DrawerItem(icon: Icons.settings_outlined, title: 'الإعدادات'),
       ],
       'admin' => [
-        _DrawerItem(
-          icon: Icons.business_outlined,
-          title: 'إدارة المعاهد',
-        ),
-        _DrawerItem(
-          icon: Icons.people_outline,
-          title: 'إدارة المستخدمين',
-        ),
-        _DrawerItem(
-          icon: Icons.bar_chart_outlined,
-          title: 'التقارير',
-        ),
-        _DrawerItem(
-          icon: Icons.settings_outlined,
-          title: 'إعدادات المنصة',
-        ),
+        _DrawerItem(icon: Icons.business_outlined, title: 'إدارة المعاهد'),
+        _DrawerItem(icon: Icons.people_outline, title: 'إدارة المستخدمين'),
+        _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
+        _DrawerItem(icon: Icons.settings_outlined, title: 'إعدادات المنصة'),
       ],
       _ => <_DrawerItem>[],
     };
@@ -117,18 +83,12 @@ class AppDrawer extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     user?.email ?? '',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     roleLabel,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -136,7 +96,7 @@ class AppDrawer extends StatelessWidget {
 
             // Role-specific menu
             ...menuItems.map(
-                  (item) => ListTile(
+              (item) => ListTile(
                 leading: Icon(item.icon),
                 title: Text(item.title),
                 onTap: () {
@@ -152,10 +112,7 @@ class AppDrawer extends StatelessWidget {
 
             // Logout
             ListTile(
-              leading: const Icon(
-                Icons.logout,
-                color: Colors.red,
-              ),
+              leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text(
                 'تسجيل الخروج',
                 style: TextStyle(
@@ -163,8 +120,17 @@ class AppDrawer extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              onTap: () {
-                context.read<AuthController>().logout();
+              onTap: () async {
+                try {
+                  await context.read<AuthController>().logout();
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  }
+                }
+                if (!context.mounted) return;
                 context.go('/login');
               },
             ),
@@ -178,9 +144,7 @@ class AppDrawer extends StatelessWidget {
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('هذه الميزة ستكون متاحة قريباً'),
-      ),
+      const SnackBar(content: Text('هذه الميزة ستكون متاحة قريباً')),
     );
   }
 }
@@ -189,8 +153,5 @@ class _DrawerItem {
   final IconData icon;
   final String title;
 
-  const _DrawerItem({
-    required this.icon,
-    required this.title,
-  });
+  const _DrawerItem({required this.icon, required this.title});
 }

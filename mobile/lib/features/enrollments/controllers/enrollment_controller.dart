@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 
 import '../../courses/controllers/course_controller.dart';
@@ -65,8 +64,9 @@ class EnrollmentController extends ChangeNotifier {
     final courses = List<CourseModel>.of(_courseController.courses);
 
     for (final course in courses) {
-      final enrollments =
-          await _enrollmentRepository.getCourseEnrollments(course.id);
+      final enrollments = await _enrollmentRepository.getCourseEnrollments(
+        course.id,
+      );
 
       final confirmedBookings = enrollments.where((enrollment) {
         return enrollment.status == EnrollmentStatus.confirmed;
@@ -90,8 +90,8 @@ class EnrollmentController extends ChangeNotifier {
 
   // Expire overdue enrollments.
   Future<void> _expireOverdueEnrollments() async {
-    final expiredEnrollments =
-        await _enrollmentRepository.expireOverdueEnrollments();
+    final expiredEnrollments = await _enrollmentRepository
+        .expireOverdueEnrollments();
 
     for (final enrollment in expiredEnrollments) {
       _updateEnrollmentLists(enrollment);
@@ -107,8 +107,9 @@ class EnrollmentController extends ChangeNotifier {
     try {
       await _expireOverdueEnrollments();
 
-      _studentEnrollments =
-          await _enrollmentRepository.getStudentEnrollments(studentId);
+      _studentEnrollments = await _enrollmentRepository.getStudentEnrollments(
+        studentId,
+      );
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
@@ -123,8 +124,8 @@ class EnrollmentController extends ChangeNotifier {
     try {
       await _expireOverdueEnrollments();
 
-      _instituteEnrollments =
-          await _enrollmentRepository.getInstituteEnrollments(instituteId);
+      _instituteEnrollments = await _enrollmentRepository
+          .getInstituteEnrollments(instituteId);
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
@@ -137,12 +138,37 @@ class EnrollmentController extends ChangeNotifier {
     _startLoading();
 
     try {
-      _payments =
-          await _enrollmentRepository.getEnrollmentPayments(enrollmentId);
+      _payments = await _enrollmentRepository.getEnrollmentPayments(
+        enrollmentId,
+      );
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
       _finishLoading();
+    }
+  }
+
+  Future<PaymentModel> getCurrentPayment(String enrollmentId) async {
+    final enrollment = await _enrollmentRepository.getEnrollmentById(
+      enrollmentId,
+    );
+
+    if (enrollment == null) {
+      throw Exception('الحجز غير موجود');
+    }
+
+    final paymentId = enrollment.currentPaymentId;
+    if (paymentId == null) {
+      throw Exception('لا توجد عملية دفع مرتبطة بالحجز');
+    }
+
+    final payments = await _enrollmentRepository.getEnrollmentPayments(
+      enrollmentId,
+    );
+    try {
+      return payments.firstWhere((payment) => payment.id == paymentId);
+    } catch (_) {
+      throw Exception('عملية الدفع غير موجودة');
     }
   }
 
@@ -165,15 +191,9 @@ class EnrollmentController extends ChangeNotifier {
         settings: settings,
       );
 
-      _studentEnrollments = [
-        ..._studentEnrollments,
-        enrollment,
-      ];
+      _studentEnrollments = [..._studentEnrollments, enrollment];
 
-      _instituteEnrollments = [
-        ..._instituteEnrollments,
-        enrollment,
-      ];
+      _instituteEnrollments = [..._instituteEnrollments, enrollment];
 
       await _refreshCourseBookingCounts();
 

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-
 import '../models/onboarding.models.dart';
 import '../widgets/on_boarding_button.dart';
-import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -26,34 +25,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _controller = PageController();
   }
 
-  // الانتقال إلى صفحة تسجيل الدخول
   void _goToLogin() {
     context.go('/login');
   }
 
-  // الانتقال إلى الصفحة التالية
   void nextPage() {
     if (currentIndex < onBoardingList.length - 1) {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOutCubic,
       );
     } else {
       _goToLogin();
     }
   }
 
-  // الرجوع إلى الصفحة السابقة
   void previousPage() {
     if (currentIndex > 0) {
       _controller.previousPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
 
-  // تخطي صفحات التعريف
   void skipOnboarding() {
     _goToLogin();
   }
@@ -71,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // صفحات التعريف
+            _buildTopBar(),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -82,17 +77,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
                 itemBuilder: (context, index) {
-                  final page = onBoardingList[index];
-
-                  return _buildOnboardingPage(page);
+                  return _buildOnboardingPage(onBoardingList[index], index);
                 },
               ),
             ),
-
-            // مؤشرات الصفحات
             _buildPageIndicators(),
-
-            // أزرار التنقل
             _buildNavigationButtons(),
           ],
         ),
@@ -100,32 +89,176 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // تصميم صفحة التعريف
-  Widget _buildOnboardingPage(dynamic page) {
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(page.icon, size: 120, color: AppColors.primary),
-
-              const SizedBox(height: AppSpacing.xxxl),
-
-              Text(
-                page.title,
-                textAlign: TextAlign.center,
-                style: AppTypography.headlineMedium,
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        0,
+      ),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: skipOnboarding,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
               ),
+            ),
+            child: Text(
+              'تخطي',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Spacer(),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -0.25),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: Container(
+              key: ValueKey(currentIndex),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${currentIndex + 1} من ${onBoardingList.length}',
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              const SizedBox(height: AppSpacing.md),
+  Widget _buildOnboardingPage(OnBoarding page, int index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final illustrationSize = constraints.maxHeight < 480 ? 190.0 : 230.0;
 
-              Text(
-                page.description,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildIllustration(page, index, illustrationSize),
+                  SizedBox(
+                    height: constraints.maxHeight < 480
+                        ? AppSpacing.lg
+                        : AppSpacing.xxxl,
+                  ),
+                  Text(
+                    page.title,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.headlineMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    child: Text(
+                      page.description,
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyLarge.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIllustration(OnBoarding page, int index, double size) {
+    final isCurrentPage = currentIndex == index;
+
+    return AnimatedScale(
+      scale: isCurrentPage ? 1 : 0.88,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: isCurrentPage ? 1 : 0.72,
+        duration: const Duration(milliseconds: 300),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: page.color,
+                  borderRadius: BorderRadius.circular(size * 0.24),
+                ),
+              ),
+              Positioned(
+                top: size * 0.12,
+                left: size * 0.13,
+                child: _decorationDot(size * 0.12, AppColors.accentLight),
+              ),
+              Positioned(
+                bottom: size * 0.12,
+                right: size * 0.12,
+                child: _decorationDot(size * 0.16, AppColors.primaryLight),
+              ),
+              Container(
+                width: size * 0.52,
+                height: size * 0.52,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 28,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  page.icon,
+                  size: size * 0.27,
+                  color: AppColors.primary,
+                ),
+              ),
+              Positioned(
+                top: size * 0.21,
+                right: size * 0.19,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: size * 0.1,
+                  color: AppColors.accent,
                 ),
               ),
             ],
@@ -135,20 +268,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // مؤشرات الصفحات
+  Widget _decorationDot(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
   Widget _buildPageIndicators() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(onBoardingList.length, (index) {
           final isSelected = currentIndex == index;
 
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
-            width: isSelected ? 24 : 8,
+            width: isSelected ? 28 : 8,
             height: 8,
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : AppColors.border,
@@ -160,7 +300,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // أزرار التنقل
   Widget _buildNavigationButtons() {
     final isFirstPage = currentIndex == 0;
     final isLastPage = currentIndex == onBoardingList.length - 1;
@@ -172,45 +311,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         AppSpacing.xl,
         AppSpacing.xl,
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              if (!isFirstPage) ...[
-                Expanded(
-                  child: OnBoardingButton(
-                    text: 'السابق',
-                    isPrimary: false,
-                    onTap: previousPage,
-                  ),
-                ),
-
-                const SizedBox(width: AppSpacing.sm),
-              ],
-
-              Expanded(
-                child: OnBoardingButton(
-                  text: isLastPage ? 'ابدأ الآن' : 'التالي',
-                  isPrimary: true,
-                  onTap: nextPage,
-                ),
-              ),
-            ],
-          ),
-
-          if (isFirstPage) ...[
-            const SizedBox(height: AppSpacing.xs),
-
-            TextButton(
-              onPressed: skipOnboarding,
-              child: Text(
-                'تخطي',
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.primary,
-                ),
+          if (!isFirstPage) ...[
+            Expanded(
+              child: OnBoardingButton(
+                text: 'السابق',
+                isPrimary: false,
+                onTap: previousPage,
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
           ],
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.15),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: OnBoardingButton(
+                key: ValueKey(isLastPage),
+                text: isLastPage ? 'ابدأ الآن' : 'التالي',
+                isPrimary: true,
+                onTap: nextPage,
+              ),
+            ),
+          ),
         ],
       ),
     );

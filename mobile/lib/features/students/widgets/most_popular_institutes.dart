@@ -51,7 +51,14 @@ class _MostPopularInstitutesState
 
         const SizedBox(height: AppSpacing.sm),
 
-        if (institutes.isEmpty)
+        if (controller.isLoading)
+          const SizedBox(
+            height: 160,
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          )
+        else if (institutes.isEmpty)
           _buildEmptyMessage()
         else
           _buildInstitutesList(institutes),

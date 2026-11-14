@@ -15,6 +15,9 @@ class InstituteCard extends StatelessWidget {
     this.onTap,
     this.showDetailsButton = true,
     this.buttonText = 'عرض التفاصيل',
+    this.isFavorite = false,
+    this.onFavoriteTap,
+    this.isFavoriteBusy = false,
   });
 
   final InstituteModel institute;
@@ -25,6 +28,9 @@ class InstituteCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showDetailsButton;
   final String buttonText;
+  final bool isFavorite;
+  final VoidCallback? onFavoriteTap;
+  final bool isFavoriteBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -60,21 +66,80 @@ class InstituteCard extends StatelessWidget {
     return SizedBox(
       height: imageHeight,
       width: double.infinity,
-      child: Image.asset(
-        institute.imageUrl ?? 'assets/images/institute1.png',
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: AppColors.primaryLight,
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.apartment_outlined,
-              color: AppColors.primary,
-              size: 42,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _buildImage(),
+          if (onFavoriteTap != null)
+            PositionedDirectional(
+              top: AppSpacing.xs,
+              start: AppSpacing.xs,
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey(isFavorite),
+                tween: Tween(begin: 0.55, end: 1),
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.elasticOut,
+                builder: (context, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Material(
+                  color: AppColors.surface.withValues(alpha: 0.94),
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    tooltip: isFavorite
+                        ? 'إزالة من المفضلة'
+                        : 'إضافة إلى المفضلة',
+                    onPressed: isFavoriteBusy ? null : onFavoriteTap,
+                    visualDensity: VisualDensity.compact,
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: Icon(
+                        key: ValueKey(isFavorite),
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavorite
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          );
-        },
+        ],
       ),
+    );
+  }
+
+  Widget _buildImage() {
+    final image = institute.imageUrl;
+    final isNetworkImage =
+        image != null &&
+        (image.startsWith('http://') || image.startsWith('https://'));
+    Widget errorWidget(BuildContext context, Object error, StackTrace? trace) {
+      return Container(
+        color: AppColors.primaryLight,
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.apartment_outlined,
+          color: AppColors.primary,
+          size: 42,
+        ),
+      );
+    }
+
+    if (isNetworkImage) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: errorWidget,
+      );
+    }
+    return Image.asset(
+      image ?? 'assets/images/institute1.png',
+      fit: BoxFit.cover,
+      errorBuilder: errorWidget,
     );
   }
 

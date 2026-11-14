@@ -2,24 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
 import '../features/auth/controllers/auth_controller.dart';
 import '../features/auth/models/user_model.dart';
+import '../features/courses/screens/student/courses_screen.dart';
+import '../features/courses/screens/student/course_registration_screen.dart';
+import '../features/favorites/screens/favorites_screen.dart';
 import '../features/students/routing/student_shell.dart';
-import '../features/students/screens/bookings_screen.dart';
-import '../features/students/screens/course_registration_screen.dart';
-import '../features/students/screens/course_details_screen.dart';
-import '../features/students/screens/courses_screen.dart';
-import '../features/students/screens/home_screen.dart';
 
+import '../features/courses/screens/student/course_details_screen.dart';
+import '../features/students/screens/home_screen.dart';
+import '../features/students/screens/my_reservations_screen.dart';
+import '../features/students/screens/reservation_details_screen.dart';
+import '../features/students/models/student_reservation_model.dart';
 import '../features/institutes/routing/institute_shell.dart';
-import '../features/institutes/screens/institute_bookings_screen.dart';
+import '../features/institutes/screens/add_institute_course_screen.dart';
 import '../features/institutes/screens/institute_courses_screen.dart';
 import '../features/institutes/screens/institute_students_screen.dart';
 import '../features/institutes/screens/institute_dashboard_screen.dart';
+import '../features/reservations/screens/institute_reservations_screen.dart';
 
 import '../features/admin/routing/admin_shell.dart';
 import '../features/admin/screens/admin_institutes_screen.dart';
+import '../features/admin/screens/admin_add_institute_screen.dart';
 import '../features/admin/screens/admin_users_screen.dart';
 import '../features/admin/screens/admin_more_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
@@ -64,33 +68,37 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) => const RegisterScreen(),
         ),
 
-        // Onboarding
         GoRoute(
-          path: '/onboarding',
-          builder: (context, state) => const OnboardingScreen(),
+          path: '/favorites',
+          builder: (context, state) => const FavoritesScreen(),
         ),
 
-        // Course Details
-        GoRoute(
-          path: '/course-details',
-          builder: (context, state) {
-            final extra = state.extra;
-            if (extra is! CourseModel) return const CoursesScreen();
-            final course = extra;
-            return CourseDetailsScreen(course: course);
-          },
-        ),
-
-        // Course Registration
         GoRoute(
           path: '/course-registration',
           builder: (context, state) {
             final extra = state.extra;
-            if (extra is! CourseModel) return const CoursesScreen();
-            final course = extra;
-
-            return CourseRegistrationScreen(course: course);
+            if (extra is! CourseModel) {
+              return const CoursesScreen();
+            }
+            return CourseRegistrationScreen(course: extra);
           },
+        ),
+
+        GoRoute(
+          path: '/reservation-details',
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! StudentReservationModel) {
+              return const MyReservationsScreen();
+            }
+            return ReservationDetailsScreen(reservation: extra);
+          },
+        ),
+
+        // Onboarding
+        GoRoute(
+          path: '/onboarding',
+          builder: (context, state) => const OnboardingScreen(),
         ),
 
         // Institute Owner Dashboard
@@ -107,27 +115,45 @@ class _MyAppState extends State<MyApp> {
                 ),
               ],
             ),
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: '/institute_bookings',
-                  builder: (context, state) => const InstituteBookingsScreen(),
-                ),
-              ],
-            ),
+
             StatefulShellBranch(
               routes: [
                 GoRoute(
                   path: '/institute_courses',
                   builder: (context, state) => const InstituteCoursesScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'add',
+                      builder: (context, state) =>
+                          const AddInstituteCourseScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
+
             StatefulShellBranch(
               routes: [
                 GoRoute(
                   path: '/institute_students',
                   builder: (context, state) => const InstituteStudentsScreen(),
+                ),
+              ],
+            ),
+
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/institute_reservations',
+                  builder: (context, state) =>
+                      const InstituteReservationsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'add',
+                      builder: (context, state) =>
+                          const AddInstituteCourseScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -153,6 +179,13 @@ class _MyAppState extends State<MyApp> {
                 GoRoute(
                   path: '/admin_institutes',
                   builder: (context, state) => const AdminInstitutesScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'add',
+                      builder: (context, state) =>
+                          const AdminAddInstituteScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -178,7 +211,12 @@ class _MyAppState extends State<MyApp> {
         // Student Dashboard
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {
-            return StudentShell(navigationShell: navigationShell);
+            return StudentShell(
+              navigationShell: navigationShell,
+              showBottomNavigationBar:
+                  state.uri.path != '/courses_screen/details' &&
+                  state.uri.path != '/my_reservations/details',
+            );
           },
           branches: [
             // Home
@@ -197,16 +235,40 @@ class _MyAppState extends State<MyApp> {
                 GoRoute(
                   path: '/courses_screen',
                   builder: (context, state) => const CoursesScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'details',
+                      builder: (context, state) {
+                        final extra = state.extra;
+                        if (extra is! CourseModel) {
+                          return const CoursesScreen();
+                        }
+                        return CourseDetailsScreen(course: extra);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
 
-            // Bookings
+            // My Reservations (حجوزاتي)
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/bookings_screen',
-                  builder: (context, state) => const BookingsScreen(),
+                  path: '/my_reservations',
+                  builder: (context, state) => const MyReservationsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'details',
+                      builder: (context, state) {
+                        final extra = state.extra;
+                        if (extra is! StudentReservationModel) {
+                          return const MyReservationsScreen();
+                        }
+                        return ReservationDetailsScreen(reservation: extra);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -223,9 +285,16 @@ class _MyAppState extends State<MyApp> {
     }
     final user = _authController.currentUser;
 
-    if ((location == '/course-details' || location == '/course-registration') &&
+    if ((location == '/courses_screen/details' ||
+            location == '/course-registration') &&
         state.extra is! CourseModel) {
       return '/courses_screen';
+    }
+
+    if ((location == '/reservation-details' ||
+            location == '/my_reservations/details') &&
+        state.extra is! StudentReservationModel) {
+      return '/my_reservations';
     }
 
     final roleHome = switch (user?.role) {
@@ -242,17 +311,24 @@ class _MyAppState extends State<MyApp> {
     final requiredRole = switch (location) {
       '/home_screen' ||
       '/courses_screen' ||
-      '/bookings_screen' ||
-      '/course-details' ||
-      '/course-registration' => UserRole.student,
+      '/courses_screen/details' ||
+      '/course-registration' ||
+      '/my_reservations' ||
+      '/my_reservations/details' ||
+      '/reservation-details' ||
+      '/favorites' => UserRole.student,
+
       '/institute_dashboard' ||
-      '/institute_bookings' ||
       '/institute_courses' ||
-      '/institute_students' => UserRole.instituteOwner,
+      '/institute_students' ||
+      '/institute_reservations' ||
+      '/institute_courses/add' => UserRole.instituteOwner,
+
       '/admin_dashboard' ||
       '/admin_institutes' ||
       '/admin_users' ||
       '/admin_more' => UserRole.admin,
+
       _ => null,
     };
 

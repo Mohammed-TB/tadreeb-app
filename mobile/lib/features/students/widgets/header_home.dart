@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -12,9 +13,21 @@ class HeaderHome extends StatelessWidget {
   const HeaderHome({
     super.key,
     required this.onMenuTap,
+    this.onFilterTap,
+    this.onSearchChanged,
+    this.onSearchSubmitted,
+    this.onClear,
+    this.searchController,
+    this.hasActiveFilter = false,
   });
 
   final VoidCallback onMenuTap;
+  final VoidCallback? onFilterTap;
+  final ValueChanged<String>? onSearchChanged;
+  final ValueChanged<String>? onSearchSubmitted;
+  final VoidCallback? onClear;
+  final TextEditingController? searchController;
+  final bool hasActiveFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +79,7 @@ class HeaderHome extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    onPressed: () {
-                      // الانتقال إلى المفضلة لاحقاً
-                    },
+                    onPressed: () => context.push('/favorites'),
                     icon: const Icon(
                       Icons.favorite_outline,
                       color: Colors.white,
@@ -96,6 +107,12 @@ class HeaderHome extends StatelessWidget {
           Search(
             hinText: 'ابحث عن دورة أو معهد',
             isBorder: false,
+            onFilterTap: onFilterTap,
+            onChanged: onSearchChanged,
+            onSubmitted: onSearchSubmitted,
+            onClear: onClear,
+            controller: searchController,
+            hasActiveFilter: hasActiveFilter,
           ),
         ],
       ),

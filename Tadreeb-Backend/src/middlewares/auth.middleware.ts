@@ -16,6 +16,9 @@ export interface AuthPayload {
   role: UserRole;
   status: UserStatus;
   authProvider: string;
+
+    // معرّف المعهد المرتبط بحساب المستخدم.
+  instituteId?: string;
 }
 
 // إضافة بيانات المستخدم إلى Express Request.
@@ -71,9 +74,9 @@ const authenticate = async (
     }
 
     // البحث عن المستخدم في MongoDB.
-    const user = await User.findById(decoded.userId).select(
-      "_id name email phone role status authProvider"
-    );
+const user = await User.findById(decoded.userId).select(
+  "_id name email phone role status authProvider instituteId"
+);
 
     // رفض الطلب إذا لم يعد المستخدم موجودًا.
     if (!user) {
@@ -102,6 +105,10 @@ const authenticate = async (
       role: user.role,
       status: user.status,
       authProvider: user.authProvider,
+
+
+  // تحويل ObjectId إلى String لتسهيل استخدامه في API.
+  instituteId: user.instituteId?.toString(),
     };
 
     // السماح باستكمال الطلب.

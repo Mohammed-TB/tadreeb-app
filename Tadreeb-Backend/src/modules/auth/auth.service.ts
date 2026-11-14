@@ -13,6 +13,7 @@ import User, {
 interface RegisterInput {
   name: string;
   email: string;
+  phone: string;
   password: string;
 }
 
@@ -50,6 +51,7 @@ const getSafeUser = (user: any) => ({
   id: user.id,
   name: user.name,
   email: user.email,
+  phone:user.phone,
   role: user.role,
   status: user.status,
 });
@@ -79,6 +81,7 @@ class AuthService {
     const user = await User.create({
       name,
       email: normalizedEmail,
+      phone: input.phone, 
       password: hashedPassword,
       role: UserRole.STUDENT,
       status: UserStatus.ACTIVE,

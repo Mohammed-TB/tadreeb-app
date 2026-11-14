@@ -9,15 +9,18 @@ class StudentShell extends StatelessWidget {
   const StudentShell({
     super.key,
     required this.navigationShell,
+    required this.showBottomNavigationBar,
   });
 
   final StatefulNavigationShell navigationShell;
+  final bool showBottomNavigationBar;
 
   @override
   Widget build(BuildContext context) {
     return AppShell(
       navigationShell: navigationShell,
       drawer: const AppDrawer(),
+      showBottomNavigationBar: showBottomNavigationBar,
       navigationItems: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
@@ -30,10 +33,11 @@ class StudentShell extends StatelessWidget {
           label: 'الدورات',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.event_note_outlined),
-          activeIcon: Icon(Icons.event_note),
+          icon: Icon(Icons.receipt_long_outlined),
+          activeIcon: Icon(Icons.receipt_long_rounded),
           label: 'حجوزاتي',
         ),
+
       ],
     );
   }

@@ -20,11 +20,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        defaultConfig {
-    // المعرّف الرسمي لتطبيق Tadreeb على Android.
-    applicationId = "com.tadreeb.app"
-}
+        // المعرّف الرسمي لتطبيق Tadreeb على Android.
+        applicationId = "com.tadreeb.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

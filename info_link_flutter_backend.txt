@@ -1,0 +1,38 @@
+ApiCleint : ينفذ اتصال Http الخادم
+
+service:يحدد أي API نريد استدعاءه والبيانات التي نرسلها
+
+Model : يحول json الى كا~ن dart
+
+controller :يدير البيانات وحالات التحميل والاخطاء
+
+
+class AuthService {
+  AuthService({
+    ApiClient? apiClient,
+    TokenStorageService? tokenStorage,
+  }) : this._(
+         apiClient,
+         tokenStorage ?? TokenStorageService(),
+       );
+}
+
+
+
+
+الفكرة هنا هي Dependency Injection (حقن الاعتماديات).
+
+بمعنى أن AuthService يحتاج إلى ApiClient حتى يتصل بالـ Backend.
+
+بدل أن نكرر إعداد الاتصال داخل كل خدمة، نمرر لها الاتصال الجاهز.
+
+
+  static const _registerPath = '/api/auth/register';
+  static const _loginPath = '/api/auth/login';
+  static const _googlePath = '/api/auth/google';
+  static const _mePath = '/api/auth/me';
+
+
+  مسارات ال api الي راح نسختدمهن
+
+  

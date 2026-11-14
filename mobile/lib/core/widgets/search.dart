@@ -12,12 +12,22 @@ class Search extends StatelessWidget {
     this.isShowFilter = true,
     this.onFilterTap,
     this.isBorder = true,
+    this.onChanged,
+    this.onSubmitted,
+    this.controller,
+    this.hasActiveFilter = false,
+    this.onClear,
   });
 
   final String? hinText;
   final bool isShowFilter;
   final VoidCallback? onFilterTap;
   final bool isBorder;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final bool hasActiveFilter;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +45,26 @@ class Search extends StatelessWidget {
               isBorder: isBorder,
               fillColor: AppColors.surface,
               borderRadius: 12,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              suffixIcon: controller != null && controller!.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textHint,
+                      ),
+                      onPressed: () {
+                        controller!.clear();
+                        onChanged?.call('');
+                        onClear?.call();
+                      },
+                      splashRadius: 16,
+                      tooltip: 'مسح',
+                    )
+                  : null,
             ),
           ),
 
@@ -50,19 +80,45 @@ class Search extends StatelessWidget {
                 child: InkWell(
                   onTap: onFilterTap,
                   borderRadius: BorderRadius.circular(12),
-                  child: Ink(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
                     decoration: BoxDecoration(
+                      color: hasActiveFilter
+                          ? AppColors.primaryLight.withValues(alpha: 0.5)
+                          : AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.border,
+                        color: hasActiveFilter
+                            ? AppColors.primary
+                            : AppColors.border,
+                        width: hasActiveFilter ? 1.5 : 1.0,
                       ),
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.filter_list,
-                        size: 25,
-                        color: AppColors.accent,
-                      ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          Icons.tune_rounded,
+                          size: 22,
+                          color: hasActiveFilter
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                        ),
+                        if (hasActiveFilter)
+                          Positioned(
+                            top: 7,
+                            left: 7,
+                            child: Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

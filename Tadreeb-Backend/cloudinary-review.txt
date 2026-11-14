@@ -1,0 +1,1265 @@
+﻿
+
+==================================================
+FILE: src/config/cloudinary.ts
+==================================================
+
+// ØªØ­Ù…ÙŠÙ„ Ù…ØªØºÙŠØ±Ø§Øª Ø§Ù„Ø¨ÙŠØ¦Ø© Ù‚Ø¨Ù„ Ø¥Ø¹Ø¯Ø§Ø¯ Cloudinary.
+import "dotenv/config";
+
+import { v2 as cloudinary } from "cloudinary";
+
+// Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ÙˆØ¬ÙˆØ¯ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø§ØªØµØ§Ù„.
+const requiredVariables = [
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+];
+
+for (const variable of requiredVariables) {
+  if (!process.env[variable]) {
+    throw new Error(`${variable} is missing from environment`);
+  }
+}
+
+// Ø¥Ø¹Ø¯Ø§Ø¯ Cloudinary.
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
+
+export default cloudinary;
+
+
+
+==================================================
+FILE: src/middlewares/upload.middleware.ts
+==================================================
+
+import multer from "multer";
+
+// Ø§Ù„Ø§Ø­ØªÙØ§Ø¸ Ø¨Ø§Ù„ØµÙˆØ±Ø© ÙÙŠ Ø§Ù„Ø°Ø§ÙƒØ±Ø© Ù…Ø¤Ù‚ØªÙ‹Ø§ Ù‚Ø¨Ù„ Ø±ÙØ¹Ù‡Ø§ Ø¥Ù„Ù‰ Cloudinary.
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ 5MB.
+  },
+  fileFilter: (_req, file, callback) => {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return callback(
+        new Error("Only JPG, PNG and WEBP images are allowed"),
+      );
+    }
+
+    callback(null, true);
+  },
+});
+
+export default upload;
+
+
+
+==================================================
+FILE: src/modules/reservations/services/receipt-upload.service.ts
+==================================================
+
+import cloudinary from "../../../config/cloudinary";
+import { Readable } from "stream";
+
+interface UploadedReceipt {
+  publicId: string;
+  format: string;
+}
+
+class ReceiptUploadService {
+  async uploadReceipt(buffer: Buffer): Promise<UploadedReceipt> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "tadreeb/receipts",
+          resource_type: "image",
+          type: "authenticated",
+          allowed_formats: ["jpg", "jpeg", "png", "webp"],
+        },
+        (error, result) => {
+          if (error || !result) {
+            return reject(error || new Error("Receipt upload failed"));
+          }
+
+          resolve({
+            publicId: result.public_id,
+            format: result.format,
+          });
+        },
+      );
+
+      Readable.from(buffer).pipe(uploadStream);
+    });
+  }
+
+  // Ø¥Ù†Ø´Ø§Ø¡ Ø±Ø§Ø¨Ø· Ù…ÙˆÙ‚Ù‘Ø¹ ØµØ§Ù„Ø­ Ù„Ù…Ø¯Ø© 5 Ø¯Ù‚Ø§Ø¦Ù‚.
+  generateReceiptUrl(publicId: string, format: string): string {
+    const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+
+    return cloudinary.utils.private_download_url(publicId, format, {
+      resource_type: "image",
+      type: "authenticated",
+      expires_at: expiresAt,
+      attachment: false,
+    });
+  }
+}
+
+export default new ReceiptUploadService();
+
+
+
+==================================================
+FILE: src/modules/reservations/services/reservation.service.ts
+==================================================
+import mongoose from "mongoose";
+
+import Course from "../../courses/models/course.model";
+import Institute, {
+  InstituteStatus,
+} from "../../institutes/models/institute.model";
+import User, { UserRole, UserStatus } from "../../users/user.model";
+
+import Reservation from "../models/reservation.model";
+import receiptUploadService from "./receipt-upload.service";
+
+import {
+  BookingType,
+  PaymentOption,
+  PaymentStatus,
+  ReservationStatus,
+  AttendanceStatus,
+} from "../types/reservation.types";
+
+class ReservationService {
+  // ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ Ø­Ø³Ø¨ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹.
+  private getAmountToPay(
+    paymentOption: PaymentOption,
+    price: number,
+    depositAmount: number,
+  ): number {
+    return paymentOption === PaymentOption.DEPOSIT ? depositAmount : price;
+  }
+
+  // Ø­Ø¬Ø² Ù…Ù‚Ø¹Ø¯ Ù…Ø¤Ù‚Øª Ù…Ø¹ Ù…Ù†Ø¹ ØªØ¬Ø§ÙˆØ² Ø³Ø¹Ø© Ø§Ù„Ø¯ÙˆØ±Ø©.
+  private async reserveSeat(
+    courseId: mongoose.Types.ObjectId,
+    session: mongoose.ClientSession,
+  ): Promise<any> {
+    const course: any = await Course.findOneAndUpdate(
+      {
+        _id: courseId,
+        status: "published",
+        startDate: { $gt: new Date() },
+        endDate: { $gte: new Date() },
+        $expr: {
+          $lt: [
+            {
+              $add: [
+                { $ifNull: ["$enrolledCount", 0] },
+                { $ifNull: ["$reservedCount", 0] },
+              ],
+            },
+            "$capacity",
+          ],
+        },
+      } as any,
+      { $inc: { reservedCount: 1 } },
+      { new: true, session },
+    );
+
+    if (!course) {
+      throw new Error("Course is unavailable or full");
+    }
+
+    return course;
+  }
+
+  // =====================================================
+  // 1. Ø§Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø¨ÙˆØ§Ø³Ø·Ø© Ø§Ù„Ø·Ø§Ù„Ø¨.
+  // =====================================================
+  async createOnlineReservation(
+    studentId: string,
+    courseId: string,
+    paymentOption: PaymentOption,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      throw new Error("Invalid course ID");
+    }
+
+    if (!Object.values(PaymentOption).includes(paymentOption)) {
+      throw new Error("Invalid payment option");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      let result: any;
+
+      await session.withTransaction(async () => {
+        const student = await User.findById(studentId).session(session);
+
+        if (
+          !student ||
+          student.role !== UserRole.STUDENT ||
+          student.status !== UserStatus.ACTIVE
+        ) {
+          throw new Error("Active student account required");
+        }
+
+        if (!student.phone?.trim()) {
+          throw new Error("Please add your phone number to your profile");
+        }
+
+        // Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ÙˆØ¬ÙˆØ¯ Ù…Ù‚Ø¹Ø¯ ÙˆØ­Ø¬Ø²Ù‡ Ù…Ø¤Ù‚ØªÙ‹Ø§.
+        const course: any = await this.reserveSeat(
+          new mongoose.Types.ObjectId(courseId),
+          session,
+        );
+
+        const institute = await Institute.findOne({
+          _id: course.instituteId,
+          status: InstituteStatus.ACTIVE,
+        }).session(session);
+
+        if (!institute) {
+          throw new Error("Institute is not active");
+        }
+
+        // Ù…Ù†Ø¹ ØªÙƒØ±Ø§Ø± Ø§Ù„Ø­Ø¬Ø² Ø§Ù„Ù†Ø´Ø· Ù„Ù„Ø·Ø§Ù„Ø¨ ÙÙŠ Ø§Ù„Ø¯ÙˆØ±Ø© Ù†ÙØ³Ù‡Ø§.
+        const existing = await Reservation.findOne({
+          studentId: student._id,
+          courseId: course._id,
+          status: {
+            $in: [
+              ReservationStatus.PENDING_PAYMENT,
+              ReservationStatus.PAYMENT_SUBMITTED,
+              ReservationStatus.CONFIRMED,
+            ],
+          },
+        }).session(session);
+
+        if (existing) {
+          throw new Error("You already have a reservation for this course");
+        }
+
+        const amountToPay = this.getAmountToPay(
+          paymentOption,
+          course.price,
+          course.depositAmount,
+        );
+
+        if (amountToPay <= 0) {
+          throw new Error("Invalid payment amount");
+        }
+
+        // Ù…Ø¯Ø© Ø§Ù„Ø­Ø¬Ø² Ø§Ù„Ù…Ø¤Ù‚Øª: 24 Ø³Ø§Ø¹Ø©.
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        const [reservation] = await Reservation.create(
+          [
+            {
+              courseId: course._id,
+              instituteId: course.instituteId,
+              studentId: student._id,
+              studentName: student.name,
+              studentPhone: student.phone,
+              bookingType: BookingType.ONLINE,
+              createdBy: student._id,
+              paymentOption,
+              totalAmount: course.price,
+              amountToPay,
+              amountPaid: 0,
+              paymentStatus: PaymentStatus.UNPAID,
+              status: ReservationStatus.PENDING_PAYMENT,
+              expiresAt,
+              attendanceStatus: AttendanceStatus.NOT_MARKED,
+            },
+          ],
+          { session },
+        );
+
+        result = reservation;
+      });
+
+      return result;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  // =====================================================
+  // 2. Ø§Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ±ÙŠ Ø¨ÙˆØ§Ø³Ø·Ø© ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+  // =====================================================
+  async createInPersonReservation(
+    ownerId: string,
+    input: {
+      courseId: string;
+      studentName: string;
+      studentPhone: string;
+      paymentOption: PaymentOption;
+      amountPaid: number;
+    },
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(input.courseId)) {
+      throw new Error("Invalid course ID");
+    }
+
+    if (!input.studentName?.trim() || !input.studentPhone?.trim()) {
+      throw new Error("Student name and phone are required");
+    }
+
+    if (!Object.values(PaymentOption).includes(input.paymentOption)) {
+      throw new Error("Invalid payment option");
+    }
+
+    if (!Number.isFinite(input.amountPaid) || input.amountPaid < 0) {
+      throw new Error("Invalid paid amount");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      let result: any;
+
+      await session.withTransaction(async () => {
+        const owner = await User.findById(ownerId).session(session);
+
+        if (
+          !owner ||
+          owner.role !== UserRole.INSTITUTE_OWNER ||
+          owner.status !== UserStatus.ACTIVE ||
+          !owner.instituteId
+        ) {
+          throw new Error("Active institute owner required");
+        }
+
+        const institute = await Institute.findOne({
+          _id: owner.instituteId,
+          ownerId: owner._id,
+          status: InstituteStatus.ACTIVE,
+        }).session(session);
+
+        if (!institute) {
+          throw new Error("Active institute not found");
+        }
+
+        // Ø§Ù„ØªØ£ÙƒØ¯ Ø£Ù† Ø§Ù„Ø¯ÙˆØ±Ø© ØªØ§Ø¨Ø¹Ø© Ù„Ù„Ù…Ø¹Ù‡Ø¯ Ø§Ù„Ø­Ø§Ù„ÙŠ.
+        const course: any = await Course.findOne({
+          _id: input.courseId,
+          instituteId: owner.instituteId,
+          status: "published",
+          startDate: { $gt: new Date() },
+          endDate: { $gte: new Date() },
+        } as any).session(session);
+
+        if (!course) {
+          throw new Error("Course not found or unavailable");
+        }
+
+        if (input.amountPaid > course.price) {
+          throw new Error("Paid amount cannot exceed course price");
+        }
+
+        // ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ù…Ø¨Ø§Ø´Ø±Ø© Ù„Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ±ÙŠ.
+        const updatedCourse: any = await Course.findOneAndUpdate(
+          {
+            _id: course._id,
+            instituteId: owner.instituteId,
+            status: "published",
+            $expr: {
+              $lt: [
+                {
+                  $add: [
+                    { $ifNull: ["$enrolledCount", 0] },
+                    { $ifNull: ["$reservedCount", 0] },
+                  ],
+                },
+                "$capacity",
+              ],
+            },
+          } as any,
+          { $inc: { enrolledCount: 1 } },
+          { new: true, session },
+        );
+
+        if (!updatedCourse) {
+          throw new Error("No available seats");
+        }
+
+        const amountToPay = this.getAmountToPay(
+          input.paymentOption,
+          course.price,
+          course.depositAmount,
+        );
+
+        const paymentStatus =
+          input.amountPaid >= course.price
+            ? PaymentStatus.PAID
+            : input.amountPaid > 0
+              ? PaymentStatus.PARTIAL
+              : PaymentStatus.UNPAID;
+
+        // Ø¥Ù†Ø´Ø§Ø¡ ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ±ÙŠ Ù…Ø¤ÙƒØ¯ Ø¯ÙˆÙ† Ø§Ù„Ø­Ø§Ø¬Ø© Ù„Ø­Ø³Ø§Ø¨ Ø·Ø§Ù„Ø¨.
+        const [reservation] = await Reservation.create(
+          [
+            {
+              courseId: course._id,
+              instituteId: owner.instituteId,
+              studentName: input.studentName.trim(),
+              studentPhone: input.studentPhone.trim(),
+              bookingType: BookingType.IN_PERSON,
+              createdBy: owner._id,
+              paymentOption: input.paymentOption,
+              totalAmount: course.price,
+              amountToPay,
+              amountPaid: input.amountPaid,
+              paymentStatus,
+              status: ReservationStatus.CONFIRMED,
+              attendanceStatus: AttendanceStatus.NOT_MARKED,
+            },
+          ],
+          { session },
+        );
+
+        result = reservation;
+      });
+
+      return result;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  // =====================================================
+  // 3. Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø¨ÙˆØ§Ø³Ø·Ø© ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+  // =====================================================
+  async approveReservation(ownerId: string, reservationId: string) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      let result: any;
+
+      await session.withTransaction(async () => {
+        const owner = await User.findById(ownerId).session(session);
+
+        if (
+          !owner ||
+          owner.role !== UserRole.INSTITUTE_OWNER ||
+          owner.status !== UserStatus.ACTIVE ||
+          !owner.instituteId
+        ) {
+          throw new Error("Active institute owner required");
+        }
+
+        // Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ø¹ØªÙ…Ø§Ø¯ Ø­Ø¬Ø² ØªØ§Ø¨Ø¹ Ù„Ù…Ø¹Ù‡Ø¯ Ø¢Ø®Ø±.
+        const reservation = await Reservation.findOne({
+          _id: reservationId,
+          instituteId: owner.instituteId,
+          bookingType: BookingType.ONLINE,
+          status: ReservationStatus.PAYMENT_SUBMITTED,
+        }).session(session);
+
+        if (!reservation) {
+          throw new Error("Submitted reservation not found");
+        }
+
+        // ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ù…Ù‚Ø¹Ø¯ Ù…Ù† Ù…Ø­Ø¬ÙˆØ² Ù…Ø¤Ù‚ØªÙ‹Ø§ Ø¥Ù„Ù‰ Ù…Ù‚Ø¹Ø¯ Ù…Ø¤ÙƒØ¯.
+        const course: any = await Course.findOneAndUpdate(
+          {
+            _id: reservation.courseId,
+            instituteId: owner.instituteId,
+            reservedCount: { $gte: 1 },
+          } as any,
+          {
+            $inc: {
+              reservedCount: -1,
+              enrolledCount: 1,
+            },
+          },
+          { new: true, session },
+        );
+
+        if (!course) {
+          throw new Error("Could not confirm reserved course seat");
+        }
+
+        // Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…ÙˆØ¬ÙˆØ¯ ÙÙŠ Ø§Ù„Ø³Ù†Ø¯.
+        reservation.amountPaid = reservation.amountToPay;
+
+        reservation.paymentStatus =
+          reservation.amountPaid >= reservation.totalAmount
+            ? PaymentStatus.PAID
+            : PaymentStatus.PARTIAL;
+
+        reservation.status = ReservationStatus.CONFIRMED;
+
+        reservation.rejectionReason = undefined;
+        reservation.receiptResubmissionDeadline = undefined;
+
+        await reservation.save({ session });
+
+        result = reservation;
+      });
+
+      return result;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  // =====================================================
+  // 4. Ø±ÙØ¶ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØªØ­Ø¯ÙŠØ¯ Ù…Ù‡Ù„Ø© Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø±ÙØ¹.
+  // =====================================================
+  async rejectReservation(
+    ownerId: string,
+    reservationId: string,
+    reason: string,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    if (!reason?.trim()) {
+      throw new Error("Rejection reason is required");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      let result: any;
+
+      await session.withTransaction(async () => {
+        const owner = await User.findById(ownerId).session(session);
+
+        if (
+          !owner ||
+          owner.role !== UserRole.INSTITUTE_OWNER ||
+          owner.status !== UserStatus.ACTIVE ||
+          !owner.instituteId
+        ) {
+          throw new Error("Active institute owner required");
+        }
+
+        const institute = await Institute.findOne({
+          _id: owner.instituteId,
+          ownerId: owner._id,
+          status: InstituteStatus.ACTIVE,
+        }).session(session);
+
+        if (!institute) {
+          throw new Error("Active institute not found");
+        }
+
+        const reservation = await Reservation.findOne({
+          _id: reservationId,
+          instituteId: owner.instituteId,
+          bookingType: BookingType.ONLINE,
+          status: ReservationStatus.PAYMENT_SUBMITTED,
+        }).session(session);
+
+        if (!reservation) {
+          throw new Error("Submitted reservation not found");
+        }
+
+        // Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ù‡Ù„Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø© ÙÙŠ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+        const hours: number = Number(
+          institute.settings?.receiptResubmissionHours ?? 1,
+        );
+
+        const deadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+
+        reservation.status = ReservationStatus.REJECTED;
+        reservation.rejectionReason = reason.trim();
+        reservation.receiptResubmissionDeadline = deadline;
+
+        await reservation.save({ session });
+
+        result = reservation;
+      });
+
+      return result;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  // =====================================================
+  // 3. Ø¹Ø±Ø¶ Ø­Ø¬ÙˆØ²Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨.
+  // =====================================================
+  async getMyReservations(studentId: string) {
+    return Reservation.find({ studentId })
+      .populate("courseId")
+      .populate("instituteId", "name logo address")
+      .sort({ createdAt: -1 });
+  }
+
+  // =====================================================
+  // 4. Ø¹Ø±Ø¶ Ø¬Ù…ÙŠØ¹ ØªØ³Ø¬ÙŠÙ„Ø§Øª Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+  // =====================================================
+  async getInstituteReservations(ownerId: string) {
+    const owner = await User.findById(ownerId);
+
+    if (
+      !owner ||
+      owner.role !== UserRole.INSTITUTE_OWNER ||
+      !owner.instituteId
+    ) {
+      throw new Error("Institute owner not found");
+    }
+
+    return Reservation.find({
+      instituteId: owner.instituteId,
+    })
+      .populate("courseId", "title price depositAmount")
+      .populate("studentId", "name email phone")
+      .sort({ createdAt: -1 });
+  }
+
+  // Ø±ÙØ¹ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø¨ÙˆØ§Ø³Ø·Ø© Ø§Ù„Ø·Ø§Ù„Ø¨ ØµØ§Ø­Ø¨ Ø§Ù„Ø­Ø¬Ø².
+  async uploadReceipt(
+    studentId: string,
+    reservationId: string,
+    fileBuffer: Buffer,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    // Ù„Ø§ Ù†Ø³Ù…Ø­ Ø¥Ù„Ø§ Ù„ØµØ§Ø­Ø¨ Ø§Ù„Ø­Ø¬Ø² Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø¨Ø±ÙØ¹ Ø§Ù„Ø³Ù†Ø¯.
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      studentId,
+      bookingType: BookingType.ONLINE,
+    });
+
+    if (!reservation) {
+      throw new Error("Reservation not found");
+    }
+
+    const now = new Date();
+
+    // Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø§Ù„Ø±ÙØ¹ Ø§Ù„Ø£ÙˆÙ„ Ù‚Ø¨Ù„ Ø§Ù†ØªÙ‡Ø§Ø¡ Ù…Ø¯Ø© Ø§Ù„Ø­Ø¬Ø².
+    const isFirstUpload =
+      reservation.status === ReservationStatus.PENDING_PAYMENT &&
+      !!reservation.expiresAt &&
+      reservation.expiresAt > now;
+
+    // Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø±ÙØ¹ Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶ Ø®Ù„Ø§Ù„ Ø§Ù„Ù…Ù‡Ù„Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©.
+    const isResubmission =
+      reservation.status === ReservationStatus.REJECTED &&
+      !!reservation.receiptResubmissionDeadline &&
+      reservation.receiptResubmissionDeadline > now;
+
+    if (!isFirstUpload && !isResubmission) {
+      throw new Error("Receipt upload period has expired or is not allowed");
+    }
+
+    // Ø±ÙØ¹ Ø§Ù„ØµÙˆØ±Ø© Ø£ÙˆÙ„Ù‹Ø§ØŒ Ø«Ù… Ø­ÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ÙÙŠ MongoDB.
+// Ø±ÙØ¹ Ø§Ù„ØµÙˆØ±Ø© ÙˆØªØ®Ø²ÙŠÙ† Ù…Ø¹Ø±Ù‘ÙÙ‡Ø§ ÙˆØµÙŠØºØªÙ‡Ø§ ÙÙ‚Ø·.
+const uploadedReceipt =
+  await receiptUploadService.uploadReceipt(fileBuffer);
+
+reservation.receiptPublicId = uploadedReceipt.publicId;
+reservation.receiptFormat = uploadedReceipt.format;
+
+// Ù„Ø§ Ù†Ø®Ø²Ù† Ø±Ø§Ø¨Ø·Ø§Ù‹ Ø¹Ø§Ù…Ø§Ù‹ Ù„Ù„ØµÙˆØ±Ø©.
+reservation.receiptUrl = undefined;
+
+reservation.status = ReservationStatus.PAYMENT_SUBMITTED;
+
+// ØªÙ†Ø¸ÙŠÙ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙØ¶ Ø§Ù„Ø³Ø§Ø¨Ù‚.
+reservation.rejectionReason = undefined;
+reservation.receiptResubmissionDeadline = undefined;
+
+await reservation.save();
+
+return reservation;
+  }
+
+
+  // Ø¥Ù†Ø´Ø§Ø¡ Ø±Ø§Ø¨Ø· Ù…Ø¤Ù‚Øª Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµØ§Ø­Ø¨ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ©.
+  async getReceiptAccessUrl(
+    requesterId: string,
+    role: UserRole,
+    reservationId: string,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const reservation = await Reservation.findById(reservationId)
+      .select("+receiptPublicId +receiptFormat");
+
+    if (!reservation) {
+      throw new Error("Reservation not found");
+    }
+
+    // Ø§Ù„Ø·Ø§Ù„Ø¨ Ù„Ø§ ÙŠØ±Ù‰ Ø¥Ù„Ø§ Ø³Ù†Ø¯ Ø­Ø¬Ø²Ù‡ Ø§Ù„Ø®Ø§Øµ.
+    if (role === UserRole.STUDENT) {
+      if (reservation.studentId?.toString() !== requesterId) {
+        throw new Error("Reservation not found");
+      }
+    }
+    // ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø¹Ù‡Ø¯ Ù„Ø§ ÙŠØ±Ù‰ Ø¥Ù„Ø§ Ø³Ù†Ø¯Ø§Øª Ù…Ø¹Ù‡Ø¯ÙÙ‡.
+    else if (role === UserRole.INSTITUTE_OWNER) {
+      const owner = await User.findOne({
+        _id: requesterId,
+        role: UserRole.INSTITUTE_OWNER,
+        status: UserStatus.ACTIVE,
+      });
+
+      if (
+        !owner?.instituteId ||
+        owner.instituteId.toString() !== reservation.instituteId.toString()
+      ) {
+        throw new Error("Reservation not found");
+      }
+    } else {
+      throw new Error("Not authorized to view this receipt");
+    }
+
+    if (!reservation.receiptPublicId || !reservation.receiptFormat) {
+      throw new Error("Receipt is not available");
+    }
+
+    return {
+      receiptUrl: receiptUploadService.generateReceiptUrl(
+        reservation.receiptPublicId,
+        reservation.receiptFormat,
+      ),
+      expiresIn: 300,
+    };
+  }
+
+}
+
+export default new ReservationService();
+
+
+
+==================================================
+FILE: src/modules/reservations/models/reservation.model.ts
+==================================================
+import mongoose, { Schema } from "mongoose";
+import {
+  IReservation,
+  BookingType,
+  PaymentOption,
+  PaymentStatus,
+  ReservationStatus,
+  AttendanceStatus,
+} from "../types/reservation.types";
+
+const reservationSchema = new Schema<IReservation>(
+  {
+    courseId: {
+      type: Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+      index: true,
+    },
+
+    instituteId: {
+      type: Schema.Types.ObjectId,
+      ref: "Institute",
+      required: true,
+      index: true,
+    },
+
+    studentId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: undefined,
+    },
+
+    studentName: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 150,
+    },
+
+    studentPhone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    bookingType: {
+      type: String,
+      enum: Object.values(BookingType),
+      required: true,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    paymentOption: {
+      type: String,
+      enum: Object.values(PaymentOption),
+      required: true,
+    },
+
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    amountToPay: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    amountPaid: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: Object.values(PaymentStatus),
+      default: PaymentStatus.UNPAID,
+    },
+receiptPublicId: {
+  type: String,
+  trim: true,
+  select:false,
+
+},
+
+receiptFormat: {
+  type: String,
+  trim: true,
+  select:false,
+},
+
+// Ù„Ù„ØªÙˆØ§ÙÙ‚ Ù…Ø¹ Ø§Ù„Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© ÙÙ‚Ø·.
+receiptUrl: {
+  type: String,
+  select: false,
+},
+
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+
+    receiptResubmissionDeadline: Date,
+
+    status: {
+      type: String,
+      enum: Object.values(ReservationStatus),
+      required: true,
+    },
+
+    // Ø§Ù„Ø­Ø¬Ø² Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ù…Ø¤Ù‚ØªØŒ Ø£Ù…Ø§ Ø§Ù„Ø­Ø¶ÙˆØ±ÙŠ ÙÙ„Ø§ ÙŠØ­ØªØ§Ø¬ Ø¥Ù„Ù‰ Ø§Ù†ØªÙ‡Ø§Ø¡ Ù…Ø¤Ù‚Øª.
+    expiresAt: Date,
+
+    attendanceStatus: {
+      type: String,
+      enum: Object.values(AttendanceStatus),
+      default: AttendanceStatus.NOT_MARKED,
+    },
+  },
+  { timestamps: true },
+);
+
+// ÙÙ‡Ø§Ø±Ø³ ØªØ³Ù‡Ù‘Ù„ Ø¹Ø±Ø¶ Ø­Ø¬ÙˆØ²Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨ ÙˆØ§Ù„Ù…Ø¹Ù‡Ø¯.
+reservationSchema.index({ studentId: 1, createdAt: -1 });
+reservationSchema.index({ instituteId: 1, status: 1 });
+reservationSchema.index({ courseId: 1, status: 1 });
+
+const Reservation = mongoose.model<IReservation>(
+  "Reservation",
+  reservationSchema,
+);
+
+export default Reservation;
+
+
+==================================================
+FILE: src/modules/reservations/controllers/reservation.controller.ts
+==================================================
+import { Request, Response } from "express";
+import reservationService from "../services/reservation.service";
+import { PaymentOption } from "../types/reservation.types";
+
+class ReservationController {
+  // Ù…Ø¹Ø§Ù„Ø¬Ø© Ø£Ø®Ø·Ø§Ø¡ Ø§Ù„Ø®Ø¯Ù…Ø©.
+  private handleError(res: Response, error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Server error";
+
+    const status =
+      message.includes("not found") ? 404 :
+      message.includes("not available") || message.includes("full") ? 409 :
+      message.includes("already have") ? 409 :
+      message.includes("required") ? 400 :
+      400;
+
+    return res.status(status).json({
+      success: false,
+      message,
+    });
+  }
+
+  // POST: Ø­Ø¬Ø² Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø¨ÙˆØ§Ø³Ø·Ø© Ø§Ù„Ø·Ø§Ù„Ø¨.
+  async createOnline(req: Request, res: Response) {
+    try {
+      const { courseId, paymentOption } = req.body;
+
+      if (typeof courseId !== "string" || !paymentOption) {
+        return res.status(400).json({
+          success: false,
+          message: "Course ID and payment option are required",
+        });
+      }
+
+      const reservation =
+        await reservationService.createOnlineReservation(
+          req.user!.userId,
+          courseId,
+          paymentOption,
+        );
+
+      return res.status(201).json({
+        success: true,
+        message: "Online reservation created successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  // POST: ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ±ÙŠ Ø¨ÙˆØ§Ø³Ø·Ø© ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+  async createInPerson(req: Request, res: Response) {
+    try {
+      const {
+        courseId,
+        studentName,
+        studentPhone,
+        paymentOption,
+        amountPaid,
+      } = req.body;
+
+      if (
+        typeof courseId !== "string" ||
+        typeof studentName !== "string" ||
+        typeof studentPhone !== "string" ||
+        typeof amountPaid !== "number"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide valid student and payment details",
+        });
+      }
+
+      const reservation =
+        await reservationService.createInPersonReservation(
+          req.user!.userId,
+          {
+            courseId,
+            studentName,
+            studentPhone,
+            paymentOption,
+            amountPaid,
+          },
+        );
+
+      return res.status(201).json({
+        success: true,
+        message: "In-person registration created successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  
+  // PATCH: Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„.
+  async approveReservation(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+
+      const reservation =
+        await reservationService.approveReservation(
+          req.user!.userId,
+          reservationId,
+        );
+
+      return res.status(200).json({
+        success: true,
+        message: "Reservation approved successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  // PATCH: Ø±ÙØ¶ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„.
+  async rejectReservation(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      const { reason } = req.body;
+
+      if (
+        typeof reservationId !== "string" ||
+        typeof reason !== "string" ||
+        !reason.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Reservation ID and rejection reason are required",
+        });
+      }
+
+      const reservation =
+        await reservationService.rejectReservation(
+          req.user!.userId,
+          reservationId,
+          reason,
+        );
+
+      return res.status(200).json({
+        success: true,
+        message: "Reservation rejected successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+
+  // GET: Ø­Ø¬ÙˆØ²Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨.
+  async getMyReservations(req: Request, res: Response) {
+    try {
+      const reservations = await reservationService.getMyReservations(
+        req.user!.userId,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: reservations,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  // GET: Ø¬Ù…ÙŠØ¹ ØªØ³Ø¬ÙŠÙ„Ø§Øª Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+  async getInstituteReservations(req: Request, res: Response) {
+    try {
+      const reservations =
+        await reservationService.getInstituteReservations(
+          req.user!.userId,
+        );
+
+      return res.status(200).json({
+        success: true,
+        data: reservations,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  
+
+  // POST: Ø±ÙØ¹ Ø³Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ.
+  async uploadReceipt(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a receipt image",
+        });
+      }
+
+      const reservation = await reservationService.uploadReceipt(
+        req.user!.userId,
+        reservationId,
+        req.file.buffer,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Receipt uploaded successfully. Waiting for institute review.",
+        data: {
+          _id: reservation._id,
+          status: reservation.status,
+          paymentStatus: reservation.paymentStatus,
+          amountToPay: reservation.amountToPay,
+          amountPaid: reservation.amountPaid,
+          message: "Receipt submitted successfully and is awaiting review.",
+        },
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+
+  // GET: Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø±Ø§Ø¨Ø· Ù…Ø¤Ù‚Øª Ù„Ù„Ø³Ù†Ø¯ Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ©.
+async getReceiptUrl(req: Request, res: Response) {
+  try {
+    const reservationId = req.params.reservationId;
+
+    if (typeof reservationId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reservation ID",
+      });
+    }
+
+    const result = await reservationService.getReceiptAccessUrl(
+      req.user!.userId,
+      req.user!.role,
+      reservationId,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return this.handleError(res, error);
+  }
+}
+
+
+}
+
+export default new ReservationController();
+
+
+==================================================
+FILE: src/modules/reservations/routes/reservation.routes.ts
+==================================================
+
+import { Router } from "express";
+import authenticate, {
+  authorizeRoles,
+} from "../../../middlewares/auth.middleware";
+
+import { UserRole } from "../../users/user.model";
+import reservationController from "../controllers/reservation.controller";
+import upload from "../../../middlewares/upload.middleware";
+
+// =====================================================
+// Ù…Ø³Ø§Ø±Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨.
+// =====================================================
+export const studentReservationRouter = Router();
+
+studentReservationRouter.use(authenticate);
+studentReservationRouter.use(authorizeRoles(UserRole.STUDENT));
+
+// Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø¬Ø² Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ.
+studentReservationRouter.post("/", (req, res) =>
+  reservationController.createOnline(req, res),
+);
+
+// Ø¹Ø±Ø¶ Ø­Ø¬ÙˆØ²Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨.
+studentReservationRouter.get("/my", (req, res) =>
+  reservationController.getMyReservations(req, res),
+);
+
+// Ø±ÙØ¹ Ø³Ù†Ø¯ Ø§Ù„Ø¯ÙØ¹.
+studentReservationRouter.post(
+  "/:reservationId/receipt",
+  upload.single("receipt"),
+  (req, res) => reservationController.uploadReceipt(req, res),
+);
+
+// Ø¹Ø±Ø¶ Ø³Ù†Ø¯ Ø§Ù„Ø·Ø§Ù„Ø¨ Ø§Ù„Ø®Ø§Øµ Ø¨Ù‡ ÙÙ‚Ø·.
+studentReservationRouter.get(
+  "/:reservationId/receipt",
+  (req, res) => reservationController.getReceiptUrl(req, res),
+);
+
+// =====================================================
+// Ù…Ø³Ø§Ø±Ø§Øª ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+// =====================================================
+export const instituteReservationRouter = Router();
+
+instituteReservationRouter.use(authenticate);
+instituteReservationRouter.use(
+  authorizeRoles(UserRole.INSTITUTE_OWNER),
+);
+
+// ØªØ³Ø¬ÙŠÙ„ Ø·Ø§Ù„Ø¨ Ø­Ø¶ÙˆØ±ÙŠØ§Ù‹.
+instituteReservationRouter.post("/in-person", (req, res) =>
+  reservationController.createInPerson(req, res),
+);
+
+// Ø¹Ø±Ø¶ Ø­Ø¬ÙˆØ²Ø§Øª Ø§Ù„Ù…Ø¹Ù‡Ø¯.
+instituteReservationRouter.get("/", (req, res) =>
+  reservationController.getInstituteReservations(req, res),
+);
+
+// Ø¹Ø±Ø¶ Ø³Ù†Ø¯ Ø­Ø¬Ø² ØªØ§Ø¨Ø¹ Ù„Ù„Ù…Ø¹Ù‡Ø¯ ÙÙ‚Ø·.
+instituteReservationRouter.get(
+  "/:reservationId/receipt",
+  (req, res) => reservationController.getReceiptUrl(req, res),
+);
+
+// Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø³Ù†Ø¯.
+instituteReservationRouter.patch(
+  "/:reservationId/approve",
+  (req, res) => reservationController.approveReservation(req, res),
+);
+
+// Ø±ÙØ¶ Ø§Ù„Ø³Ù†Ø¯.
+instituteReservationRouter.patch(
+  "/:reservationId/reject",
+  (req, res) => reservationController.rejectReservation(req, res),
+);
+

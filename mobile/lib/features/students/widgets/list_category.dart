@@ -10,6 +10,7 @@ class ListCategory extends StatefulWidget {
     super.key,
     required this.categories,
     this.onCategorySelected,
+    this.selectedCategory,
     this.initialSelectedIndex = 0,
   });
 
@@ -17,6 +18,7 @@ class ListCategory extends StatefulWidget {
 
   // إرسال التصنيف المختار إلى الصفحة الأم
   final ValueChanged<String>? onCategorySelected;
+  final String? selectedCategory;
 
   // التصنيف المحدد افتراضيًا
   final int initialSelectedIndex;
@@ -34,10 +36,29 @@ class _ListCategoryState extends State<ListCategory> {
 
     selectedIndex = widget.categories.isEmpty
         ? -1
-        : widget.initialSelectedIndex.clamp(
-      0,
-      widget.categories.length - 1,
-    );
+        : _indexForSelectedCategory() ??
+            widget.initialSelectedIndex.clamp(0, widget.categories.length - 1);
+  }
+
+  @override
+  void didUpdateWidget(covariant ListCategory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.categories != widget.categories ||
+        oldWidget.selectedCategory != widget.selectedCategory) {
+      selectedIndex = widget.categories.isEmpty
+          ? -1
+          : _indexForSelectedCategory() ??
+              widget.initialSelectedIndex.clamp(
+                0,
+                widget.categories.length - 1,
+              );
+    }
+  }
+
+  int? _indexForSelectedCategory() {
+    if (widget.selectedCategory == null) return null;
+    final index = widget.categories.indexOf(widget.selectedCategory!);
+    return index < 0 ? null : index;
   }
 
   void _selectCategory(int index) {

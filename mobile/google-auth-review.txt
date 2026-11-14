@@ -1,0 +1,1397 @@
+﻿
+
+==================================================
+FILE: .\pubspec.yaml
+==================================================
+name: project_1
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.5+1
+  go_router: ^17.5.0
+  http: ^1.6.0
+  http_parser: ^4.1.2
+  image_picker: ^1.1.2
+  flutter_secure_storage: ^9.2.4
+  intl: ^0.20.2
+  google_sign_in: ^7.2.0
+  flutter_svg: ^2.3.0
+  google_fonts: ^8.2.1
+  another_flushbar: ^2.2.4
+  carousel_slider: ^5.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/images/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
+
+
+
+==================================================
+FILE: .\lib\main.dart
+==================================================
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'app/app.dart';
+
+import 'core/network/api_client.dart';
+import 'core/network/api_exception.dart';
+import 'core/network/token_storage_service.dart';
+import 'features/auth/controllers/auth_controller.dart';
+import 'features/auth/services/auth_service.dart';
+
+import 'features/courses/controllers/course_controller.dart';
+import 'features/courses/services/course_service.dart';
+
+import 'features/institutes/controllers/institute_controller.dart';
+import 'features/institutes/services/institute_service.dart';
+
+import 'features/enrollments/repositories/enrollment_repository.dart';
+import 'features/enrollments/repositories/mock_enrollment_repository.dart';
+import 'features/enrollments/services/enrollment_service.dart';
+import 'features/enrollments/controllers/enrollment_controller.dart';
+
+void _debugHealthCheck() async {
+  try {
+    final client = ApiClient(
+      tokenStorage: TokenStorageService(),
+      baseUrl: 'http://10.0.2.2:5000',
+    );
+    final payload = await client.get('/api/health');
+    print('[HEALTH DEBUG] GET /api/health -> OK status=200 payload=$payload');
+  } on ApiException catch (e) {
+    print('[HEALTH DEBUG] GET /api/health -> API_ERROR status=${e.statusCode} message=${e.message}');
+  } on SocketException catch (e) {
+    print('[HEALTH DEBUG] GET /api/health -> SOCKET_ERROR ${e.osError?.message}');
+  } on TimeoutException {
+    print('[HEALTH DEBUG] GET /api/health -> TIMEOUT (15s)');
+  } catch (e) {
+    print('[HEALTH DEBUG] GET /api/health -> ERROR $e');
+  }
+}
+
+void main() {
+  _debugHealthCheck();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<TokenStorageService>(create: (_) => TokenStorageService()),
+        Provider<ApiClient>(
+          create: (context) =>
+              ApiClient(tokenStorage: context.read<TokenStorageService>()),
+        ),
+        Provider<AuthService>(
+          create: (context) => AuthService(
+            apiClient: context.read<ApiClient>(),
+            tokenStorage: context.read<TokenStorageService>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            final controller = AuthController(context.read<AuthService>());
+            unawaited(controller.restoreSession());
+            return controller;
+          },
+        ),
+
+        // Courses
+        ChangeNotifierProvider(
+          create: (_) => CourseController(CourseService())..getCourses(),
+        ),
+
+        // Institutes
+        ChangeNotifierProvider(
+          create: (_) =>
+              InstituteController(InstituteService())..getInstitutes(),
+        ),
+
+        // Enrollment Repository
+        Provider<EnrollmentRepository>(
+          create: (_) => MockEnrollmentRepository(),
+        ),
+
+        // Enrollment Service
+        Provider<EnrollmentService>(
+          create: (context) => EnrollmentService(
+            repository: context.read<EnrollmentRepository>(),
+          ),
+        ),
+
+        // Enrollment Controller
+        ChangeNotifierProvider(
+          create: (context) => EnrollmentController(
+            context.read<EnrollmentService>(),
+            context.read<EnrollmentRepository>(),
+            context.read<CourseController>(),
+          ),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\core\mock_data\auth_data.dart
+==================================================
+class MockAuthAccount {
+  final String userId;
+  final String email;
+  final String password;
+
+  const MockAuthAccount({
+    required this.userId,
+    required this.email,
+    required this.password,
+  });
+}
+
+final List<MockAuthAccount> mockAuthAccounts = [
+  const MockAuthAccount(
+    userId: 'user1',
+    email: 'john@example.com',
+    password: 'password123',
+  ),
+  const MockAuthAccount(
+    userId: 'user2',
+    email: 'jane@example.com',
+    password: 'password456',
+  ),
+  const MockAuthAccount(
+    userId: 'user3',
+    email: 'bob@example.com',
+    password: 'password789',
+  ),
+];
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\core\network\api_client.dart
+==================================================
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import 'api_exception.dart';
+import 'token_storage_service.dart';
+
+class ApiClient {
+  ApiClient({
+    required TokenStorageService tokenStorage,
+    http.Client? client,
+    String? baseUrl,
+    this.timeout = const Duration(seconds: 15),
+  }) : _tokenStorage = tokenStorage,
+       _client = client ?? http.Client(),
+       _baseUrl =
+           (baseUrl ??
+                   const String.fromEnvironment(
+                     'API_BASE_URL',
+                     defaultValue: 'http://127.0.0.1:5000',
+                   ))
+               .replaceFirst(RegExp(r'/+$'), '');
+
+  final TokenStorageService _tokenStorage;
+  final http.Client _client;
+  final String _baseUrl;
+  final Duration timeout;
+
+  Future<Map<String, dynamic>> get(String path, {bool authenticated = false}) =>
+      _send('GET', path, authenticated: authenticated);
+
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, dynamic>? body,
+    bool authenticated = false,
+  }) => _send('POST', path, body: body, authenticated: authenticated);
+
+  Future<Map<String, dynamic>> _send(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    required bool authenticated,
+  }) async {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (authenticated) {
+      final token = await _tokenStorage.readToken();
+      if (token == null || token.isEmpty) {
+        throw const ApiException('Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©ØŒ ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§');
+      }
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    final request = http.Request(method, Uri.parse('$_baseUrl$path'))
+      ..headers.addAll(headers);
+    if (body != null) request.body = jsonEncode(body);
+
+    try {
+      final streamed = await _client.send(request).timeout(timeout);
+      final response = await http.Response.fromStream(
+        streamed,
+      ).timeout(timeout);
+      return _parseResponse(response);
+    } on TimeoutException {
+      throw const ApiException(
+        'Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…. ØªØ­Ù‚Ù‚ Ù…Ù† Ø§ØªØµØ§Ù„Ùƒ ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§',
+      );
+    } on SocketException {
+      throw const ApiException(
+        'ØªØ¹Ø°Ø± Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª Ø£Ùˆ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…. ØªØ­Ù‚Ù‚ Ù…Ù† Ø§ØªØµØ§Ù„Ùƒ ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'ØªØ¹Ø°Ø± Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…. ØªØ­Ù‚Ù‚ Ù…Ù† Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø®Ø¯Ù…Ø© ÙˆØ§ØªØµØ§Ù„Ùƒ Ø¨Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª',
+      );
+    } on FormatException {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ø®Ø§Ø¯Ù… ØºÙŠØ± ØµØ§Ù„Ø­Ø©');
+    }
+  }
+
+  Map<String, dynamic> _parseResponse(http.Response response) {
+    final Object? decoded;
+    try {
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } on FormatException {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ø®Ø§Ø¯Ù… ØºÙŠØ± ØµØ§Ù„Ø­Ø©');
+    }
+
+    final payload = decoded is Map<String, dynamic> ? decoded : null;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final serverMessage = payload?['message'];
+      throw ApiException(
+        _errorMessage(response.statusCode, serverMessage),
+        statusCode: response.statusCode,
+      );
+    }
+
+    if (payload == null) {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ø®Ø§Ø¯Ù… ØºÙŠØ± ØµØ§Ù„Ø­Ø©');
+    }
+    if (payload['success'] == false) {
+      throw ApiException(
+        _errorMessage(response.statusCode, payload['message']),
+        statusCode: response.statusCode,
+      );
+    }
+    return payload;
+  }
+
+  String _errorMessage(int statusCode, Object? serverMessage) {
+    final message = serverMessage is String ? serverMessage : '';
+    if (statusCode == 401) {
+      if (message == 'Invalid email or password') {
+        return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± ØµØ­ÙŠØ­Ø©';
+      }
+      return 'Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø© Ø£Ùˆ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯Ø®ÙˆÙ„ ØºÙŠØ± ØµØ­ÙŠØ­Ø©';
+    }
+    if (statusCode == 403) {
+      if (message.contains('not active')) {
+        return 'Ø§Ù„Ø­Ø³Ø§Ø¨ ØºÙŠØ± Ù†Ø´Ø·. ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†ØµØ©';
+      }
+      if (message.contains('Google login is only available')) {
+        return 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google Ù…ØªØ§Ø­ Ù„Ø­Ø³Ø§Ø¨Ø§Øª Ø§Ù„Ø·Ù„Ø§Ø¨ ÙÙ‚Ø·';
+      }
+      return 'Ù„ÙŠØ³ Ù„Ø¯ÙŠÙƒ ØµÙ„Ø§Ø­ÙŠØ© ØªÙ†ÙÙŠØ° Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡';
+    }
+    if (statusCode == 409 || message == 'Email is already registered') {
+      return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ù…Ø³Ø¬Ù„ Ù…Ø³Ø¨Ù‚Ù‹Ø§';
+    }
+    if (statusCode == 400) {
+      if (message == 'Email is already registered') {
+        return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ù…Ø³Ø¬Ù„ Ù…Ø³Ø¨Ù‚Ù‹Ø§';
+      }
+      if (message == 'Invalid email or password') {
+        return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± ØµØ­ÙŠØ­Ø©';
+      }
+      if (message == 'Google ID Token is required' ||
+          message == 'Invalid Google account') {
+        return 'ØªØ¹Ø°Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø­Ø³Ø§Ø¨ Google. Ø­Ø§ÙˆÙ„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰';
+      }
+      if (message == 'This email is linked to another Google account') {
+        return 'Ù‡Ø°Ø§ Ø§Ù„Ø¨Ø±ÙŠØ¯ Ù…Ø±ØªØ¨Ø· Ø¨Ø­Ø³Ø§Ø¨ Google Ø¢Ø®Ø±';
+      }
+      return 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø¯Ø®Ù„Ø© ØºÙŠØ± ØµØ­ÙŠØ­Ø©. ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡Ø§ ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§';
+    }
+    if (statusCode >= 500) {
+      return 'Ø­Ø¯Ø« Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ø®Ø§Ø¯Ù…. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ù„Ø§Ø­Ù‚Ù‹Ø§';
+    }
+    return 'ØªØ¹Ø°Ø± Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰';
+  }
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\auth\controllers\auth_controller.dart
+==================================================
+import 'package:flutter/foundation.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
+
+class AuthController extends ChangeNotifier {
+  AuthController(this._authService);
+
+  final AuthService _authService;
+
+  UserModel? _currentUser;
+  bool _isLoading = false;
+  bool _isInitializing = true;
+  String? _errorMessage;
+
+  UserModel? get currentUser => _currentUser;
+  bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
+  String? get errorMessage => _errorMessage;
+
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+  }) => _runAuthentication(
+    () => _authService.register(name: name, email: email, password: password),
+  );
+
+  Future<bool> login({required String email, required String password}) =>
+      _runAuthentication(
+        () => _authService.login(email: email, password: password),
+      );
+
+  Future<bool> loginWithGoogle() =>
+      _runAuthentication(_authService.loginWithGoogle);
+
+  Future<void> restoreSession() async {
+    _isInitializing = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await _authService.restoreSession();
+    } on ApiException catch (error) {
+      _currentUser = null;
+      _errorMessage = error.message;
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        try {
+          await _authService.logout();
+        } on ApiException catch (storageError) {
+          _errorMessage = '${error.message}. ${storageError.message}';
+        }
+      }
+    } catch (error) {
+      _currentUser = null;
+      _errorMessage = 'ØªØ¹Ø°Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¬Ù„Ø³Ø©: $error';
+    } finally {
+      _isInitializing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> logout() async {
+    _currentUser = null;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.logout();
+    } catch (error) {
+      _errorMessage = 'ØªØ¹Ø°Ø± Ø­Ø°Ù Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¬Ù„Ø³Ø© Ù…Ù† Ø§Ù„Ø¬Ù‡Ø§Ø²: $error';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<bool> _runAuthentication(
+    Future<UserModel> Function() authenticate,
+  ) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await authenticate();
+      return true;
+    } catch (error) {
+      _errorMessage = error is ApiException
+          ? error.message
+          : 'ØªØ¹Ø°Ø± Ø¥ÙƒÙ…Ø§Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\auth\screens\login_screen.dart
+==================================================
+import 'package:flutter/material.dart';
+import 'package:project_1/features/auth/widgets/form_login.dart';
+import 'package:project_1/features/auth/widgets/top_header.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:another_flushbar/flushbar.dart';
+
+import '../controllers/auth_controller.dart';
+import '../models/user_model.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  Future<void> _login({required String email, required String password}) async {
+    final authController = context.read<AuthController>();
+
+    final success = await authController.login(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      final user = authController.currentUser;
+
+      if (user == null) return;
+
+      _completeLogin(user);
+    } else {
+      _showMessage(
+        authController.errorMessage ??
+            'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± ØµØ­ÙŠØ­Ø©',
+        isSuccess: false,
+      );
+    }
+  }
+
+  Future<void> _googleLogin() async {
+    final authController = context.read<AuthController>();
+    final success = await authController.loginWithGoogle();
+    if (!mounted) return;
+
+    final user = authController.currentUser;
+    if (success && user != null) {
+      _completeLogin(user);
+    } else {
+      _showMessage(
+        authController.errorMessage ?? 'ØªØ¹Ø°Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Google',
+        isSuccess: false,
+      );
+    }
+  }
+
+  void _completeLogin(UserModel user) {
+    final destination = switch (user.role) {
+      UserRole.student => '/home_screen',
+      UserRole.instituteOwner => '/institute_dashboard',
+      UserRole.admin => '/admin_dashboard',
+    };
+    context.go(destination);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showMessage('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù†Ø¬Ø§Ø­ØŒ Ø£Ù‡Ù„Ø§Ù‹ ${user.name}!');
+      }
+    });
+  }
+
+  void _showMessage(String message, {bool isSuccess = true}) {
+    Flushbar(
+      message: message,
+      icon: Icon(
+        isSuccess ? Icons.check_circle : Icons.error_outline,
+        color: Colors.white,
+      ),
+      backgroundColor: isSuccess ? Colors.green : Colors.red.shade700,
+      duration: const Duration(seconds: 3),
+      borderRadius: BorderRadius.circular(12),
+      margin: const EdgeInsets.all(16),
+      flushbarPosition: FlushbarPosition.TOP,
+    ).show(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TopHeader(title: 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„', subTitle: 'Ø³Ø¬Ù„ Ø¯Ø®ÙˆÙ„Ùƒ Ù„Ù„Ù…ØªØ§Ø¨Ø¹Ø©'),
+              FormLogin(login: _login, googleLogin: _googleLogin),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\auth\services\auth_service.dart
+==================================================
+import 'package:google_sign_in/google_sign_in.dart';
+
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/token_storage_service.dart';
+import '../models/user_model.dart';
+
+class AuthService {
+  AuthService({
+    ApiClient? apiClient,
+    TokenStorageService? tokenStorage,
+    GoogleSignIn? googleSignIn,
+    String? googleServerClientId,
+  }) : this._(
+         apiClient,
+         tokenStorage ?? TokenStorageService(),
+         googleSignIn ?? GoogleSignIn.instance,
+         googleServerClientId ??
+             const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
+       );
+
+  AuthService._(
+    ApiClient? apiClient,
+    TokenStorageService tokenStorage,
+    this._googleSignIn,
+    this._googleServerClientId,
+  ) : _tokenStorage = tokenStorage,
+      _apiClient = apiClient ?? ApiClient(tokenStorage: tokenStorage);
+
+  static const _registerPath = '/api/auth/register';
+  static const _loginPath = '/api/auth/login';
+  static const _googlePath = '/api/auth/google';
+  static const _mePath = '/api/auth/me';
+
+  final ApiClient _apiClient;
+  final TokenStorageService _tokenStorage;
+  final GoogleSignIn _googleSignIn;
+  final String _googleServerClientId;
+  bool _googleInitialized = false;
+
+  Future<UserModel> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    final response = await _apiClient.post(
+      _registerPath,
+      body: {
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      },
+    );
+    return _saveAuthenticatedResponse(response);
+  }
+
+  Future<UserModel> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _apiClient.post(
+      _loginPath,
+      body: {'email': email.trim().toLowerCase(), 'password': password},
+    );
+    return _saveAuthenticatedResponse(response);
+  }
+
+  Future<UserModel> loginWithGoogle() async {
+    if (_googleServerClientId.isEmpty) {
+      throw const ApiException(
+        'Ø¥Ø¹Ø¯Ø§Ø¯ Google ØºÙŠØ± Ù…ÙƒØªÙ…Ù„. Ø£Ø¶Ù Google Web Client ID Ø¹Ø¨Ø± '
+        '--dart-define=GOOGLE_SERVER_CLIENT_ID',
+      );
+    }
+
+    if (!_googleInitialized) {
+      try {
+        await _googleSignIn.initialize(serverClientId: _googleServerClientId);
+        _googleInitialized = true;
+      } on GoogleSignInException {
+        throw const ApiException(
+          'ØªØ¹Ø°Ø± ØªÙ‡ÙŠØ¦Ø© Google Sign-In. ØªØ­Ù‚Ù‚ Ù…Ù† Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª OAuth Ø§Ù„Ø®Ø§ØµØ© Ø¨Ø§Ù„ØªØ·Ø¨ÙŠÙ‚',
+        );
+      }
+    }
+
+    if (!_googleSignIn.supportsAuthenticate()) {
+      throw const ApiException(
+        'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ… Ø¹Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù‡Ø§Ø²',
+      );
+    }
+
+    final GoogleSignInAccount account;
+    try {
+      account = await _googleSignIn.authenticate();
+    } on GoogleSignInException catch (error) {
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        throw const ApiException('ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google');
+      }
+      throw const ApiException(
+        'ØªØ¹Ø°Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google. ØªØ­Ù‚Ù‚ Ù…Ù† Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª OAuth ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§',
+      );
+    }
+    final idToken = account.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw const ApiException(
+        'ØªØ¹Ø°Ø± Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø±Ù…Ø² Google. ØªØ­Ù‚Ù‚ Ù…Ù† Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª OAuth ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§',
+      );
+    }
+
+    final response = await _apiClient.post(
+      _googlePath,
+      body: {'idToken': idToken},
+    );
+    return _saveAuthenticatedResponse(response);
+  }
+
+  Future<UserModel?> restoreSession() async {
+    final String? token;
+    try {
+      token = await _tokenStorage.readToken();
+    } catch (_) {
+      throw const ApiException('ØªØ¹Ø°Ø± Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø¬Ù„Ø³Ø© Ø§Ù„Ø¢Ù…Ù†Ø© Ù…Ù† Ø§Ù„Ø¬Ù‡Ø§Ø²');
+    }
+    if (token == null || token.isEmpty) return null;
+
+    final response = await _apiClient.get(_mePath, authenticated: true);
+    final userJson = response['user'];
+    if (userJson is! Map<String, dynamic>) {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø­Ø§Ù„ÙŠ ØºÙŠØ± ØµØ§Ù„Ø­Ø©');
+    }
+    return UserModel.fromJson(userJson);
+  }
+
+  Future<void> logout() async {
+    try {
+      await _tokenStorage.deleteToken();
+    } catch (_) {
+      throw const ApiException('ØªØ¹Ø°Ø± Ø­Ø°Ù Ø±Ù…Ø² Ø§Ù„Ø¬Ù„Ø³Ø© Ù…Ù† Ø§Ù„ØªØ®Ø²ÙŠÙ† Ø§Ù„Ø¢Ù…Ù†');
+    }
+  }
+
+  Future<UserModel> _saveAuthenticatedResponse(
+    Map<String, dynamic> response,
+  ) async {
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©');
+    }
+    final userJson = data['user'];
+    final token = data['token'];
+    if (userJson is! Map<String, dynamic> ||
+        token is! String ||
+        token.isEmpty) {
+      throw const ApiException('Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© Ù„Ø§ ØªØ­ØªÙˆÙŠ Ø¨ÙŠØ§Ù†Ø§Øª Ø¬Ù„Ø³Ø© ØµØ§Ù„Ø­Ø©');
+    }
+
+    final user = UserModel.fromJson(userJson);
+    try {
+      await _tokenStorage.saveToken(token);
+    } catch (_) {
+      throw const ApiException('ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨ØµÙˆØ±Ø© Ø¢Ù…Ù†Ø©');
+    }
+    return user;
+  }
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\auth\widgets\form_login.dart
+==================================================
+import 'package:another_flushbar/flushbar.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/text_filed_form.dart';
+import '../../../core/widgets/button.dart';
+
+class FormLogin extends StatefulWidget {
+  const FormLogin({super.key, required this.login, required this.googleLogin});
+
+  final Future<void> Function({required String email, required String password})
+  login;
+  final Future<void> Function() googleLogin;
+
+  @override
+  State<FormLogin> createState() => _FormLoginState();
+}
+
+class _FormLoginState extends State<FormLogin> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
+
+  // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await widget.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      _showMessage(
+        message: 'ØªØ¹Ø°Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ØŒ ØªØ­Ù‚Ù‚ Ù…Ù† Ø¨ÙŠØ§Ù†Ø§ØªÙƒ ÙˆØ­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ø§Ù‹',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Ø¥Ø¸Ù‡Ø§Ø± ÙˆØ¥Ø®ÙØ§Ø¡ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±
+  void _togglePasswordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
+    });
+  }
+
+  // Ø§Ù„Ø±Ø³Ø§Ø¦Ù„
+  void _showMessage({required String message, bool isError = false}) {
+    Flushbar(
+      message: message,
+      icon: Icon(
+        isError ? Icons.error_outline : Icons.info_outline,
+        color: Colors.white,
+      ),
+      backgroundColor: isError ? AppColors.error : AppColors.accent,
+      duration: const Duration(seconds: 3),
+      borderRadius: BorderRadius.circular(12),
+      margin: const EdgeInsets.all(16),
+      flushbarPosition: FlushbarPosition.TOP,
+    ).show(context);
+  }
+
+  // Ù†Ø³ÙŠØª ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±
+  void _handleForgotPassword() {
+    _showMessage(message: 'Ø³ÙŠØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ø³ØªØ¹Ø§Ø¯Ø© ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ù‚Ø±ÙŠØ¨Ø§Ù‹');
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.googleLogin();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(message: error.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Ø§Ù„Ø§Ù†ØªÙ‚Ø§Ù„ Ø¥Ù„Ù‰ Ø§Ù„ØªØ³Ø¬ÙŠÙ„
+  void _goToRegister() {
+    context.go('/register');
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: const Offset(0, -35),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.screenHorizontal,
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.15),
+                blurRadius: 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ
+                CustomTextFiledForm(
+                  hinText: 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ',
+                  icon: Icons.email_outlined,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ù…Ø·Ù„ÙˆØ¨';
+                    }
+
+                    if (!RegExp(
+                      r'^[^@]+@[^@]+\.[^@]+$',
+                    ).hasMatch(value.trim())) {
+                      return 'Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ ØºÙŠØ± ØµØ­ÙŠØ­';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: AppSpacing.sm),
+
+                // ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±
+                Stack(
+                  children: [
+                    CustomTextFiledForm(
+                      hinText: 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±',
+                      icon: Icons.key_outlined,
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ù…Ø·Ù„ÙˆØ¨Ø©';
+                        }
+
+                        if (value.length < 8) {
+                          return 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† 8 Ø£Ø­Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    Positioned(
+                      top: 10,
+                      left: 4,
+                      child: InkWell(
+                        onTap: _togglePasswordVisibility,
+                        child: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppSpacing.xs),
+
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _handleForgotPassword,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Ù†Ø³ÙŠØª ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±ØŸ',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.xs),
+
+                // Ø²Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„
+                Button(
+                  text: 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„',
+                  onTap: _isLoading ? null : _handleLogin,
+                  isLoading: _isLoading,
+                  height: 48,
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Ø§Ù„ÙØ§ØµÙ„
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Divider(color: AppColors.border, thickness: 1),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        'Ø£Ùˆ',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+
+                    const Expanded(
+                      child: Divider(color: AppColors.border, thickness: 1),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _handleGoogleLogin,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppColors.surface,
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/images/google_logo.svg',
+                          width: 24,
+                          height: 24,
+                        ),
+
+                        const SizedBox(width: AppSpacing.sm),
+
+                        Text(
+                          'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¹Ø¨Ø± Google',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Ø§Ù„Ø§Ù†ØªÙ‚Ø§Ù„ Ø¥Ù„Ù‰ Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø³Ø§Ø¨
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Ù„ÙŠØ³ Ù„Ø¯ÙŠÙƒ Ø­Ø³Ø§Ø¨ØŸ ',
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _goToRegister,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          'Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø³Ø§Ø¨',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\enrollments\repositories\enrollment_repository.dart
+==================================================
+
+import '../models/enrollment_model.dart';
+import '../models/payment_model.dart';
+
+abstract class EnrollmentRepository {
+  // Fetch enrollments.
+  Future<List<EnrollmentModel>> getStudentEnrollments(
+    String studentId,
+  );
+
+  Future<List<EnrollmentModel>> getInstituteEnrollments(
+    String instituteId,
+  );
+
+  Future<EnrollmentModel?> getEnrollmentById(
+    String enrollmentId,
+  );
+
+  // Fetch payment attempts.
+  Future<List<PaymentModel>> getEnrollmentPayments(
+    String enrollmentId,
+  );
+
+  // Create enrollment with its first payment.
+  Future<EnrollmentModel> createEnrollment({
+    required EnrollmentModel enrollment,
+    required PaymentModel payment,
+    required int courseCapacity,
+    required int currentEnrolled,
+  });
+
+  // Update enrollment.
+  Future<void> updateEnrollment(EnrollmentModel enrollment);
+
+  // Update an existing payment.
+  Future<void> updatePayment(PaymentModel payment);
+
+  // Add a new payment attempt.
+  Future<void> addPayment(PaymentModel payment);
+
+  // Expire all overdue active enrollments.
+  Future<List<EnrollmentModel>> expireOverdueEnrollments();
+
+  Future<List<EnrollmentModel>> getCourseEnrollments(
+  String courseId,
+);
+}
+
+
+
+==================================================
+FILE: E:\Real_My_Apps\institute_registration_app\mobile\lib\features\enrollments\repositories\mock_enrollment_repository.dart
+==================================================
+import '../models/enrollment_model.dart';
+import '../models/payment_model.dart';
+import 'enrollment_repository.dart';
+
+class MockEnrollmentRepository implements EnrollmentRepository {
+  final List<EnrollmentModel> _enrollments = [];
+  final List<PaymentModel> _payments = [];
+  final Map<String, int> _initialEnrolledByCourse = {};
+
+  // Check whether an enrollment currently occupies a seat.
+  bool _occupiesSeat(EnrollmentModel enrollment, DateTime now) {
+    switch (enrollment.status) {
+      case EnrollmentStatus.confirmed:
+        return true;
+
+      case EnrollmentStatus.pendingReview:
+      case EnrollmentStatus.rejected:
+        return enrollment.expiresAt.isAfter(now);
+
+      case EnrollmentStatus.expired:
+      case EnrollmentStatus.cancelled:
+        return false;
+    }
+  }
+
+  @override
+  Future<List<EnrollmentModel>> getStudentEnrollments(String studentId) async {
+    return _enrollments.where((item) => item.studentId == studentId).toList();
+  }
+
+  @override
+  Future<List<EnrollmentModel>> getInstituteEnrollments(
+    String instituteId,
+  ) async {
+    return _enrollments
+        .where((item) => item.instituteId == instituteId)
+        .toList();
+  }
+
+  // Get all enrollments for a specific course.
+  @override
+  Future<List<EnrollmentModel>> getCourseEnrollments(String courseId) async {
+    return _enrollments.where((item) => item.courseId == courseId).toList();
+  }
+
+  @override
+  Future<EnrollmentModel?> getEnrollmentById(String enrollmentId) async {
+    try {
+      return _enrollments.firstWhere((item) => item.id == enrollmentId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<List<PaymentModel>> getEnrollmentPayments(String enrollmentId) async {
+    return _payments
+        .where((item) => item.enrollmentId == enrollmentId)
+        .toList();
+  }
+
+  @override
+  Future<EnrollmentModel> createEnrollment({
+    required EnrollmentModel enrollment,
+    required PaymentModel payment,
+    required int courseCapacity,
+    required int currentEnrolled,
+  }) async {
+    final now = DateTime.now();
+
+    // Validate capacity values.
+    if (courseCapacity <= 0 ||
+        currentEnrolled < 0 ||
+        currentEnrolled > courseCapacity) {
+      throw Exception('Ø¨ÙŠØ§Ù†Ø§Øª Ø³Ø¹Ø© Ø§Ù„Ø¯ÙˆØ±Ø© ØºÙŠØ± ØµØ­ÙŠØ­Ø©');
+    }
+
+    // Prevent duplicate active bookings.
+    final alreadyExists = _enrollments.any(
+      (item) =>
+          item.studentId == enrollment.studentId &&
+          item.courseId == enrollment.courseId &&
+          _occupiesSeat(item, now),
+    );
+
+    if (alreadyExists) {
+      throw Exception('Ù„Ø¯ÙŠÙƒ Ø·Ù„Ø¨ Ø­Ø¬Ø² Ø³Ø§Ø¨Ù‚ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø¯ÙˆØ±Ø©');
+    }
+
+    // Keep the mock repository's baseline separate from enrollment counts.
+    final initialEnrolled = _initialEnrolledByCourse.putIfAbsent(
+      enrollment.courseId,
+      () =>
+          currentEnrolled -
+          _enrollments
+              .where(
+                (item) =>
+                    item.courseId == enrollment.courseId &&
+                    item.status == EnrollmentStatus.confirmed,
+              )
+              .length,
+    );
+    if (initialEnrolled < 0 || initialEnrolled > courseCapacity) {
+      throw Exception('Ø¨ÙŠØ§Ù†Ø§Øª Ø³Ø¹Ø© Ø§Ù„Ø¯ÙˆØ±Ø© ØºÙŠØ± ØµØ­ÙŠØ­Ø©');
+    }
+
+    final totalOccupiedSeats =
+        initialEnrolled +
+        _enrollments
+            .where(
+              (item) =>
+                  item.courseId == enrollment.courseId &&
+                  _occupiesSeat(item, now),
+            )
+            .length;
+
+    if (totalOccupiedSeats >= courseCapacity) {
+      throw Exception('Ø¹Ø°Ø±Ø§Ù‹ØŒ Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ù‚Ø§Ø¹Ø¯ Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹');
+    }
+
+    // Validate payment relationship.
+    if (payment.enrollmentId != enrollment.id ||
+        payment.id != enrollment.currentPaymentId) {
+      throw Exception('Ø¨ÙŠØ§Ù†Ø§Øª Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¯ÙØ¹ ØºÙŠØ± Ù…ØªØ·Ø§Ø¨Ù‚Ø©');
+    }
+
+    // Save enrollment and its first payment.
+    _enrollments.add(enrollment);
+    _payments.add(payment);
+
+    return enrollment;
+  }
+
+  @override
+  Future<void> updateEnrollment(EnrollmentModel enrollment) async {
+    final index = _enrollments.indexWhere((item) => item.id == enrollment.id);
+
+    if (index == -1) {
+      throw Exception('Ø§Ù„Ø­Ø¬Ø² ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯');
+    }
+
+    _enrollments[index] = enrollment;
+  }
+
+  @override
+  Future<void> updatePayment(PaymentModel payment) async {
+    final index = _payments.indexWhere((item) => item.id == payment.id);
+
+    if (index == -1) {
+      throw Exception('Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¯ÙØ¹ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©');
+    }
+
+    _payments[index] = payment;
+  }
+
+  @override
+  Future<void> addPayment(PaymentModel payment) async {
+    final alreadyExists = _payments.any((item) => item.id == payment.id);
+
+    if (alreadyExists) {
+      throw Exception('Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¯ÙØ¹ Ù…ÙˆØ¬ÙˆØ¯Ø© Ù…Ø³Ø¨Ù‚Ø§Ù‹');
+    }
+
+    _payments.add(payment);
+  }
+
+  @override
+  Future<List<EnrollmentModel>> expireOverdueEnrollments() async {
+    final now = DateTime.now();
+    final expiredEnrollments = <EnrollmentModel>[];
+
+    for (var i = 0; i < _enrollments.length; i++) {
+      final enrollment = _enrollments[i];
+
+      final canExpire =
+          enrollment.status == EnrollmentStatus.pendingReview ||
+          enrollment.status == EnrollmentStatus.rejected;
+
+      if (canExpire && !enrollment.expiresAt.isAfter(now)) {
+        final expiredEnrollment = enrollment.copyWith(
+          status: EnrollmentStatus.expired,
+        );
+
+        _enrollments[i] = expiredEnrollment;
+        expiredEnrollments.add(expiredEnrollment);
+      }
+    }
+
+    return expiredEnrollments;
+  }
+}
+

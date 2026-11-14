@@ -1,0 +1,113 @@
+// تسجيل دخول 
+ADMIN
+http://localhost:5000/api/auth/login
+
+{
+  "email": "admin@tadreeb.com",
+  "password": "كلمة المرور الموجودة في ADMIN_PASSWORD داخل .env"
+}
+
+token 
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWYzMGU1YjFhMDI3ZTVhNTAyMzg2MmMiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3OTQzMTQwMjcsImV4cCI6MTc5NDkxODgyN30.yHXbLQMLcgp5ZOdPpt4mXgqREUJbPV6a8T1SSoHasKQ
+
+// Create Institute
+
+http://localhost:5000/api/admin/institutes
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWYzMGU1YjFhMDI3ZTVhNTAyMzg2MmMiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3OTQzMTQwMjcsImV4cCI6MTc5NDkxODgyN30.yHXbLQMLcgp5ZOdPpt4mXgqREUJbPV6a8T1SSoHasKQ
+{
+  "institute": {
+    "name": "معهد المستقبل للتدريب",
+    "description": "معهد متخصص في الدورات التقنية",
+    "phone": "777123456",
+    "email": "future@example.com",
+    "address": "المكلا - حضرموت"
+  },
+  "owner": {
+    "name": "أحمد محمد",
+    "email": "ahmed@example.com",
+    "phone": "777654321",
+    "password": "Test@123456"
+  }
+}
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWYzMTM4OTk5ZmM3OGM5YTI1MmZmZTIiLCJyb2xlIjoiaW5zdGl0dXRlT3duZXIiLCJpYXQiOjE3OTQzMTU4ODEsImV4cCI6MTc5NDkyMDY4MX0.vm9SRLUPTp6HsRYsAMtf7g7u0UAy_TKBak-xSRNX-Uc
+
+
+
+// Create Student
+
+http://localhost:5000/api/auth/register
+
+{
+  "name": "طالب اختبار انتهاء الحجز",
+  "email": "expiry-test@tadreeb.com",
+  "password": "Test@123456",
+  "phone": "777999111"
+}
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWYzMTQ0Nzk5ZmM3OGM5YTI1MmZmZTYiLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc5NDMxNTMzNiwiZXhwIjoxNzk0OTIwMTM2fQ.WWJsGaxrnzReFWuyoPsbvSLQJE6WCmzRIHBfEmbtvrk
+
+{
+  "name": "سالمين سعيد",
+  "email": "salmeen@tadreeb.com",
+  "password": "Test@123456",
+  "phone": "777999111"
+}
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWYzMzY3NjI0NDVhNDZlOTRlNDExYTciLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc5NDMyNDA4NiwiZXhwIjoxNzk0OTI4ODg2fQ.zwQjai7nntz4AdCNc8BQrQSQ6XApMMjCaiEwPcRSwFo
+
+
+
+// Create Course
+
+http://localhost:5000/api/institutes/me/courses
+
+Authorization: Bearer OWNER_TOKEN
+Content-Type: application/json
+
+{
+  "title": "دورة تطوير تطبيقات Flutter",
+  "description": "دورة تدريبية عملية لتعلم تطوير تطبيقات الهاتف باستخدام Flutter وDart من الصفر حتى بناء تطبيق متكامل.",
+  "category": "البرمجة",
+  "price": 200,
+  "depositAmount": 50,
+  "capacity": 10,
+  "startDate": "2026-12-15T09:00:00.000Z",
+  "endDate": "2026-12-25T15:00:00.000Z",
+  "location": "المكلا - حضرموت"
+}
+
+
+
+// Create Reservration
+
+http://localhost:5000/api/reservations
+
+Authorization → Bearer STUDENT_TOKEN
+
+{
+  "courseId": "COURSE_ID",
+  "paymentOption": "deposit"
+}
+
+6af3188a99fc78c9a252ffe8
+
+
+// upload Receipt
+
+http://localhost:5000/api/reservations/RESERVATION_ID/receipt
+
+Authorization → Bearer STUDENT_TOKEN
+
+اختر Form.
+أضف المفتاح receipt.
+
+غيّر نوع الحقل إلى File.
+
+اختر صورة سند JPG حقيقية.
+
+// Show Receipt
+
+http://localhost:5000/api/reservations/RESERVATION_ID/receipt
+
+Authorization → Bearer STUDENT_TOKEN

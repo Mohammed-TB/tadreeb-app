@@ -8,11 +8,10 @@ class AuthController {
   async register(req: Request, res: Response): Promise<void> {
     try {
       const result = await authService.registerStudent(req.body);
-
       res.status(201).json({
         success: true,
         message: "Student registered successfully",
-        data: result,
+        data: result, // return user,token 
       });
     } catch (error) {
       const message =
@@ -44,7 +43,7 @@ class AuthController {
 
       const statusCode =
         message === "Invalid email or password" ? 401 : 400;
-
+      // statusCode =  401 or 400
       res.status(statusCode).json({
         success: false,
         message,

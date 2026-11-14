@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import app from "./app";
 import connectDatabase from "./config/database";
+import { startReservationExpirationJob } from "./jobs/reservation-expiration.job";
 
 // تحميل متغيرات البيئة من ملف .env.
 dotenv.config();
@@ -12,6 +13,8 @@ const PORT = process.env.PORT || 5000;
 const startServer = async (): Promise<void> => {
   try {
     await connectDatabase();
+// تشغيل الفحص الدوري بعد نجاح الاتصال بقاعدة البيانات.
+startReservationExpirationJob();
 
     app.listen(PORT, () => {
       console.log(`Tadreeb API running at http://localhost:${PORT}`);
@@ -23,3 +26,4 @@ const startServer = async (): Promise<void> => {
 };
 
 startServer();
+

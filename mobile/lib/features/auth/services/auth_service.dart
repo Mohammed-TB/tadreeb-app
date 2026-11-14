@@ -11,14 +11,17 @@ class AuthService {
     TokenStorageService? tokenStorage,
     GoogleSignIn? googleSignIn,
     String? googleServerClientId,
-  }) : this._(
+  }) : 
+  // Constructor Redirection.
+  // ?? Null Coalescing Operator. Example : إذا مررت قيمة tokenStorage  استخدمها اذا لا انشئ TokenStorageService
+  this._(
          apiClient,
          tokenStorage ?? TokenStorageService(),
          googleSignIn ?? GoogleSignIn.instance,
          googleServerClientId ??
              const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
        );
-
+  
   AuthService._(
     ApiClient? apiClient,
     TokenStorageService tokenStorage,

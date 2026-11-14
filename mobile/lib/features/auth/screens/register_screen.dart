@@ -110,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     top: 20,
                     right: 20,
                     child: InkWell(
-                      onTap: () => context.pop(),
+                      onTap: () => context.go('/login'),
                       child: Container(
                         width: 30,
                         height: 30,

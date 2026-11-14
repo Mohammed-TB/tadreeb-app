@@ -1,106 +1,205 @@
 
-class CourseModel {
-  // معلومات الدورة
-  final String id;
-  final String instituteID;
+enum CourseStatus {
+  draft,
+  published,
+  closed,
+  completed;
 
-  final String name;
+  static CourseStatus fromJson(dynamic value) {
+    return CourseStatus.values.firstWhere(
+      (status) => status.name == value?.toString().toLowerCase(),
+      orElse: () => CourseStatus.draft,
+    );
+  }
+}
+
+class CourseModel {
+  final String? id;
+  final String title;
   final String description;
-  final double price;
+  final String? image;
   final String category;
 
-  final String? courseImageUrl;
+  final double price;
+  final double depositAmount;
 
-  // المقاعد
   final int capacity;
+  final int enrolledCount;
+  final int reservedCount;
 
-  // عدد الطلاب المؤكد تسجيلهم
-  final int enrolled;
+  final DateTime startDate;
+  final DateTime endDate;
 
-  // عدد المقاعد المحجوزة مؤقتاً
-  final int reservedSeats;
-
-  // نسبة العربون
-  final int depositPercentage;
-
-  // محتوى الدورة
+  final String location;
+  final CourseStatus status;
   final List<String> whatWillLearn;
   final List<String> features;
 
-  // معلومات إضافية
-  final String? duration;
-  final DateTime? startDate;
+  final String instituteId;
 
-  // المفضلة
-  final bool isFavourite;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   CourseModel({
-    required this.id,
-    required this.instituteID,
-    required this.name,
+    this.id,
+    required this.title,
     required this.description,
-    required this.price,
+    this.image,
     required this.category,
+    required this.price,
+    required this.depositAmount,
     required this.capacity,
-    required this.enrolled,
-    this.reservedSeats = 0,
-    this.depositPercentage = 30,
-    this.courseImageUrl,
+    this.enrolledCount = 0,
+    this.reservedCount = 0,
+    required this.startDate,
+    required this.endDate,
+    required this.location,
+    this.status = CourseStatus.draft,
     this.whatWillLearn = const [],
     this.features = const [],
-    this.duration,
-    this.startDate,
-    this.isFavourite = false,
-  })  : assert(
-          depositPercentage >= 0 && depositPercentage <= 100,
-          'نسبة العربون يجب أن تكون بين 0 و100',
-        ),
-        assert(enrolled >= 0),
-        assert(reservedSeats >= 0),
-        assert(capacity >= 0);
+    required this.instituteId,
+    this.createdAt,
+    this.updatedAt, 
+  });
 
-  // المقاعد المتاحة فعلياً
+  // المقاعد المتاحة فعليًا.
   int get availableSeats {
-    return (capacity - enrolled - reservedSeats).clamp(0, capacity);
+    final available = capacity - enrolledCount - reservedCount;
+    return available < 0 ? 0 : available;
   }
 
-  // هل الدورة مكتملة؟
-  bool get isFull {
-    return availableSeats == 0;
+  bool get isFull => availableSeats == 0;
+
+  // نسبة العربون للعرض فقط.
+  double get depositPercentage {
+    if (price <= 0) return 0;
+    return (depositAmount / price) * 100;
   }
 
-  // مبلغ العربون
-  double get depositAmount {
-    return (price * depositPercentage / 100).roundToDouble();
+  factory CourseModel.fromJson(Map<String, dynamic> json) {
+    final institute = json['instituteId'];
+
+    return CourseModel(
+      id: (json['_id'] ?? json['id'])?.toString(),
+
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      image: json['image']?.toString(),
+      category: json['category']?.toString() ?? '',
+
+      price: _toDouble(json['price']),
+      depositAmount: _toDouble(json['depositAmount']),
+
+      capacity: _toInt(json['capacity']),
+      enrolledCount: _toInt(json['enrolledCount']),
+      reservedCount: _toInt(json['reservedCount']),
+
+      startDate: _parseDate(json['startDate']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+
+      endDate: _parseDate(json['endDate']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+
+      location: json['location']?.toString() ?? '',
+
+      status: CourseStatus.fromJson(json['status']),
+      whatWillLearn: _toStringList(json['whatWillLearn']),
+      features: _toStringList(json['features']),
+
+      instituteId: institute is Map
+          ? (institute['_id'] ?? institute['id'] ?? '').toString()
+          : (institute?.toString() ?? ''),
+
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
+    );
   }
 
-  // المبلغ المتبقي
-  double get remainingAmount {
-    return price - depositAmount;
+  // بيانات إنشاء الدورة المتوافقة مع CreateCourseInput.
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      if (image != null && image!.isNotEmpty) 'image': image,
+      'category': category,
+      'price': price,
+      'depositAmount': depositAmount,
+      'capacity': capacity,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'location': location,
+      'whatWillLearn': whatWillLearn,
+      'features': features,
+    };
   }
 
-  // إنشاء نسخة جديدة مع إمكانية تعديل بعض البيانات
   CourseModel copyWith({
-    int? enrolled,
-    int? reservedSeats,
+    String? id,
+    String? title,
+    String? description,
+    String? image,
+    String? category,
+    double? price,
+    double? depositAmount,
+    int? capacity,
+    int? enrolledCount,
+    int? reservedCount,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? location,
+    CourseStatus? status,
+    List<String>? whatWillLearn,
+    List<String>? features,
+    String? instituteId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return CourseModel(
-      id: id,
-      instituteID: instituteID,
-      name: name,
-      description: description,
-      price: price,
-      category: category,
-      capacity: capacity,
-      enrolled: enrolled ?? this.enrolled,
-      reservedSeats: reservedSeats ?? this.reservedSeats,
-      depositPercentage: depositPercentage,
-      courseImageUrl: courseImageUrl,
-      whatWillLearn: whatWillLearn,
-      features: features,
-      duration: duration,
-      startDate: startDate,
-      isFavourite: isFavourite,
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      image: image ?? this.image,
+      category: category ?? this.category,
+      price: price ?? this.price,
+      depositAmount: depositAmount ?? this.depositAmount,
+      capacity: capacity ?? this.capacity,
+      enrolledCount: enrolledCount ?? this.enrolledCount,
+      reservedCount: reservedCount ?? this.reservedCount,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      location: location ?? this.location,
+      status: status ?? this.status,
+      whatWillLearn: whatWillLearn ?? this.whatWillLearn,
+      features: features ?? this.features,
+      instituteId: instituteId ?? this.instituteId,
+      
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static List<String> _toStringList(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<String>()
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value.toString());
   }
 }

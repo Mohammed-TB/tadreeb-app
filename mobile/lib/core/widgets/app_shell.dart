@@ -10,11 +10,13 @@ class AppShell extends StatelessWidget {
     required this.navigationShell,
     required this.drawer,
     required this.navigationItems,
+    this.showBottomNavigationBar = true,
   });
 
   final StatefulNavigationShell navigationShell;
   final Widget drawer;
   final List<BottomNavigationBarItem> navigationItems;
+  final bool showBottomNavigationBar;
 
   @override
   Widget build(BuildContext context) {
@@ -23,21 +25,22 @@ class AppShell extends StatelessWidget {
 
       body: navigationShell,
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation:
-                index == navigationShell.currentIndex,
-          );
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.navBackground,
-        selectedItemColor: AppColors.navSelected,
-        unselectedItemColor: AppColors.navUnselected,
-        items: navigationItems,
-      ),
+      bottomNavigationBar: showBottomNavigationBar
+          ? BottomNavigationBar(
+              currentIndex: navigationShell.currentIndex,
+              onTap: (index) {
+                navigationShell.goBranch(
+                  index,
+                  initialLocation: index == navigationShell.currentIndex,
+                );
+              },
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: AppColors.navBackground,
+              selectedItemColor: AppColors.navSelected,
+              unselectedItemColor: AppColors.navUnselected,
+              items: navigationItems,
+            )
+          : null,
     );
   }
 }

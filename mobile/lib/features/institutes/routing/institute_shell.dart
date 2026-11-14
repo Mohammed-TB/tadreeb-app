@@ -25,20 +25,22 @@ class InstituteShell extends StatelessWidget {
           label: 'الرئيسية',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.event_note_outlined),
-          activeIcon: Icon(Icons.event_note),
-          label: 'الحجوزات',
-        ),
-        BottomNavigationBarItem(
           icon: Icon(Icons.school_outlined),
           activeIcon: Icon(Icons.school),
           label: 'الدورات',
         ),
+
         BottomNavigationBarItem(
           icon: Icon(Icons.people_outline),
           activeIcon: Icon(Icons.people),
           label: 'الطلاب',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.event_note_outlined),
+          activeIcon: Icon(Icons.event_note),
+          label: 'الحجوزات',
+        ),
+
       ],
     );
   }

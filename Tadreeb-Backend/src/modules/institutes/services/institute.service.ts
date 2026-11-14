@@ -20,6 +20,48 @@ import Institute, { InstituteStatus } from "../models/institute.model";
 
 // خدمة إدارة المعاهد وإنشاء حسابات أصحابها.
 class InstituteService {
+  async getActiveInstitutes(query: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(50, Math.max(1, query.limit || 12));
+    const filter: Record<string, unknown> = {
+      status: InstituteStatus.ACTIVE,
+    };
+
+    if (query.search?.trim()) {
+      const search = query.search
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { address: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [institutes, total] = await Promise.all([
+      Institute.find(filter)
+        .select("name description phone email address logo status createdAt")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Institute.countDocuments(filter),
+    ]);
+
+    return {
+      institutes,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   // إنشاء معهد جديد وحساب صاحبه داخل Transaction واحدة.
   async createInstituteWithOwner(input: CreateInstituteWithOwnerInput) {
     const { institute, owner } = input;

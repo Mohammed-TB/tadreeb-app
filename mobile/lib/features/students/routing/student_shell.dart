@@ -33,6 +33,11 @@ class StudentShell extends StatelessWidget {
           label: 'الدورات',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.apartment_outlined),
+          activeIcon: Icon(Icons.apartment_rounded),
+          label: 'المعاهد',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.receipt_long_outlined),
           activeIcon: Icon(Icons.receipt_long_rounded),
           label: 'حجوزاتي',

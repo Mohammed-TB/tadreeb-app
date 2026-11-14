@@ -5,6 +5,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import instituteRoutes from "./modules/institutes/routes/institute.routes";
 import {
   instituteOwnerRouter,
+  publicInstituteRouter,
 } from "./modules/institutes/routes/institute.routes";
 import courseRoutes from "./modules/courses/routes/course.routes";
 import publicCourseRoutes from "./modules/courses/routes/public-course.routes";
@@ -36,6 +37,7 @@ app.use("/api/admin/institutes", instituteRoutes);
 app.use("/api/admin", adminRoutes);
 // مسارات إدارة المعهد لصاحبه.
 app.use("/api/institutes", instituteOwnerRouter);
+app.use("/api/institutes", publicInstituteRouter);
 
 
 

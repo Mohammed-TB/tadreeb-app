@@ -78,7 +78,10 @@ void main() {
         ),
 
         // Institutes
-        Provider<InstituteService>(create: (_) => InstituteService()),
+        Provider<InstituteService>(
+          create: (context) =>
+              InstituteService(apiClient: context.read<ApiClient>()),
+        ),
         ChangeNotifierProvider<InstituteController>(
           create: (context) =>
               InstituteController(context.read<InstituteService>())

@@ -355,8 +355,7 @@ class _HomeScreenState extends State<HomeScreen>
                       // 7. المعاهد الأكثر رواجاً
                       MostPopularInstitutes(
                         onSeeAll: () {
-                          context.read<CourseController>().setSearchQuery('');
-                          context.go('/courses_screen');
+                          context.go('/institutes_screen');
                         },
                         onInstituteTap: _showInstituteDetailsSheet,
                       ),

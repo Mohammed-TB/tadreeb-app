@@ -10,6 +10,12 @@ import { UserRole } from "../../users/user.model";
 // Router خاص بإدارة المعاهد من الأدمن.
 const router = Router();
 
+export const publicInstituteRouter = Router();
+
+publicInstituteRouter.get("/", (req, res) =>
+  instituteController.getActiveInstitutes(req, res),
+);
+
 // إنشاء معهد وحساب صاحبه.
 // هذا المسار متاح لمدير المنصة فقط.
 router.post(

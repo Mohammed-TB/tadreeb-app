@@ -76,7 +76,7 @@ class _MostPopularInstitutesState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'المعاهد الأكثر رواجاً',
+            'معاهد مميزة',
             style: AppTypography.titleMedium,
           ),
 

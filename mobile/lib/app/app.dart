@@ -11,6 +11,7 @@ import '../features/students/routing/student_shell.dart';
 
 import '../features/courses/screens/student/course_details_screen.dart';
 import '../features/students/screens/home_screen.dart';
+import '../features/students/screens/institutes_screen.dart';
 import '../features/students/screens/my_reservations_screen.dart';
 import '../features/students/screens/reservation_details_screen.dart';
 import '../features/students/models/student_reservation_model.dart';
@@ -251,6 +252,15 @@ class _MyAppState extends State<MyApp> {
               ],
             ),
 
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/institutes_screen',
+                  builder: (context, state) => const InstitutesScreen(),
+                ),
+              ],
+            ),
+
             // My Reservations (حجوزاتي)
             StatefulShellBranch(
               routes: [
@@ -313,6 +323,7 @@ class _MyAppState extends State<MyApp> {
       '/courses_screen' ||
       '/courses_screen/details' ||
       '/course-registration' ||
+      '/institutes_screen' ||
       '/my_reservations' ||
       '/my_reservations/details' ||
       '/reservation-details' ||

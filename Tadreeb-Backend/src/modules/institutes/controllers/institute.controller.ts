@@ -5,6 +5,31 @@ import instituteDashboardService from "../services/institute-dashboard.service";
 
 // Controller مسؤول عن استقبال طلبات إدارة المعاهد.
 class InstituteController {
+  async getActiveInstitutes(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await instituteService.getActiveInstitutes({
+        search: typeof req.query.search === "string"
+          ? req.query.search
+          : undefined,
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 12,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Institutes fetched successfully",
+        data: result.institutes,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      console.error("Public institutes error:", error);
+      res.status(500).json({
+        success: false,
+        message: "حدث خطأ أثناء جلب المعاهد",
+      });
+    }
+  }
+
   async getDashboard(req: Request, res: Response): Promise<void> {
     if (!req.user) {
       res.status(401).json({

@@ -1,6 +1,3 @@
-
-
-
 class InstituteModel {
   final String id;
   final String ownerUserId;
@@ -9,6 +6,9 @@ class InstituteModel {
   final String address;
   final String phone;
   final String? imageUrl;
+  final String? description;
+  final String? email;
+  final String status;
 
   // final BookingSettingsModel bookingSettings;
 
@@ -19,6 +19,9 @@ class InstituteModel {
     required this.address,
     required this.phone,
     this.imageUrl,
+    this.description,
+    this.email,
+    this.status = 'active',
     // this.bookingSettings = const BookingSettingsModel(),
   });
 
@@ -30,6 +33,9 @@ class InstituteModel {
       address: (json['address'] ?? '').toString(),
       phone: (json['phone'] ?? '').toString(),
       imageUrl: (json['logo'] ?? json['imageUrl'])?.toString(),
+      description: json['description']?.toString(),
+      email: json['email']?.toString(),
+      status: (json['status'] ?? '').toString(),
     );
   }
 }

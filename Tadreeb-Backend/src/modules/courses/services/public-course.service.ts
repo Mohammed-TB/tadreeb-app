@@ -9,6 +9,7 @@ class PublicCourseService {
   async getPublishedCourses(query: {
     search?: string;
     category?: string;
+    instituteId?: string;
     page?: number;
     limit?: number;
   }) {
@@ -29,6 +30,10 @@ class PublicCourseService {
       endDate: { $gte: getSaudiDayStart() },
       instituteId: { $in: instituteIds },
     };
+
+    if (query.instituteId) {
+      filter.instituteId.$eq = new mongoose.Types.ObjectId(query.instituteId);
+    }
 
     // البحث في عنوان الدورة ووصفها.
     if (query.search?.trim()) {

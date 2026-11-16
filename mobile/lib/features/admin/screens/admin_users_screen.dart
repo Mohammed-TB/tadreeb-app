@@ -10,7 +10,6 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/button.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../models/admin_user_model.dart';
 import '../services/admin_user_service.dart';
 import '../widgets/admin_dashboard_error.dart';
@@ -164,12 +163,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final adminName = context.watch<AuthController>().currentUser?.name;
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Column(
         children: [
-          AdminDashboardHeader(adminName: adminName),
+          AdminDashboardHeader(                title: 'المستخدمون',
+),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => _loadFirstPage(refresh: true),

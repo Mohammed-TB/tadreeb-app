@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../app/theme/app_typography.dart';
 
 class AdminDashboardHeader extends StatelessWidget {
   const AdminDashboardHeader({
     super.key,
-    required this.adminName,
+    this.adminName,
+    this.title,
     this.onMenuTap,
   });
-
+  final String? title;
   final String? adminName;
   final VoidCallback? onMenuTap;
 
@@ -45,23 +46,14 @@ class AdminDashboardHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      adminName == null || adminName!.trim().isEmpty
-                          ? 'إدارة المنصة'
-                          : 'مرحباً، $adminName',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.textOnPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      'ملخص مؤشرات المنصة',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textOnPrimary.withValues(alpha: 0.8),
-                      ),
-                    ),
+ Text(
+  title ?? 'الرئيسية',
+  style: GoogleFonts.poppins(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: AppColors.surface,
+  ),
+),
                   ],
                 ),
               ),

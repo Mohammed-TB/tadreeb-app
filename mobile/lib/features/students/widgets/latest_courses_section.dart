@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project_1/features/institutes/controllers/institute_controller.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -23,8 +25,11 @@ class LatestCoursesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final institutes = context
+    .watch<InstituteController>()
+    .institutes;
     if (courses.isEmpty) return const SizedBox.shrink();
-
+     
     final latestCourses = List<CourseModel>.from(courses)
       ..sort((a, b) {
         final dateA = a.createdAt ?? a.startDate;
@@ -89,6 +94,7 @@ class LatestCoursesSection extends StatelessWidget {
               final course = previewCourses[index];
               return CourseCard(
                 course: course,
+                institutes: institutes,
                 isHorizontal: true,
                 showDetailsCourse: () => onShowDetails(course),
                 isFavorite: favorites.isCourseFavorite(course.id),

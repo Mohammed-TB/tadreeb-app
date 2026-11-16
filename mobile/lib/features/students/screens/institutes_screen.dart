@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../favorites/controllers/favorite_controller.dart';
 import '../../institutes/controllers/institute_controller.dart';
 import '../../institutes/models/institute_model.dart';
+import '../widgets/institute_card.dart';
 
 class InstitutesScreen extends StatefulWidget {
   const InstitutesScreen({super.key});
@@ -27,7 +30,9 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
     super.initState();
     _scrollController.addListener(_loadNextPage);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<InstituteController>().getInstitutes();
+      if (!mounted) return;
+      context.read<InstituteController>().getInstitutes();
+      context.read<FavoriteController>().loadFavorites();
     });
   }
 
@@ -60,6 +65,7 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<InstituteController>();
+    final favorites = context.watch<FavoriteController>();
 
     return Column(
       children: [
@@ -99,7 +105,7 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
           child: RefreshIndicator(
             onRefresh: _refresh,
             color: AppColors.primary,
-            child: _buildResults(controller),
+            child: _buildResults(controller, favorites),
           ),
         ),
       ],
@@ -187,7 +193,10 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
     );
   }
 
-  Widget _buildResults(InstituteController controller) {
+  Widget _buildResults(
+    InstituteController controller,
+    FavoriteController favorites,
+  ) {
     if (controller.isLoading && controller.institutes.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -273,14 +282,32 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
         }
 
         final institute = controller.institutes[index];
-        return _InstituteListCard(
+        return InstituteCard(
           institute: institute,
-          onTap: () {
-            
-          },
+          layout: InstituteCardLayout.horizontal,
+          width: double.infinity,
+          imageHeight: 96,
+          showDetailsButton: false,
+          onTap: () => context.push('/institute-details', extra: institute),
+          isFavorite: favorites.isInstituteFavorite(institute.id),
+          isFavoriteBusy: favorites.isInstituteSaving(institute.id),
+          onFavoriteTap: favorites.canToggleFavorites
+              ? () => _toggleFavorite(institute)
+              : null,
         );
       },
     );
+  }
+
+  Future<void> _toggleFavorite(InstituteModel institute) async {
+    try {
+      await context.read<FavoriteController>().toggleInstitute(institute);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $error')));
+    }
   }
 
   Widget _buildMessage({
@@ -329,121 +356,3 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
     super.dispose();
   }
 }
-
-class _InstituteListCard extends StatelessWidget {
-  const _InstituteListCard({required this.institute, required this.onTap});
-
-  final InstituteModel institute;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = institute.imageUrl;
-    final isNetworkImage =
-        imageUrl != null &&
-        (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
-
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.035),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  color: AppColors.primaryLight,
-                  child: isNetworkImage
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const _InstitutePlaceholder(),
-                        )
-                      : const _InstitutePlaceholder(),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            institute.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.titleSmall,
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_outlined,
-                          color: AppColors.textHint,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 17,
-                          color: AppColors.accent,
-                        ),
-                        const SizedBox(width: AppSpacing.xxs),
-                        Expanded(
-                          child: Text(
-                            institute.address,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InstitutePlaceholder extends StatelessWidget {
-  const _InstitutePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(Icons.apartment_rounded, size: 34, color: AppColors.primary),
-    );
-  }
-}
-

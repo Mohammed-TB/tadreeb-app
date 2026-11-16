@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -18,26 +17,53 @@ class ApiClient {
     this.timeout = const Duration(seconds: 20),
   }) : _tokenStorage = tokenStorage,
        _client = client ?? http.Client(),
-       _baseUrl = (baseUrl ?? ApiConfig.baseUrl)
-           .replaceFirst(RegExp(r'/+$'), '');
+       _baseUrl = (baseUrl ?? ApiConfig.baseUrl).replaceFirst(
+         RegExp(r'/+$'),
+         '',
+       );
 
   final TokenStorageService _tokenStorage;
   final http.Client _client;
   final String _baseUrl;
   final Duration timeout;
 
-Future<Map<String, dynamic>> get(
-  String path, {
-  Map<String, dynamic>? queryParameters,
-  bool authenticated = false,
-}) {
-  return _send(
-    'GET',
-    path,
-    queryParameters: queryParameters,
-    authenticated: authenticated,
-  );
-}
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    bool authenticated = false,
+  }) {
+    return _send(
+      'GET',
+      path,
+      queryParameters: queryParameters,
+      authenticated: authenticated,
+    );
+  }
+
+  Future<PublicGetResponse> getPublic(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    String? ifNoneMatch,
+  }) async {
+    final response = await _sendRaw(
+      'GET',
+      path,
+      queryParameters: queryParameters,
+      authenticated: false,
+      additionalHeaders: ifNoneMatch == null
+          ? null
+          : {'If-None-Match': ifNoneMatch},
+    );
+
+    if (response.statusCode == 304) {
+      return PublicGetResponse.notModified(response.headers['etag']);
+    }
+
+    return PublicGetResponse(
+      data: _parseResponse(response),
+      etag: response.headers['etag'],
+    );
+  }
 
   // POST request
   Future<Map<String, dynamic>> post(
@@ -45,12 +71,7 @@ Future<Map<String, dynamic>> get(
     Map<String, dynamic>? body,
     bool authenticated = false,
   }) {
-    return _send(
-      'POST',
-      path,
-      body: body,
-      authenticated: authenticated,
-    );
+    return _send('POST', path, body: body, authenticated: authenticated);
   }
 
   Future<Map<String, dynamic>> postMultipart(
@@ -62,10 +83,8 @@ Future<Map<String, dynamic>> get(
     String? fileName,
     String? contentType,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_baseUrl$path'),
-    )..headers['Accept'] = 'application/json';
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$path'))
+      ..headers['Accept'] = 'application/json';
 
     if (authenticated) {
       final token = await _tokenStorage.readToken();
@@ -115,12 +134,7 @@ Future<Map<String, dynamic>> get(
     Map<String, dynamic>? body,
     bool authenticated = false,
   }) {
-    return _send(
-      'PUT',
-      path,
-      body: body,
-      authenticated: authenticated,
-    );
+    return _send('PUT', path, body: body, authenticated: authenticated);
   }
 
   // PATCH request
@@ -129,12 +143,7 @@ Future<Map<String, dynamic>> get(
     Map<String, dynamic>? body,
     bool authenticated = false,
   }) {
-    return _send(
-      'PATCH',
-      path,
-      body: body,
-      authenticated: authenticated,
-    );
+    return _send('PATCH', path, body: body, authenticated: authenticated);
   }
 
   // DELETE request
@@ -144,97 +153,98 @@ Future<Map<String, dynamic>> get(
   }) {
     return _send('DELETE', path, authenticated: authenticated);
   }
-// Central request handler
-Future<Map<String, dynamic>> _send(
-  String method,
-  String path, {
-  Map<String, dynamic>? body,
-  Map<String, dynamic>? queryParameters,
-  required bool authenticated,
-}) async {
-  final headers = <String, String>{
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
 
-  // Attach Tadreeb JWT when authentication is required.
-  if (authenticated) {
-    final token = await _tokenStorage.readToken();
+  // Central request handler
+  Future<Map<String, dynamic>> _send(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? queryParameters,
+    required bool authenticated,
+  }) async {
+    final response = await _sendRaw(
+      method,
+      path,
+      body: body,
+      queryParameters: queryParameters,
+      authenticated: authenticated,
+    );
+    return _parseResponse(response);
+  }
 
-    if (token == null || token.isEmpty) {
-      throw const ApiException(
-        'انتهت الجلسة، يرجى تسجيل الدخول مجددًا',
-      );
+  Future<http.Response> _sendRaw(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? queryParameters,
+    required bool authenticated,
+    Map<String, String>? additionalHeaders,
+  }) async {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (additionalHeaders != null) headers.addAll(additionalHeaders);
+
+    // Attach Tadreeb JWT when authentication is required.
+    if (authenticated) {
+      final token = await _tokenStorage.readToken();
+
+      if (token == null || token.isEmpty) {
+        throw const ApiException('انتهت الجلسة، يرجى تسجيل الدخول مجددًا');
+      }
+
+      headers['Authorization'] = 'Bearer $token';
     }
 
-    headers['Authorization'] = 'Bearer $token';
+    final baseUri = Uri.parse('$_baseUrl$path');
+
+    final uri = baseUri.replace(
+      queryParameters: queryParameters?.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    );
+
+    final request = http.Request(method, uri)..headers.addAll(headers);
+
+    if (body != null) {
+      request.body = jsonEncode(body);
+    }
+
+    try {
+      final streamed = await _client.send(request).timeout(timeout);
+
+      final response = await http.Response.fromStream(
+        streamed,
+      ).timeout(timeout);
+
+      return response;
+    } on TimeoutException {
+      throw const ApiException('انتهت مهلة الاتصال بالخادم. حاول مجددًا');
+    } on SocketException {
+      throw const ApiException('تعذر الاتصال بالخادم. تحقق من تشغيل Backend');
+    } on http.ClientException {
+      throw const ApiException('تعذر الاتصال بالخادم. تحقق من عنوان الخدمة');
+    } on FormatException {
+      throw const ApiException('استجابة الخادم غير صالحة');
+    }
   }
-
-  final baseUri = Uri.parse('$_baseUrl$path');
-
-  final uri = baseUri.replace(
-    queryParameters: queryParameters?.map(
-      (key, value) => MapEntry(key, value.toString()),
-    ),
-  );
-
-  final request = http.Request(method, uri)
-    ..headers.addAll(headers);
-
-  if (body != null) {
-    request.body = jsonEncode(body);
-  }
-
-  try {
-    final streamed = await _client.send(request).timeout(timeout);
-
-    final response = await http.Response.fromStream(
-      streamed,
-    ).timeout(timeout);
-
-    return _parseResponse(response);
-  } on TimeoutException {
-    throw const ApiException(
-      'انتهت مهلة الاتصال بالخادم. حاول مجددًا',
-    );
-  } on SocketException {
-    throw const ApiException(
-      'تعذر الاتصال بالخادم. تحقق من تشغيل Backend',
-    );
-  } on http.ClientException {
-    throw const ApiException(
-      'تعذر الاتصال بالخادم. تحقق من عنوان الخدمة',
-    );
-  } on FormatException {
-    throw const ApiException(
-      'استجابة الخادم غير صالحة',
-    );
-  }
-}
 
   // Parse server response and handle HTTP errors.
   Map<String, dynamic> _parseResponse(http.Response response) {
     final Object? decoded;
 
     try {
-      decoded = response.body.isEmpty
-          ? null
-          : jsonDecode(response.body);
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
     } on FormatException {
       throw const ApiException('استجابة الخادم غير صالحة');
     }
 
-    final payload = decoded is Map<String, dynamic>
-        ? decoded
-        : null;
+    final payload = decoded is Map<String, dynamic> ? decoded : null;
 
-    if (response.statusCode < 200 ||
-        response.statusCode >= 300) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
-        _errorMessage(
-          response.statusCode,
-          payload?['message'],
-        ),
+        _errorMessage(response.statusCode, payload?['message']),
         statusCode: response.statusCode,
       );
     }
@@ -245,10 +255,7 @@ Future<Map<String, dynamic>> _send(
 
     if (payload['success'] == false) {
       throw ApiException(
-        _errorMessage(
-          response.statusCode,
-          payload['message'],
-        ),
+        _errorMessage(response.statusCode, payload['message']),
         statusCode: response.statusCode,
       );
     }
@@ -317,4 +324,16 @@ Future<Map<String, dynamic>> _send(
 
     return 'تعذر إكمال الطلب. حاول مرة أخرى';
   }
+}
+
+class PublicGetResponse {
+  const PublicGetResponse({this.data, this.etag, this.notModified = false});
+
+  const PublicGetResponse.notModified(this.etag)
+    : data = null,
+      notModified = true;
+
+  final Map<String, dynamic>? data;
+  final String? etag;
+  final bool notModified;
 }

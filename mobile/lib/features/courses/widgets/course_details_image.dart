@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
@@ -19,7 +20,12 @@ class CourseDetailsImage extends StatelessWidget {
       height: 230,
       width: double.infinity,
       child: isNetworkImage
-          ? Image.network(image, fit: BoxFit.cover, errorBuilder: _buildError)
+          ? CachedNetworkImage(
+              imageUrl: image,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => _buildPlaceholder(),
+              errorWidget: (context, url, error) => _buildPlaceholder(),
+            )
           : Image.asset(
               image ?? 'assets/images/english2_course.png',
               fit: BoxFit.cover,
@@ -32,7 +38,9 @@ class CourseDetailsImage extends StatelessWidget {
     BuildContext context,
     Object error,
     StackTrace? stackTrace,
-  ) {
+  ) => _buildPlaceholder();
+
+  Widget _buildPlaceholder() {
     return Container(
       color: AppColors.primaryLight,
       alignment: Alignment.center,

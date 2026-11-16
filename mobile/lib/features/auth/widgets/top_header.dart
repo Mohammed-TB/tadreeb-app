@@ -11,28 +11,33 @@ class TopHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 18,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.primary,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(12),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
       ),
       child: Column(
         children: [
-          ClipOval(
-            child: Container(
-              width: 100,
-              height: 100,
-              color: Colors.white,
-              child: Image.asset(
-                'assets/images/logo_app.png',
-                fit: BoxFit.contain,
-              ),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.primaryLight, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.school_rounded,
+              size: 58,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(height: 4),

@@ -28,9 +28,10 @@ class AppShell extends StatelessWidget {
           ? SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 26, 12, 8),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Container(
+                  padding: EdgeInsets.only(bottom: 2),
+                  decoration: BoxDecoration( 
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(

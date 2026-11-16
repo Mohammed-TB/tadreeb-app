@@ -1,6 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import 'package:project_1/features/institutes/controllers/institute_controller.dart';
+import 'package:project_1/features/institutes/models/institute_model.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -12,7 +16,10 @@ import '../../courses/widgets/course_card.dart';
 import '../../favorites/controllers/favorite_controller.dart';
 
 class MostPopularCourses extends StatefulWidget {
-  const MostPopularCourses({super.key, required this.showDetailsCourse});
+  const MostPopularCourses({
+    super.key,
+    required this.showDetailsCourse,
+  });
 
   final ValueChanged<CourseModel> showDetailsCourse;
 
@@ -31,18 +38,25 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     final courses = context.watch<CourseController>();
     final favorites = context.watch<FavoriteController>();
 
+    final institutes = context
+        .watch<InstituteController>()
+        .institutes;
+
     final featured = courses.featuredCourses;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // عنوان القسم
         _buildSectionHeader(),
 
         const SizedBox(height: AppSpacing.sm),
 
-        // محتوى القسم حسب حالة الطلب
-        _buildCoursesContent(courses, favorites, featured),
+        _buildCoursesContent(
+          courses,
+          favorites,
+          featured,
+          institutes,
+        ),
       ],
     );
   }
@@ -50,12 +64,16 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
   // عنوان القسم
   Widget _buildSectionHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('الدورات الأكثر رواجاً', style: AppTypography.titleMedium),
-
+          Text(
+            'الدورات الأكثر رواجاً',
+            style: AppTypography.titleMedium,
+          ),
           InkWell(
             onTap: _showCourses,
             borderRadius: BorderRadius.circular(8),
@@ -70,9 +88,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
                       color: AppColors.primary,
                     ),
                   ),
-
                   const SizedBox(width: AppSpacing.xxs),
-
                   const Icon(
                     Icons.arrow_forward,
                     size: 16,
@@ -92,18 +108,24 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     CourseController controller,
     FavoriteController favorites,
     List<CourseModel> courses,
+    List<InstituteModel> institutes,
   ) {
     if (controller.isLoading) {
       return const SizedBox(
         height: 180,
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
         ),
       );
     }
 
     if (controller.errorMessage != null) {
-      return _buildMessage('تعذر تحميل الدورات', icon: Icons.error_outline);
+      return _buildMessage(
+        'تعذر تحميل الدورات',
+        icon: Icons.error_outline,
+      );
     }
 
     if (courses.isEmpty) {
@@ -113,20 +135,26 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
       );
     }
 
-    return _buildCoursesList(courses, favorites);
+    return _buildCoursesList(
+      courses,
+      favorites,
+      institutes,
+    );
   }
 
   // قائمة الدورات الأفقية
-
   Widget _buildCoursesList(
     List<CourseModel> courses,
     FavoriteController favorites,
+    List<InstituteModel> institutes,
   ) {
     return SizedBox(
       height: 275,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+        ),
         itemCount: courses.length,
         separatorBuilder: (context, index) {
           return const SizedBox(width: AppSpacing.xs);
@@ -136,6 +164,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
 
           return CourseCard(
             course: course,
+            institutes: institutes,
             isHorizontal: false,
             showDetailsCourse: () {
               widget.showDetailsCourse(course);
@@ -151,30 +180,46 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     );
   }
 
+  // تحديث المفضلة
   Future<void> _toggleFavorite(CourseModel course) async {
     try {
-      await context.read<FavoriteController>().toggleCourse(course);
+      await context
+          .read<FavoriteController>()
+          .toggleCourse(course);
     } catch (error) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $error')));
+        ..showSnackBar(
+          SnackBar(
+            content: Text('تعذر تحديث المفضلة: $error'),
+          ),
+        );
     }
   }
 
   // رسائل التحميل والخطأ والفراغ
-  Widget _buildMessage(String message, {required IconData icon}) {
+  Widget _buildMessage(
+    String message, {
+    required IconData icon,
+  }) {
     return SizedBox(
       height: 140,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 32, color: AppColors.textHint),
-
+            Icon(
+              icon,
+              size: 32,
+              color: AppColors.textHint,
+            ),
             const SizedBox(height: AppSpacing.xs),
-
-            Text(message, style: AppTypography.bodyMedium),
+            Text(
+              message,
+              style: AppTypography.bodyMedium,
+            ),
           ],
         ),
       ),

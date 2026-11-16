@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:project_1/core/mock_data/institutes_data.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -101,6 +102,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           final course = favorites.courses[index];
           return CourseCard(
             course: course,
+            institutes: institutes,
             isHorizontal: true,
             width: double.infinity,
             height: 170,
@@ -131,8 +133,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           return InstituteCard(
             institute: institute,
             width: double.infinity,
-            imageHeight: 150,
+            imageHeight: 96,
+            layout: InstituteCardLayout.horizontal,
             showDetailsButton: false,
+            onTap: () => context.push('/institute-details', extra: institute),
             isFavorite: true,
             isFavoriteBusy: favorites.isInstituteSaving(institute.id),
             onFavoriteTap: () => _toggleInstitute(institute),
@@ -177,8 +181,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton(
-              onPressed: () =>
-                  favorites.loadFavorites(forceRefresh: true),
+              onPressed: () => favorites.loadFavorites(forceRefresh: true),
               child: const Text('إعادة المحاولة'),
             ),
           ],

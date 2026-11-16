@@ -1,49 +1,217 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/cache/public_data_cache.dart';
 import '../../../core/utils/saudi_date.dart';
 import '../models/course_model.dart';
 import '../models/course_pagination_model.dart';
 
 class CourseService {
-  CourseService({required ApiClient apiClient}) : _apiClient = apiClient;
+  CourseService({required ApiClient apiClient, PublicApiCache? publicCache})
+    : _apiClient = apiClient,
+      _publicCache = publicCache;
 
   final ApiClient _apiClient;
+  final PublicApiCache? _publicCache;
+
+  static const _courseListTtl = Duration(minutes: 5);
+  static const _courseDetailsTtl = Duration(minutes: 10);
 
   Future<CoursesResponse> getCourses({
     String? search,
     String? category,
+    String? instituteId,
+    int page = 1,
+    int limit = 10,
+    bool forceRefresh = false,
+  }) async {
+    final result = await loadCourses(
+      search: search,
+      category: category,
+      instituteId: instituteId,
+      page: page,
+      limit: limit,
+      forceRefresh: forceRefresh,
+    );
+    return result.data;
+  }
+
+  Future<CoursesResponse?> getCachedCourses({
+    String? search,
+    String? category,
+    String? instituteId,
     int page = 1,
     int limit = 10,
   }) async {
-    final response = await _apiClient.get(
-      '/api/courses',
-      queryParameters: {
-        if (search != null && search.isNotEmpty) 'search': search,
-        if (category != null && category.isNotEmpty) 'category': category,
-        'page': page,
-        'limit': limit,
+    final cache = _publicCache;
+    if (cache == null) return null;
+
+    final queryParameters = _courseQuery(
+      search: search,
+      category: category,
+      instituteId: instituteId,
+      page: page,
+      limit: limit,
+    );
+    final key = cache.keyFor('/api/courses', queryParameters);
+    final entry = await cache.read(key);
+    return entry == null ? null : _parseCourses(entry.data);
+  }
+
+  Future<PublicDataResult<CoursesResponse>> loadCourses({
+    String? search,
+    String? category,
+    String? instituteId,
+    int page = 1,
+    int limit = 10,
+    bool forceRefresh = false,
+  }) async {
+    final cache = _publicCache;
+    final queryParameters = _courseQuery(
+      search: search,
+      category: category,
+      instituteId: instituteId,
+      page: page,
+      limit: limit,
+    );
+    if (cache == null) {
+      final response = await _apiClient.get(
+        '/api/courses',
+        queryParameters: queryParameters,
+      );
+      return PublicDataResult(
+        data: _parseCourses(response),
+        changed: true,
+      );
+    }
+
+    final key = cache.keyFor('/api/courses', queryParameters);
+    final cachedResult = await cache.fetchJson(
+      key: key,
+      ttl: _courseListTtl,
+      forceRefresh: forceRefresh,
+      fetch: (etag) async {
+        final response = await _apiClient.getPublic(
+          '/api/courses',
+          queryParameters: queryParameters,
+          ifNoneMatch: etag,
+        );
+        if (!response.notModified) {
+          final data = response.data;
+          if (data == null) {
+            throw const FormatException('بيانات الدورات الواردة غير صالحة');
+          }
+          _parseCourses(data);
+        }
+        return PublicCacheFetch(
+          data: response.data,
+          etag: response.etag,
+          notModified: response.notModified,
+        );
       },
     );
-
-    final coursesJson = response['data'] as List;
-
-    return CoursesResponse(
-      courses: coursesJson
-          .map((course) => CourseModel.fromJson(course))
-          .toList(),
-      pagination: CoursePaginationModel.fromJson(response['pagination']),
+    return PublicDataResult(
+      data: _parseCourses(cachedResult.data),
+      changed: cachedResult.changed,
     );
   }
 
-  Future<CourseModel> getCourseById(String courseId) async {
-    final response = await _apiClient.get('/api/courses/$courseId');
+  Map<String, dynamic> _courseQuery({
+    String? search,
+    String? category,
+    String? instituteId,
+    required int page,
+    required int limit,
+  }) {
+    return {
+      if (search != null && search.isNotEmpty) 'search': search,
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (instituteId != null && instituteId.isNotEmpty)
+        'instituteId': instituteId,
+      'page': page,
+      'limit': limit,
+    };
+  }
+
+  CoursesResponse _parseCourses(Map<String, dynamic> response) {
+    final coursesJson = response['data'];
+    final paginationJson = response['pagination'];
+    if (coursesJson is! List || paginationJson is! Map<String, dynamic>) {
+      throw const FormatException('بيانات الدورات الواردة من الخادم غير صالحة');
+    }
+    return CoursesResponse(
+      courses: coursesJson.map((course) {
+        if (course is! Map<String, dynamic>) {
+          throw const FormatException('بيانات إحدى الدورات غير صالحة');
+        }
+        return CourseModel.fromJson(course);
+      }).toList(),
+      pagination: CoursePaginationModel.fromJson(paginationJson),
+    );
+  }
+
+  Future<CourseModel?> getCachedCourseDetails(String courseId) async {
+    final cache = _publicCache;
+    if (cache == null) return null;
+    final key = cache.keyFor('/api/courses/$courseId', const {});
+    final cached = await cache.read(key);
+    if (cached == null) return null;
+    return _parseCourseDetails(cached.data);
+  }
+
+  Future<PublicDataResult<CourseModel>> loadPublicCourseDetails(
+    String courseId, {
+    bool forceRefresh = false,
+  }) async {
+    final cache = _publicCache;
+    final path = '/api/courses/$courseId';
+    if (cache == null) {
+      final response = await _apiClient.get(path);
+      return PublicDataResult(
+        data: _parseCourseDetails(response),
+        changed: true,
+      );
+    }
+
+    final key = cache.keyFor(path, const {});
+    final result = await cache.fetchJson(
+      key: key,
+      ttl: _courseDetailsTtl,
+      forceRefresh: forceRefresh,
+      fetch: (etag) async {
+        final response = await _apiClient.getPublic(path, ifNoneMatch: etag);
+        if (!response.notModified) {
+          final data = response.data;
+          if (data == null) {
+            throw const FormatException('بيانات الدورة الواردة غير صالحة');
+          }
+          _parseCourseDetails(data);
+        }
+        return PublicCacheFetch(
+          data: response.data,
+          etag: response.etag,
+          notModified: response.notModified,
+        );
+      },
+    );
+    return PublicDataResult(
+      data: _parseCourseDetails(result.data),
+      changed: result.changed,
+    );
+  }
+
+  CourseModel _parseCourseDetails(Map<String, dynamic> response) {
     final data = response['data'];
     if (data is! Map<String, dynamic>) {
       throw const FormatException('بيانات الدورة غير صالحة');
     }
 
     return CourseModel.fromJson(data);
+  }
+
+  Future<CourseModel> getCourseById(String courseId) async {
+    final response = await _apiClient.get('/api/courses/$courseId');
+    return _parseCourseDetails(response);
   }
 
   Future<List<CourseModel>> getMyCourses() async {

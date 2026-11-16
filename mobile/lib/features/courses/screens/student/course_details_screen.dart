@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +11,7 @@ import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/course_service.dart';
+import 'package:project_1/features/courses/controllers/reservation_controller.dart';
 import 'package:project_1/features/courses/widgets/course_details_description.dart';
 import 'package:project_1/features/courses/widgets/course_details_header.dart';
 import 'package:project_1/features/courses/widgets/course_details_image.dart';
@@ -34,6 +38,66 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
   void initState() {
     super.initState();
     _course = widget.course;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_refreshPublicCourseDetails());
+      unawaited(
+        context.read<ReservationController>().fetchMyReservations(
+          forceRefresh: true,
+        ),
+      );
+    });
+  }
+
+  Future<void> _refreshPublicCourseDetails() async {
+    final courseId = _course.id;
+    if (courseId == null || courseId.isEmpty) return;
+
+    final service = context.read<CourseService>();
+    try {
+      final cached = await service.getCachedCourseDetails(courseId);
+      if (cached != null &&
+          mounted &&
+          cached.updatedAt != null &&
+          (_course.updatedAt == null ||
+              cached.updatedAt!.isAfter(_course.updatedAt!))) {
+        setState(() => _course = cached);
+      }
+
+      final result = await service.loadPublicCourseDetails(
+        courseId,
+        forceRefresh: true,
+      );
+      if (mounted &&
+          result.changed &&
+          !_samePublicCourse(_course, result.data)) {
+        setState(() => _course = result.data);
+      }
+    } catch (error) {
+      debugPrint('Unable to refresh public course details: $error');
+    }
+  }
+
+  bool _samePublicCourse(CourseModel first, CourseModel second) {
+    return first.id == second.id &&
+        first.title == second.title &&
+        first.description == second.description &&
+        first.image == second.image &&
+        first.category == second.category &&
+        first.price == second.price &&
+        first.depositAmount == second.depositAmount &&
+        first.capacity == second.capacity &&
+        first.enrolledCount == second.enrolledCount &&
+        first.reservedCount == second.reservedCount &&
+        first.startDate == second.startDate &&
+        first.endDate == second.endDate &&
+        first.location == second.location &&
+        first.status == second.status &&
+        listEquals(first.whatWillLearn, second.whatWillLearn) &&
+        listEquals(first.features, second.features) &&
+        first.instituteId == second.instituteId &&
+        first.createdAt == second.createdAt &&
+        first.updatedAt == second.updatedAt;
   }
 
   String _instituteName(BuildContext context, CourseModel course) {
@@ -97,6 +161,13 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final course = _course;
+    final reservationController = context.watch<ReservationController>();
+    final isRegistered = reservationController.myReservations.any(
+      (reservation) =>
+          reservation.courseId == course.id &&
+          reservation.normalizedStatus != 'expired' &&
+          reservation.normalizedStatus != 'cancelled',
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -146,7 +217,10 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       ),
       bottomNavigationBar: CourseEnrollButton(
         isFull: _hasFreshCourse && course.isFull,
-        isLoading: _isCheckingAvailability,
+        isRegistered: isRegistered,
+        isLoading:
+            _isCheckingAvailability ||
+            reservationController.isLoadingReservations,
         onPressed: _refreshAndRegister,
       ),
     );

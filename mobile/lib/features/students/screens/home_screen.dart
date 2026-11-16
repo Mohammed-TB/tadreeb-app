@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:project_1/core/mock_data/institutes_data.dart';
 import 'package:provider/provider.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
@@ -77,16 +78,47 @@ class _HomeScreenState extends State<HomeScreen>
     final favoriteController = context.read<FavoriteController>();
 
     unawaited(context.read<ReservationController>().fetchMyReservations());
+    unawaited(favoriteController.loadFavorites());
 
+    var initialContentShown = false;
     try {
-      await Future.wait([
-        courseController.getCourses(),
-        instituteController.getInstitutes(),
-        favoriteController.loadFavorites(),
-      ]);
+      var hasCachedPublicData = false;
+      try {
+        final cachedData = await Future.wait([
+          courseController.loadCachedCourses(),
+          instituteController.loadCachedInstitutes(),
+        ]);
+        hasCachedPublicData = cachedData.any((hasCache) => hasCache);
+      } catch (error) {
+        debugPrint('Unable to read public startup cache: $error');
+      }
+
+      if (hasCachedPublicData && mounted) {
+        setState(() => _isInitialLoading = false);
+        initialContentShown = true;
+      }
+
+      final refresh = _refreshPublicData(courseController, instituteController);
+      if (initialContentShown) {
+        unawaited(refresh);
+      } else {
+        await refresh;
+      }
     } finally {
-      if (mounted) setState(() => _isInitialLoading = false);
+      if (mounted && !initialContentShown) {
+        setState(() => _isInitialLoading = false);
+      }
     }
+  }
+
+  Future<void> _refreshPublicData(
+    CourseController courseController,
+    InstituteController instituteController,
+  ) async {
+    await Future.wait([
+      courseController.getCourses(forceRefresh: true),
+      instituteController.getInstitutes(forceRefresh: true),
+    ]);
   }
 
   @override
@@ -127,175 +159,8 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _showInstituteDetailsSheet(InstituteModel institute) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (bottomSheetContext) {
-        final logo = institute.imageUrl;
-        final hasValidImage =
-            logo != null &&
-            (logo.startsWith('http://') || logo.startsWith('https://'));
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // الشعار والاسم
-                Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: hasValidImage
-                          ? Image.network(
-                              logo,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.apartment_rounded,
-                                    color: AppColors.primary,
-                                    size: 30,
-                                  ),
-                            )
-                          : const Icon(
-                              Icons.apartment_rounded,
-                              color: AppColors.primary,
-                              size: 30,
-                            ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  institute.name,
-                                  style: AppTypography.titleLarge,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.verified_rounded,
-                                size: 18,
-                                color: AppColors.primary,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'معهد تدريبي معتمد',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-                const Divider(height: 1, color: AppColors.divider),
-                const SizedBox(height: 14),
-
-                // العنوان
-                if (institute.address.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 20,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            institute.address,
-                            style: AppTypography.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // رقم الهاتف
-                if (institute.phone.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.phone_outlined,
-                          size: 20,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            institute.phone,
-                            textDirection: TextDirection.ltr,
-                            textAlign: TextAlign.right,
-                            style: AppTypography.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 20),
-
-                // زر استعراض دورات المعهد
-                Button(
-                  text: 'استعراض دورات المعهد',
-                  icon: Icons.school_outlined,
-                  height: 46,
-                  borderRadius: 12,
-                  onTap: () {
-                    Navigator.of(bottomSheetContext).pop();
-                    context.read<CourseController>().setSearchQuery(
-                      institute.name,
-                    );
-                    context.go('/courses_screen');
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  void _showInstituteDetails(InstituteModel institute) {
+    context.push('/institute-details', extra: institute);
   }
 
   @override
@@ -378,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen>
                         onSeeAll: () {
                           context.go('/institutes_screen');
                         },
-                        onInstituteTap: _showInstituteDetailsSheet,
+                        onInstituteTap: _showInstituteDetails,
                       ),
 
                       const SizedBox(height: AppSpacing.sectionGap),
@@ -502,6 +367,7 @@ class _HomeScreenState extends State<HomeScreen>
                 final course = results[index];
                 return CourseCard(
                   course: course,
+                  institutes: institutes,
                   isHorizontal: true,
                   showDetailsCourse: () => _showDetailsCourse(course),
                   isFavorite: favorites.isCourseFavorite(course.id),

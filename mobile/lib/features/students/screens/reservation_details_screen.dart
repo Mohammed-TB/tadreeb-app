@@ -90,16 +90,27 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
     return '$y/$m/$d';
   }
 
-  String _formatDateTime(DateTime? date) {
-    if (date == null) return '';
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final minute = date.minute.toString().padLeft(2, '0');
-    final period = date.hour >= 12 ? 'م' : 'ص';
-    return '$y/$m/$d $hour:$minute $period';
-  }
+
+String _formatDateTime(DateTime? date) {
+  if (date == null) return '';
+
+  // تحويل UTC إلى التوقيت المحلي للهاتف
+  final localDate = date.toLocal();
+
+  final y = localDate.year.toString().padLeft(4, '0');
+  final m = localDate.month.toString().padLeft(2, '0');
+  final d = localDate.day.toString().padLeft(2, '0');
+
+  final hour = localDate.hour > 12
+      ? localDate.hour - 12
+      : (localDate.hour == 0 ? 12 : localDate.hour);
+
+  final minute = localDate.minute.toString().padLeft(2, '0');
+  final period = localDate.hour >= 12 ? 'م' : 'ص';
+
+  return '$y/$m/$d $hour:$minute $period';
+}
+
 
   Future<void> _pickAndUploadReceipt(ImageSource source) async {
     final messenger = ScaffoldMessenger.of(context);

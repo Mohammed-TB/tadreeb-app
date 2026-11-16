@@ -1,10 +1,22 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import publicCourseService from "../services/public-course.service";
 
 class PublicCourseController {
   // GET /api/courses
   async getCourses(req: Request, res: Response) {
     try {
+      const instituteId = typeof req.query.instituteId === "string"
+        ? req.query.instituteId
+        : undefined;
+
+      if (instituteId && !mongoose.isValidObjectId(instituteId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid institute ID",
+        });
+      }
+
       const result = await publicCourseService.getPublishedCourses({
         search: typeof req.query.search === "string"
           ? req.query.search
@@ -14,6 +26,7 @@ class PublicCourseController {
           ? req.query.category
           : undefined,
 
+        instituteId,
         page: Number(req.query.page) || 1,
         limit: Number(req.query.limit) || 10,
       });

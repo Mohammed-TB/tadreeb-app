@@ -6,7 +6,6 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/button.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_institute_controller.dart';
 import '../models/admin_institute_model.dart';
 import '../widgets/admin_dashboard_error.dart';
@@ -48,7 +47,6 @@ class _AdminInstitutesScreenState extends State<AdminInstitutesScreen> {
   @override
   Widget build(BuildContext context) {
     final institutesController = context.watch<AdminInstituteController>();
-    final adminName = context.watch<AuthController>().currentUser?.name;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -70,7 +68,7 @@ class _AdminInstitutesScreenState extends State<AdminInstitutesScreen> {
           body: Column(
             children: [
               AdminDashboardHeader(
-                adminName: adminName,
+                title: 'المعاهد',
                 onMenuTap: () => Scaffold.of(shellContext).openDrawer(),
               ),
               Container(

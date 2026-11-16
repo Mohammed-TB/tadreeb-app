@@ -107,6 +107,22 @@ class CourseController extends ChangeNotifier {
   CourseSortOption get sortOption => _sortOption;
   bool get hasActiveFilter => _sortOption != CourseSortOption.none;
 
+  Future<bool> loadCachedCourses() async {
+    final cached = await _courseService.getCachedCourses(
+      page: 1,
+      limit: _limit,
+    );
+    if (cached == null) return false;
+
+    _courses = cached.courses;
+    _currentPage = cached.pagination.page;
+    _totalPages = cached.pagination.totalPages;
+    _hasFetched = true;
+    _errorMessage = null;
+    notifyListeners();
+    return true;
+  }
+
   void setSearchQuery(String value) {
     final query = value.trim();
     if (_searchQuery == query) return;
@@ -160,7 +176,7 @@ class CourseController extends ChangeNotifier {
   // الدورات المميزة
   List<CourseModel> get featuredCourses {
     final list = courses.where((course) {
-      return course.price < 20000 &&
+      return course.enrolledCount > course.capacity / course.capacity / 3 / 5 &&
           (_category == null || course.category.trim() == _category);
     }).toList();
 
@@ -178,25 +194,37 @@ class CourseController extends ChangeNotifier {
       return;
     }
 
+    final hadCourses = _courses.isNotEmpty;
     _isLoading = true;
     _errorMessage = null;
     _currentPage = 1;
-
-    notifyListeners();
+    if (!hadCourses) notifyListeners();
+    var shouldNotify = !hadCourses;
 
     try {
-      final result = await _courseService.getCourses(page: 1, limit: _limit);
+      if (_courses.isEmpty) await loadCachedCourses();
+      final result = await _courseService.loadCourses(
+        page: 1,
+        limit: _limit,
+        forceRefresh: forceRefresh,
+      );
 
-      _courses = result.courses;
-      _currentPage = result.pagination.page;
-      _totalPages = result.pagination.totalPages;
+      if (_courses.isEmpty || result.changed) {
+        _courses = result.data.courses;
+        shouldNotify = true;
+      }
+      _currentPage = result.data.pagination.page;
+      _totalPages = result.data.pagination.totalPages;
 
       _hasFetched = true;
+      if (_errorMessage != null) shouldNotify = true;
+      _errorMessage = null;
     } catch (e) {
+      if (_errorMessage != e.toString()) shouldNotify = true;
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
-      notifyListeners();
+      if (shouldNotify || _courses.isEmpty) notifyListeners();
       if (_refreshRequested) {
         _refreshRequested = false;
         unawaited(getCourses(forceRefresh: true));
@@ -251,21 +279,39 @@ class CourseController extends ChangeNotifier {
     try {
       final nextPage = _currentPage + 1;
 
-      final result = await _courseService.getCourses(
+      final cached = await _courseService.getCachedCourses(
+        page: nextPage,
+        limit: _limit,
+      );
+      if (cached != null) {
+        _replaceCoursePage(nextPage, cached);
+        _currentPage = cached.pagination.page;
+        _totalPages = cached.pagination.totalPages;
+        notifyListeners();
+      }
+
+      final result = await _courseService.loadCourses(
         page: nextPage,
         limit: _limit,
       );
 
-      _courses.addAll(result.courses);
-
-      _currentPage = result.pagination.page;
-      _totalPages = result.pagination.totalPages;
+      if (cached == null || result.changed) {
+        _replaceCoursePage(nextPage, result.data);
+      }
+      _currentPage = result.data.pagination.page;
+      _totalPages = result.data.pagination.totalPages;
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       _isLoadingMore = false;
       notifyListeners();
     }
+  }
+
+  void _replaceCoursePage(int page, CoursesResponse result) {
+    final startIndex = (page - 1) * _limit;
+    final existing = _courses.take(startIndex).toList();
+    _courses = [...existing, ...result.courses];
   }
 
   @override

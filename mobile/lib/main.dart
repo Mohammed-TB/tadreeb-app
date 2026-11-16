@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'app/app.dart';
 
+import 'core/cache/public_data_cache.dart';
 import 'core/network/api_client.dart';
 import 'core/network/token_storage_service.dart';
 import 'core/realtime/realtime_service.dart';
@@ -30,10 +31,17 @@ import 'features/reservations/controllers/institute_reservation_controller.dart'
 import 'features/reservations/services/reservation_service.dart'
     as institute_res;
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final publicCache = await PublicApiCache.open();
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<PublicApiCache>(
+          create: (_) => publicCache,
+          dispose: (_, cache) => unawaited(cache.close()),
+        ),
         Provider<TokenStorageService>(create: (_) => TokenStorageService()),
         Provider<RealtimeService>(
           create: (context) => RealtimeService(
@@ -65,8 +73,10 @@ void main() {
 
         // Courses
         Provider<CourseService>(
-          create: (context) =>
-              CourseService(apiClient: context.read<ApiClient>()),
+          create: (context) => CourseService(
+            apiClient: context.read<ApiClient>(),
+            publicCache: context.read<PublicApiCache>(),
+          ),
         ),
         Provider<FavoriteService>(
           create: (context) =>
@@ -104,8 +114,10 @@ void main() {
 
         // Institutes
         Provider<InstituteService>(
-          create: (context) =>
-              InstituteService(apiClient: context.read<ApiClient>()),
+          create: (context) => InstituteService(
+            apiClient: context.read<ApiClient>(),
+            publicCache: context.read<PublicApiCache>(),
+          ),
         ),
         ChangeNotifierProvider<InstituteController>(
           create: (context) => InstituteController(

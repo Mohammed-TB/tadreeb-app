@@ -14,7 +14,9 @@ import '../features/students/routing/student_shell.dart';
 
 import '../features/courses/screens/student/course_details_screen.dart';
 import '../features/students/screens/home_screen.dart';
+import '../features/students/screens/institute_details_screen.dart';
 import '../features/students/screens/institutes_screen.dart';
+import '../features/institutes/models/institute_model.dart';
 import '../features/students/screens/my_reservations_screen.dart';
 import '../features/students/screens/reservation_details_screen.dart';
 import '../features/students/models/student_reservation_model.dart';
@@ -36,6 +38,7 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/onboarding/screens/splash_screen.dart';
 
 import '../features/courses/models/course_model.dart';
 
@@ -62,16 +65,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _authController = context.read<AuthController>();
     _realtimeService = context.read<RealtimeService>();
     _authController.addListener(_syncRealtimeSession);
-    _realtimeSubscription = _realtimeService.events.listen(
-      _showRealtimeNotice,
-    );
+    _realtimeSubscription = _realtimeService.events.listen(_showRealtimeNotice);
     WidgetsBinding.instance.addObserver(this);
     _syncRealtimeSession();
     _router = GoRouter(
-      initialLocation: '/onboarding',
+      initialLocation: '/splash',
       refreshListenable: _authController,
       redirect: _redirect,
       routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashScreen(),
+        ),
+
         // Authentication
         GoRoute(
           path: '/login',
@@ -86,6 +92,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         GoRoute(
           path: '/favorites',
           builder: (context, state) => const FavoritesScreen(),
+        ),
+
+        GoRoute(
+          path: '/institute-details',
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! InstituteModel) {
+              return const InstitutesScreen();
+            }
+            return InstituteDetailsScreen(institute: extra);
+          },
         ),
 
         GoRoute(
@@ -352,10 +369,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   String? _redirect(BuildContext context, GoRouterState state) {
     final location = state.matchedLocation;
     if (_authController.isInitializing &&
-        location != '/onboarding' &&
+        location != '/splash' &&
         location != '/login' &&
         location != '/register') {
-      return '/onboarding';
+      return '/splash';
     }
     final user = _authController.currentUser;
 
@@ -363,6 +380,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             location == '/course-registration') &&
         state.extra is! CourseModel) {
       return '/courses_screen';
+    }
+
+    if (location == '/institute-details' && state.extra is! InstituteModel) {
+      return '/institutes_screen';
     }
 
     if ((location == '/reservation-details' ||
@@ -378,6 +399,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       null => null,
     };
 
+    if (location == '/splash') return null;
+
     final isPublicRoute =
         location == '/onboarding' ||
         location == '/login' ||
@@ -388,6 +411,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       '/courses_screen/details' ||
       '/course-registration' ||
       '/institutes_screen' ||
+      '/institute-details' ||
       '/my_reservations' ||
       '/my_reservations/details' ||
       '/reservation-details' ||

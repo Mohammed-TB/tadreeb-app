@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,26 +7,20 @@ import '../../../app/theme/app_typography.dart';
 
 import '../../institutes/controllers/institute_controller.dart';
 import '../../institutes/models/institute_model.dart';
+import '../../favorites/controllers/favorite_controller.dart';
 import '../../students/widgets/institute_card.dart';
 
 class MostPopularInstitutes extends StatefulWidget {
-  const MostPopularInstitutes({
-    super.key,
-    this.onSeeAll,
-    this.onInstituteTap,
-  });
+  const MostPopularInstitutes({super.key, this.onSeeAll, this.onInstituteTap});
 
   final VoidCallback? onSeeAll;
   final ValueChanged<InstituteModel>? onInstituteTap;
 
   @override
-  State<MostPopularInstitutes> createState() =>
-      _MostPopularInstitutesState();
+  State<MostPopularInstitutes> createState() => _MostPopularInstitutesState();
 }
 
-class _MostPopularInstitutesState
-    extends State<MostPopularInstitutes> {
-
+class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
   @override
   void initState() {
     super.initState();
@@ -36,12 +29,14 @@ class _MostPopularInstitutesState
       if (!mounted) return;
 
       context.read<InstituteController>().getInstitutes();
+      context.read<FavoriteController>().loadFavorites();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<InstituteController>();
+    final favorites = context.watch<FavoriteController>();
     final institutes = controller.institutes;
 
     return Column(
@@ -61,7 +56,7 @@ class _MostPopularInstitutesState
         else if (institutes.isEmpty)
           _buildEmptyMessage()
         else
-          _buildInstitutesList(institutes),
+          _buildInstitutesList(institutes, favorites),
       ],
     );
   }
@@ -69,16 +64,11 @@ class _MostPopularInstitutesState
   // عنوان القسم
   Widget _buildSectionHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'معاهد مميزة',
-            style: AppTypography.titleMedium,
-          ),
+          Text('معاهد مميزة', style: AppTypography.titleMedium),
 
           InkWell(
             onTap: widget.onSeeAll,
@@ -112,9 +102,12 @@ class _MostPopularInstitutesState
   }
 
   // قائمة المعاهد
-  Widget _buildInstitutesList(List<InstituteModel> institutes) {
+  Widget _buildInstitutesList(
+    List<InstituteModel> institutes,
+    FavoriteController favorites,
+  ) {
     return SizedBox(
-      height: 255,
+      height: 260,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
@@ -137,10 +130,26 @@ class _MostPopularInstitutesState
             onTap: () {
               widget.onInstituteTap?.call(institute);
             },
+            isFavorite: favorites.isInstituteFavorite(institute.id),
+            isFavoriteBusy: favorites.isInstituteSaving(institute.id),
+            onFavoriteTap: favorites.canToggleFavorites
+                ? () => _toggleFavorite(institute)
+                : null,
           );
         },
       ),
     );
+  }
+
+  Future<void> _toggleFavorite(InstituteModel institute) async {
+    try {
+      await context.read<FavoriteController>().toggleInstitute(institute);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $error')));
+    }
   }
 
   // حالة القائمة الفارغة
@@ -159,10 +168,7 @@ class _MostPopularInstitutesState
 
             const SizedBox(height: AppSpacing.xs),
 
-            Text(
-              'لا توجد معاهد متاحة حالياً',
-              style: AppTypography.bodyMedium,
-            ),
+            Text('لا توجد معاهد متاحة حالياً', style: AppTypography.bodyMedium),
           ],
         ),
       ),

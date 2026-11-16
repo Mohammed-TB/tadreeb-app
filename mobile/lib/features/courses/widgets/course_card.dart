@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/widgets/button.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
+import 'package:project_1/features/institutes/models/institute_model.dart';
 // import 'package:provider/provider.dart';
 
 // import '../../institutes/controllers/institute_controller.dart';
@@ -22,10 +24,12 @@ class CourseCard extends StatelessWidget {
     this.buttonText = 'عرض التفاصيل',
     this.isFavorite = false,
     this.onFavoriteTap,
-    this.isFavoriteBusy = false,
+    this.isFavoriteBusy = false, 
+    required this.institutes,
   });
 
   final CourseModel course;
+  final List<InstituteModel> institutes;
   final VoidCallback showDetailsCourse;
 
   // شكل البطاقة
@@ -40,43 +44,48 @@ class CourseCard extends StatelessWidget {
   final VoidCallback? onFavoriteTap;
   final bool isFavoriteBusy;
 
-  // String _instituteName(List<InstituteModel> institutes) {
-  //   for (final institute in institutes) {
-  //     if (institute.id == course.instituteId) {
-  //       return institute.name;
-  //     }
-  //   }
+String _instituteName(List<InstituteModel> institutes) {
+  for (final institute in institutes) {
+    if (institute.id == course.instituteId) {
+      return institute.name;
+    }
+  }
 
-  //   return 'معهد غير معروف';
-  // }
+  return 'معهد غير معروف';
+}
 
   @override
   Widget build(BuildContext context) {
+   
     final radius = BorderRadius.circular(12);
-
-    return Container(
-      width: width ?? (isHorizontal ? 320 : 200),
-      margin: EdgeInsets.only(
-        right: isHorizontal ? 0 : AppSpacing.xxs,
-        bottom: isHorizontal ? 1 : 0,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: radius,
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            offset: const Offset(0, 2),
-            blurRadius: 6,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: isHorizontal
-            ? _buildHorizontalCard(course.category)
-            : _buildVerticalCard(course.category),
+    final instituteLabel = _instituteName(institutes);
+    return InkWell(
+      onTap: showDetailsCourse,
+      borderRadius:radius,
+      child: Container(
+        width: width ?? (isHorizontal ? 320 : 200),
+        margin: EdgeInsets.only(
+          right: isHorizontal ? 0 : AppSpacing.xxs,
+          bottom: isHorizontal ? 1 : 0,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: radius,
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              offset: const Offset(0, 2),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: isHorizontal
+              ? _buildHorizontalCard(instituteLabel)
+              : _buildVerticalCard(instituteLabel),
+        ),
       ),
     );
   }
@@ -99,7 +108,21 @@ class CourseCard extends StatelessWidget {
     }
 
     if (isNetworkImage) {
-      return Image.network(image, fit: BoxFit.cover, errorBuilder: errorWidget);
+      return CachedNetworkImage(
+        imageUrl: image,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          color: AppColors.primaryLight,
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.school_outlined,
+            size: 40,
+            color: AppColors.primary,
+          ),
+        ),
+        errorWidget: (context, url, error) =>
+            errorWidget(context, error, null),
+      );
     }
 
     return Image.asset(
@@ -149,9 +172,9 @@ class CourseCard extends StatelessWidget {
         return ClipRRect(
           borderRadius: isHorizontal
               ? BorderRadius.horizontal(
-            right: isRTL ? const Radius.circular(12) : Radius.zero,
-            left: isRTL ? Radius.zero : const Radius.circular(12),
-          )
+                  right: isRTL ? const Radius.circular(12) : Radius.zero,
+                  left: isRTL ? Radius.zero : const Radius.circular(12),
+                )
               : const BorderRadius.vertical(top: Radius.circular(12)),
           child: Stack(
             fit: StackFit.expand,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:project_1/features/institutes/controllers/institute_controller.dart';
 import 'package:provider/provider.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
@@ -42,6 +43,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Widget build(BuildContext context) {
     final controller = context.watch<CourseController>();
     final favorites = context.watch<FavoriteController>();
+    final institutes = context.watch<InstituteController>().institutes;
     final courses = controller.filteredCourses;
 
     return Column(
@@ -162,7 +164,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
               ),
 
               Expanded(
-                child: controller.isLoading
+                child: controller.isLoading && controller.courses.isEmpty
                     ? const Center(
                         child: Padding(
                           padding: EdgeInsets.all(24),
@@ -181,26 +183,34 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                       )
                     : Padding(
-                        padding: const EdgeInsets.fromLTRB(16,8,16,0),
-                        child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        child: ListView.builder(
                           padding: EdgeInsets.zero,
                           itemCount: courses.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: AppSpacing.cardGap),
                           itemBuilder: (context, index) {
                             final course = courses[index];
-                            return CourseCard(
-                              course: course,
-                              isHorizontal: true,
-                              showDetailsCourse: () =>
-                                  _showDetailsCourse(course),
-                              isFavorite: favorites.isCourseFavorite(course.id),
-                              isFavoriteBusy: favorites.isCourseSaving(
-                                course.id,
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: index == courses.length - 1
+                                    ? 0
+                                    : AppSpacing.cardGap,
                               ),
-                              onFavoriteTap: favorites.canToggleFavorites
-                                  ? () => _toggleFavorite(course)
-                                  : null,
+                              child: CourseCard(
+                                course: course,
+                                institutes: institutes,
+                                isHorizontal: true,
+                                showDetailsCourse: () =>
+                                    _showDetailsCourse(course),
+                                isFavorite: favorites.isCourseFavorite(
+                                  course.id,
+                                ),
+                                isFavoriteBusy: favorites.isCourseSaving(
+                                  course.id,
+                                ),
+                                onFavoriteTap: favorites.canToggleFavorites
+                                    ? () => _toggleFavorite(course)
+                                    : null,
+                              ),
                             );
                           },
                         ),

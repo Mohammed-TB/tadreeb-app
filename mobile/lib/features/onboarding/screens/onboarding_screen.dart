@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -204,28 +205,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPageImage(OnBoarding page, double height) {
-    final borderRadius = BorderRadius.circular(28);
-
-    return Container(
+    return SizedBox(
       height: height,
       width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: Image.asset(
-          page.imageUrl,
-          fit: BoxFit.cover,
-          semanticLabel: page.title,
-        ),
+      child: SvgPicture.asset(
+        page.imageUrl,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+        semanticsLabel: page.title,
       ),
     );
   }
@@ -277,7 +266,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
           const SizedBox(width: AppSpacing.sm),
-
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -425,10 +426,11 @@ class InstituteCourseCard extends StatelessWidget {
   Widget _buildCourseImage(String? image) {
     if (image != null &&
         (image.startsWith('http://') || image.startsWith('https://'))) {
-      return Image.network(
-        image,
+      return CachedNetworkImage(
+        imageUrl: image,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _imagePlaceholder(),
+        placeholder: (_, _) => _imagePlaceholder(),
+        errorWidget: (_, _, _) => _imagePlaceholder(),
       );
     }
     if (image != null && image.startsWith('assets/')) {

@@ -94,7 +94,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              TopHeader(title: 'تسجيل الدخول', subTitle: 'سجل دخولك للمتابعة'),
+              TopHeader(
+                title: 'مرحبًا بعودتك',
+                subTitle: 'سجّل الدخول لمتابعة دوراتك وتسجيلاتك بسهولة.',
+              ),
               FormLogin(login: _login, googleLogin: _googleLogin),
             ],
           ),

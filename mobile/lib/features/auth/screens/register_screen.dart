@@ -103,8 +103,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Stack(
                 children: [
                   const TopHeader(
-                    title: 'إنشاء حساب',
-                    subTitle: 'أنشئ حسابًا واكتشف الدورات',
+                    title: 'ابدأ رحلتك التعليمية',
+                    subTitle: 'أنشئ حسابك واكتشف الدورات والمعاهد المناسبة لك.',
                   ),
                   Positioned(
                     top: 12,

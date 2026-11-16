@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Course from "../models/course.model";
 import Institute, { InstituteStatus } from "../../institutes/models/institute.model";
 import { CourseStatus } from "../types/course.types";
+import { getSaudiDayStart } from "../utils/course-date";
 
 class PublicCourseService {
   // عرض الدورات المنشورة والمتاحة للطلاب.
@@ -25,7 +26,7 @@ class PublicCourseService {
 
     const filter: any = {
       status: CourseStatus.PUBLISHED,
-      endDate: { $gte: new Date() },
+      endDate: { $gte: getSaudiDayStart() },
       instituteId: { $in: instituteIds },
     };
 
@@ -73,7 +74,7 @@ class PublicCourseService {
     const course = await Course.findOne({
       _id: courseId,
       status: CourseStatus.PUBLISHED,
-      endDate: { $gte: new Date() },
+      endDate: { $gte: getSaudiDayStart() },
     }).populate("instituteId", "name address logo");
 
     if (!course) {

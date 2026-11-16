@@ -3,15 +3,18 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:project_1/core/widgets/button.dart';
 import 'package:provider/provider.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
+import 'package:project_1/core/state/app_data_change_bus.dart';
 import 'package:project_1/features/auth/controllers/auth_controller.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/reservation_service.dart';
+import 'package:project_1/features/courses/widgets/course_registration_components.dart';
 
 enum _PaymentOption { deposit, full }
 
@@ -42,7 +45,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
   bool _isPickingReceipt = false;
   bool _isSubmitting = false;
 
-  static const _steps = ['بيانات الطالب', 'طريقة الدفع', 'سند الدفع'];
+  static const _steps = ['البيانات', 'الدفع', 'السند'];
 
   CourseModel get course => widget.course;
 
@@ -112,20 +115,33 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     }
 
     setState(() => _isSubmitting = true);
+    final dataChangeBus = context.read<AppDataChangeBus>();
     try {
       final service = context.read<ReservationService>();
-      _reservationId ??= await service.createOnlineReservation(
-        courseId: courseId,
-        studentName: _nameController.text.trim(),
-        studentPhone: _phoneController.text.trim(),
-        paymentOption: _paymentOption.name,
-      );
+      if (_reservationId == null) {
+        _reservationId = await service.createOnlineReservation(
+          courseId: courseId,
+          studentName: _nameController.text.trim(),
+          studentPhone: _phoneController.text.trim(),
+          paymentOption: _paymentOption.name,
+        );
+        dataChangeBus.notifyChanged(
+          AppDataDomain.reservations,
+          AppDataChangeOrigin.courseRegistration,
+          audience: AppDataAudience.student,
+        );
+      }
 
       await service.uploadReceipt(
         reservationId: _reservationId!,
         fileBytes: _receiptBytes!,
         fileName: _receiptName!,
         contentType: _receiptContentType!,
+      );
+      dataChangeBus.notifyChanged(
+        AppDataDomain.reservations,
+        AppDataChangeOrigin.courseRegistration,
+        audience: AppDataAudience.student,
       );
 
       if (!mounted) return;
@@ -236,27 +252,33 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          'إكمال التسجيل',
-          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
-      ),
+      appBar: AppBar(title: const Text('التسجيل في الدورة')),
       body: Column(
         children: [
-          _buildCourseSummary(),
-          _buildStepHeader(),
+          CourseRegistrationCourseSummary(course: course),
+          CourseRegistrationStepHeader(
+            steps: _steps,
+            currentStep: _currentStep,
+          ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildStudentStep(),
-                _buildPaymentStep(),
-                _buildReceiptStep(),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: TabBarView(
+                  controller: _tabController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildStudentStep(),
+                    _buildPaymentStep(),
+                    _buildReceiptStep(),
+                  ],
+                ),
+              ),
             ),
           ),
           _buildActions(),
@@ -265,162 +287,31 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     );
   }
 
-  Widget _buildCourseSummary() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.school_outlined, color: AppColors.primary),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  course.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  course.category,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            '${course.price.toStringAsFixed(0)} ريال',
-            style: AppTypography.labelLarge.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepHeader() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              AppSpacing.xs,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'الخطوة ${_currentStep + 1} من ${_steps.length}',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.textOnPrimary,
-                  ),
-                ),
-                Text(
-                  _steps[_currentStep],
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.textOnPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: (_currentStep + 1) / _steps.length,
-                minHeight: 4,
-                backgroundColor: AppColors.textOnPrimary.withValues(
-                  alpha: 0.25,
-                ),
-                valueColor: const AlwaysStoppedAnimation(
-                  AppColors.textOnPrimary,
-                ),
-              ),
-            ),
-          ),
-          TabBar(
-            controller: _tabController,
-            indicatorColor: AppColors.textOnPrimary,
-            indicatorWeight: 3,
-            labelColor: AppColors.textOnPrimary,
-            unselectedLabelColor: AppColors.textOnPrimary.withValues(
-              alpha: 0.7,
-            ),
-            labelStyle: AppTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            tabs: const [
-              Tab(text: 'البيانات'),
-              Tab(text: 'الدفع'),
-              Tab(text: 'السند'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStudentStep() {
     return Form(
       key: _studentFormKey,
+
       child: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
+
         children: [
-          _stepIntro(
+          const CourseRegistrationStepIntro(
             title: 'بيانات الطالب',
             description: 'تأكد من كتابة بيانات التواصل بشكل صحيح.',
             icon: Icons.person_outline,
           ),
           const SizedBox(height: AppSpacing.lg),
-          _buildTextField(
+          CourseRegistrationTextField(
             controller: _nameController,
             label: 'الاسم الرباعي',
             hint: 'اكتب الاسم الأول واسم الأب والجد والعائلة',
             icon: Icons.badge_outlined,
             textInputAction: TextInputAction.next,
             validator: _validateStudentName,
+            enabled: !_isSubmitting,
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildTextField(
+          CourseRegistrationTextField(
             controller: _phoneController,
             label: 'رقم الجوال',
             hint: '05xxxxxxxx',
@@ -428,9 +319,10 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
             validator: _validateStudentPhone,
+            enabled: !_isSubmitting,
           ),
           const SizedBox(height: AppSpacing.md),
-          _infoBanner(
+          const CourseRegistrationInfoBanner(
             icon: Icons.lock_outline,
             message: 'تُستخدم بياناتك للتواصل بشأن تسجيلك في هذه الدورة فقط.',
           ),
@@ -443,31 +335,34 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        _stepIntro(
+        const CourseRegistrationStepIntro(
           title: 'اختر طريقة الدفع',
           description: 'يمكنك دفع العربون لحجز مقعدك أو دفع الرسوم كاملة.',
           icon: Icons.payments_outlined,
         ),
         const SizedBox(height: AppSpacing.lg),
-        _paymentOptionCard(
-          option: _PaymentOption.deposit,
-          title: 'دفع العربون',
-          description: 'ادفع العربون الآن وأكمل المبلغ لاحقًا.',
-          amount: course.depositAmount,
-          icon: Icons.account_balance_wallet_outlined,
-          isEnabled: course.depositAmount > 0,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _paymentOptionCard(
-          option: _PaymentOption.full,
+        if (course.depositAmount > 0) ...[
+          CourseRegistrationPaymentOptionCard(
+            title: 'دفع العربون',
+            description: 'ادفع العربون الآن وأكمل المبلغ لاحقًا.',
+            amount: course.depositAmount,
+            icon: Icons.account_balance_wallet_outlined,
+            isSelected: _paymentOption == _PaymentOption.deposit,
+            onTap: () =>
+                setState(() => _paymentOption = _PaymentOption.deposit),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        CourseRegistrationPaymentOptionCard(
           title: 'دفع المبلغ كاملًا',
           description: 'سدد رسوم الدورة كاملة من الآن.',
           amount: course.price,
           icon: Icons.payments_outlined,
-          isEnabled: true,
+          isSelected: _paymentOption == _PaymentOption.full,
+          onTap: () => setState(() => _paymentOption = _PaymentOption.full),
         ),
         const SizedBox(height: AppSpacing.md),
-        _infoBanner(
+        const CourseRegistrationInfoBanner(
           icon: Icons.verified_user_outlined,
           message: 'لن يتم تأكيد التسجيل إلا بعد مراجعة سند الدفع من المعهد.',
         ),
@@ -475,100 +370,17 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     );
   }
 
-  Widget _paymentOptionCard({
-    required _PaymentOption option,
-    required String title,
-    required String description,
-    required double amount,
-    required IconData icon,
-    required bool isEnabled,
-  }) {
-    final isSelected = _paymentOption == option;
-    return Opacity(
-      opacity: isEnabled ? 1 : 0.5,
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: isEnabled
-              ? () => setState(() => _paymentOption = option)
-              : null,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.border,
-                width: isSelected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(icon, size: 18, color: AppColors.primary),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: AppTypography.labelLarge.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        description,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  '${amount.toStringAsFixed(0)} ريال',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildReceiptStep() {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        _stepIntro(
+        const CourseRegistrationStepIntro(
           title: 'أرفق سند الدفع',
           description: 'ارفع صورة واضحة لإيصال التحويل بالمبلغ المحدد.',
           icon: Icons.receipt_long_outlined,
         ),
         const SizedBox(height: AppSpacing.lg),
-        Text('صورة السند', style: AppTypography.labelLarge),
+        Text('صورة سند الدفع', style: AppTypography.labelLarge),
         const SizedBox(height: AppSpacing.xs),
         Material(
           color: AppColors.surface,
@@ -594,18 +406,30 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        _infoBanner(
+        const CourseRegistrationInfoBanner(
           icon: Icons.info_outline,
           message:
               'الصيغ المدعومة JPG وPNG وWEBP، والحد الأقصى لحجم الصورة 5 ميجابايت.',
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          'المبلغ المطلوب: ${_selectedAmount.toStringAsFixed(0)} ريال',
-          textAlign: TextAlign.center,
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('المبلغ المطلوب', style: AppTypography.labelMedium),
+              Text(
+                '${_selectedAmount.toStringAsFixed(0)} ريال',
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -621,14 +445,22 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           if (_isPickingReceipt)
             const CircularProgressIndicator()
           else
-            const Icon(
-              Icons.cloud_upload_outlined,
-              size: 44,
-              color: AppColors.primary,
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.upload_file_rounded,
+                size: 28,
+                color: AppColors.primary,
+              ),
             ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            _isPickingReceipt ? 'جارٍ فتح الصور...' : 'اضغط لاختيار صورة السند',
+            _isPickingReceipt ? 'جارٍ فتح الصور...' : 'اختر صورة سند الدفع',
             style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
           ),
           const SizedBox(height: AppSpacing.xxs),
@@ -694,157 +526,51 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       ? course.depositAmount
       : course.price;
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    required String? Function(String?) validator,
-    TextInputType? keyboardType,
-    TextInputAction? textInputAction,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTypography.labelLarge),
-        const SizedBox(height: AppSpacing.xs),
-        TextFormField(
-          controller: controller,
-          validator: validator,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          textDirection: TextDirection.rtl,
-          enabled: !_isSubmitting,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, color: AppColors.textSecondary),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _stepIntro({
-    required String title,
-    required String description,
-    required IconData icon,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.primary),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                description,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoBanner({required IconData icon, required String message}) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActions() {
     final isLastStep = _currentStep == _steps.length - 1;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.md,
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            if (_currentStep > 0) ...[
-              OutlinedButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () => _tabController.animateTo(_currentStep - 1),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(54, 50),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              if (_currentStep > 0) ...[
+                Button(
+                  isDisabled: _isSubmitting,
+                  variant: AppButtonVariant.outline,
+                  onTap: _isSubmitting
+                      ? null
+                      : () => _tabController.animateTo(_currentStep - 1),
+                  text: 'السابق',
+                  width: 104,
                 ),
-                child: const Text('السابق'),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+
+              Expanded(
+                child: _isSubmitting
+                    ? Center(child: Button(text: 'جاري الإرسال...'))
+                    : Button(
+                        onTap: _continue,
+                        text: isLastStep ? 'إرسال التسجيل' : 'التالي',
+                        icon: isLastStep
+                            ? Icons.send_rounded
+                            : Icons.arrow_forward_rounded,
+                      ),
               ),
-              const SizedBox(width: AppSpacing.sm),
             ],
-            Expanded(
-              child: SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _continue,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.textOnPrimary,
-                          ),
-                        )
-                      : Text(
-                          isLastStep ? 'إرسال التسجيل' : 'التالي',
-                          style: AppTypography.labelLarge.copyWith(
-                            color: AppColors.textOnPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

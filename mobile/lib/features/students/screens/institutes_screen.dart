@@ -275,7 +275,9 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
         final institute = controller.institutes[index];
         return _InstituteListCard(
           institute: institute,
-          onTap: () => _showInstituteDetails(institute),
+          onTap: () {
+            
+          },
         );
       },
     );
@@ -314,15 +316,6 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
           ],
         ],
       ),
-    );
-  }
-
-  void _showInstituteDetails(InstituteModel institute) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _InstituteDetailsSheet(institute: institute),
     );
   }
 
@@ -392,6 +385,7 @@ class _InstituteListCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Row(
                       children: [
@@ -404,14 +398,14 @@ class _InstituteListCard extends StatelessWidget {
                           ),
                         ),
                         const Icon(
-                          Icons.chevron_left_rounded,
+                          Icons.chevron_right_outlined,
                           color: AppColors.textHint,
                         ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Icon(
                           Icons.location_on_outlined,
@@ -430,24 +424,6 @@ class _InstituteListCard extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ),
-                    if (institute.description?.trim().isNotEmpty == true) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        institute.description!.trim(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'عرض بيانات المعهد',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary,
-                      ),
                     ),
                   ],
                 ),
@@ -471,109 +447,3 @@ class _InstitutePlaceholder extends StatelessWidget {
   }
 }
 
-class _InstituteDetailsSheet extends StatelessWidget {
-  const _InstituteDetailsSheet({required this.institute});
-
-  final InstituteModel institute;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.xl,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(institute.name, style: AppTypography.titleLarge),
-            if (institute.description?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                institute.description!.trim(),
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            _InstituteDetailRow(
-              icon: Icons.location_on_outlined,
-              text: institute.address,
-            ),
-            if (institute.phone.isNotEmpty)
-              _InstituteDetailRow(
-                icon: Icons.phone_outlined,
-                text: institute.phone,
-                textDirection: TextDirection.ltr,
-              ),
-            if (institute.email?.isNotEmpty == true)
-              _InstituteDetailRow(
-                icon: Icons.email_outlined,
-                text: institute.email!,
-                textDirection: TextDirection.ltr,
-              ),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إغلاق'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InstituteDetailRow extends StatelessWidget {
-  const _InstituteDetailRow({
-    required this.icon,
-    required this.text,
-    this.textDirection,
-  });
-
-  final IconData icon;
-  final String text;
-  final TextDirection? textDirection;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              textDirection: textDirection,
-              style: AppTypography.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -1,8 +1,14 @@
-import mongoose from "mongoose";
+import mongoose, { HydratedDocument } from "mongoose";
 
-import  Reservation  from "../models/reservation.model";
-import  Course  from "../../courses/models/course.model";
+import Reservation from "../models/reservation.model";
+import Course from "../../courses/models/course.model";
+import { ICourse } from "../../courses/types/course.types";
+import { IReservation } from "../types/reservation.types";
 import { ReservationStatus } from "../types/reservation.types";
+import {
+  emitSeatAvailabilityUpdated,
+  emitSeatHoldExpired,
+} from "../../../realtime/realtime.events";
 
 /**
  * البحث عن الحجوزات التي انتهت مهلتها وتحرير مقاعدها.
@@ -38,10 +44,14 @@ export const expireReservations = async (): Promise<number> => {
     const session = await mongoose.startSession();
 
     let didExpire = false;
+    let expiredReservation: HydratedDocument<IReservation> | undefined;
+    let updatedCourse: HydratedDocument<ICourse> | undefined;
 
     try {
       await session.withTransaction(async () => {
         didExpire = false;
+        expiredReservation = undefined;
+        updatedCourse = undefined;
 
         // إعادة التحقق من الحالة والمهلة داخل Transaction؛
         // فقد يكون الطالب رفع السند أثناء انتظار معالجة المهمة.
@@ -74,7 +84,7 @@ export const expireReservations = async (): Promise<number> => {
         if (!reservation) return;
 
         // تحرير المقعد المؤقت، مع منع نزول العداد تحت الصفر.
-        const courseUpdate = await Course.updateOne(
+        const course = await Course.findOneAndUpdate(
           {
             _id: reservation.courseId,
             reservedCount: { $gte: 1 },
@@ -82,20 +92,28 @@ export const expireReservations = async (): Promise<number> => {
           {
             $inc: { reservedCount: -1 },
           },
-          { session },
+          { new: true, session },
         );
 
-        // إذا لم نستطع تحرير المقعد، نتراجع عن تحديث الحجز أيضاً.
-        if (courseUpdate.modifiedCount !== 1) {
+        if (!course) {
           throw new Error(
             `Could not release reserved seat for reservation ${reservation._id}`,
           );
         }
 
+        updatedCourse = course;
+        expiredReservation = reservation;
         didExpire = true;
       });
 
-      if (didExpire) expiredCount++;
+      if (didExpire) {
+        if (!expiredReservation || !updatedCourse) {
+          throw new Error("Expired reservation transaction returned no result");
+        }
+        emitSeatHoldExpired(expiredReservation);
+        emitSeatAvailabilityUpdated(updatedCourse);
+        expiredCount++;
+      }
     } finally {
       await session.endSession();
     }

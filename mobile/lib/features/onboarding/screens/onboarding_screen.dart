@@ -59,6 +59,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  void _onPageChanged(int index) {
+    if (currentIndex == index) return;
+    setState(() => currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,14 +76,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: PageView.builder(
                 controller: _controller,
                 itemCount: onBoardingList.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    currentIndex = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return _buildOnboardingPage(onBoardingList[index], index);
-                },
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, index) =>
+                    _buildOnboardingPage(onBoardingList[index]),
               ),
             ),
             _buildPageIndicators(),
@@ -151,10 +151,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildOnboardingPage(OnBoarding page, int index) {
+  Widget _buildOnboardingPage(OnBoarding page) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final illustrationSize = constraints.maxHeight < 480 ? 190.0 : 230.0;
+        final imageHeight = constraints.maxHeight < 520 ? 220.0 : 300.0;
 
         return SingleChildScrollView(
           child: ConstrainedBox(
@@ -167,11 +167,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildIllustration(page, index, illustrationSize),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: _buildPageImage(page, imageHeight),
+                    ),
+                  ),
                   SizedBox(
-                    height: constraints.maxHeight < 480
-                        ? AppSpacing.lg
-                        : AppSpacing.xxxl,
+                    height: constraints.maxHeight < 520
+                        ? AppSpacing.md
+                        : AppSpacing.xxl,
                   ),
                   Text(
                     page.title,
@@ -198,81 +203,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildIllustration(OnBoarding page, int index, double size) {
-    final isCurrentPage = currentIndex == index;
+  Widget _buildPageImage(OnBoarding page, double height) {
+    final borderRadius = BorderRadius.circular(28);
 
-    return AnimatedScale(
-      scale: isCurrentPage ? 1 : 0.88,
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutBack,
-      child: AnimatedOpacity(
-        opacity: isCurrentPage ? 1 : 0.72,
-        duration: const Duration(milliseconds: 300),
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: page.color,
-                  borderRadius: BorderRadius.circular(size * 0.24),
-                ),
-              ),
-              Positioned(
-                top: size * 0.12,
-                left: size * 0.13,
-                child: _decorationDot(size * 0.12, AppColors.accentLight),
-              ),
-              Positioned(
-                bottom: size * 0.12,
-                right: size * 0.12,
-                child: _decorationDot(size * 0.16, AppColors.primaryLight),
-              ),
-              Container(
-                width: size * 0.52,
-                height: size * 0.52,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      blurRadius: 28,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  page.icon,
-                  size: size * 0.27,
-                  color: AppColors.primary,
-                ),
-              ),
-              Positioned(
-                top: size * 0.21,
-                right: size * 0.19,
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: size * 0.1,
-                  color: AppColors.accent,
-                ),
-              ),
-            ],
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Image.asset(
+          page.imageUrl,
+          fit: BoxFit.cover,
+          semanticLabel: page.title,
         ),
       ),
-    );
-  }
-
-  Widget _decorationDot(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 
@@ -321,8 +275,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 onTap: previousPage,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
           ],
+          const SizedBox(width: AppSpacing.sm),
+
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),

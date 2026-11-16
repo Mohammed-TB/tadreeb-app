@@ -4,11 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../models/institute_dashboard_model.dart';
-import '../services/institute_dashboard_service.dart';
+import '../controllers/institute_dashboard_controller.dart';
 import '../widgets/institute_dashboard_activity.dart';
 import '../widgets/institute_dashboard_analytics.dart';
 
@@ -21,27 +19,14 @@ class InstituteDashboardScreen extends StatefulWidget {
 }
 
 class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
-  late Future<InstituteDashboardData> _dashboardFuture;
-
   @override
   void initState() {
     super.initState();
-    _dashboardFuture = _fetchDashboard();
-  }
-
-  Future<InstituteDashboardData> _fetchDashboard() {
-    return InstituteDashboardService(
-      apiClient: context.read<ApiClient>(),
-    ).getDashboard();
-  }
-
-  Future<void> _refreshDashboard() {
-    final refreshedDashboard = _fetchDashboard();
-    setState(() => _dashboardFuture = refreshedDashboard);
-    return refreshedDashboard.then<void>(
-      (_) {},
-      onError: (Object error, StackTrace stackTrace) {},
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<InstituteDashboardController>().fetchDashboard();
+      }
+    });
   }
 
   @override
@@ -49,37 +34,35 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
     final ownerName = context.watch<AuthController>().currentUser?.name;
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: FutureBuilder<InstituteDashboardData>(
-        future: _dashboardFuture,
-        builder: (context, snapshot) =>
-            _buildDashboard(context, snapshot, ownerName),
+      child: Consumer<InstituteDashboardController>(
+        builder: (context, controller, _) =>
+            _buildDashboard(context, controller, ownerName),
       ),
     );
   }
 
   Widget _buildDashboard(
     BuildContext context,
-    AsyncSnapshot<InstituteDashboardData> snapshot,
+    InstituteDashboardController controller,
     String? ownerName,
   ) {
-    final dashboard = snapshot.data;
     return RefreshIndicator(
-      onRefresh: _refreshDashboard,
+      onRefresh: () => controller.fetchDashboard(forceRefresh: true),
       color: AppColors.primary,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
-            child: _buildHeader(ownerName, dashboard?.instituteName),
+            child: _buildHeader(ownerName, controller.data?.instituteName),
           ),
-          if (snapshot.hasError)
+          if (controller.error != null)
             SliverToBoxAdapter(
               child: _buildErrorState(
-                _errorMessage(snapshot.error),
-                () => setState(() => _dashboardFuture = _fetchDashboard()),
+                _errorMessage(controller.error),
+                () => controller.fetchDashboard(forceRefresh: true),
               ),
             )
-          else if (dashboard == null)
+          else if (controller.data == null)
             const SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
@@ -91,9 +74,9 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  InstituteDashboardAnalytics(data: dashboard),
+                  InstituteDashboardAnalytics(data: controller.data!),
                   const SizedBox(height: AppSpacing.sectionGap),
-                  InstituteDashboardActivity(data: dashboard),
+                  InstituteDashboardActivity(data: controller.data!),
                   const SizedBox(height: AppSpacing.xxxl),
                 ]),
               ),

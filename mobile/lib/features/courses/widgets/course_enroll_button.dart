@@ -9,10 +9,12 @@ class CourseEnrollButton extends StatelessWidget {
     super.key,
     required this.isFull,
     required this.onPressed,
+    this.isLoading = false,
   });
 
   final bool isFull;
   final VoidCallback onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +35,7 @@ class CourseEnrollButton extends StatelessWidget {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: isFull ? null : onPressed,
+            onPressed: isFull || isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.textOnPrimary,
@@ -42,15 +44,24 @@ class CourseEnrollButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(
-              isFull ? 'الدورة مكتملة' : 'التسجيل في الدورة',
-              style: AppTypography.titleMedium.copyWith(
-                color: isFull
-                    ? AppColors.textSecondary
-                    : AppColors.textOnPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.textOnPrimary,
+                    ),
+                  )
+                : Text(
+                    isFull ? 'الدورة مكتملة' : 'التسجيل في الدورة',
+                    style: AppTypography.titleMedium.copyWith(
+                      color: isFull
+                          ? AppColors.textSecondary
+                          : AppColors.textOnPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ),
       ),

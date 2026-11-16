@@ -8,6 +8,8 @@ import 'app/app.dart';
 
 import 'core/network/api_client.dart';
 import 'core/network/token_storage_service.dart';
+import 'core/realtime/realtime_service.dart';
+import 'core/state/app_data_change_bus.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/services/auth_service.dart';
 
@@ -20,16 +22,29 @@ import 'features/admin/controllers/admin_institute_controller.dart';
 import 'features/admin/services/admin_institute_service.dart';
 
 import 'features/institutes/controllers/institute_controller.dart';
+import 'features/institutes/controllers/institute_dashboard_controller.dart';
+import 'features/institutes/services/institute_dashboard_service.dart';
 import 'features/institutes/services/institute_service.dart';
 
 import 'features/reservations/controllers/institute_reservation_controller.dart';
-import 'features/reservations/services/reservation_service.dart' as institute_res;
+import 'features/reservations/services/reservation_service.dart'
+    as institute_res;
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         Provider<TokenStorageService>(create: (_) => TokenStorageService()),
+        Provider<RealtimeService>(
+          create: (context) => RealtimeService(
+            tokenStorage: context.read<TokenStorageService>(),
+          ),
+          dispose: (_, realtimeService) => unawaited(realtimeService.dispose()),
+        ),
+        Provider<AppDataChangeBus>(
+          create: (_) => AppDataChangeBus(),
+          dispose: (_, changeBus) => unawaited(changeBus.dispose()),
+        ),
         Provider<ApiClient>(
           create: (context) =>
               ApiClient(tokenStorage: context.read<TokenStorageService>()),
@@ -58,22 +73,32 @@ void main() {
               FavoriteService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider<FavoriteController>(
-          create: (context) =>
-              FavoriteController(context.read<FavoriteService>()),
+          create: (context) => FavoriteController(
+            context.read<FavoriteService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
         ),
         Provider<student_res.ReservationService>(
-          create: (context) =>
-              student_res.ReservationService(apiClient: context.read<ApiClient>()),
+          create: (context) => student_res.ReservationService(
+            apiClient: context.read<ApiClient>(),
+          ),
         ),
 
         ChangeNotifierProvider<CourseController>(
-          create: (context) => CourseController(context.read<CourseService>()),
+          create: (context) => CourseController(
+            context.read<CourseService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
         ),
 
         // Student Reservation Controller
         ChangeNotifierProvider(
           create: (context) => ReservationController(
             context.read<student_res.ReservationService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
           ),
         ),
 
@@ -83,9 +108,22 @@ void main() {
               InstituteService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider<InstituteController>(
+          create: (context) => InstituteController(
+            context.read<InstituteService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          )..getInstitutes(),
+        ),
+        Provider<InstituteDashboardService>(
           create: (context) =>
-              InstituteController(context.read<InstituteService>())
-                ..getInstitutes(),
+              InstituteDashboardService(apiClient: context.read<ApiClient>()),
+        ),
+        ChangeNotifierProvider<InstituteDashboardController>(
+          create: (context) => InstituteDashboardController(
+            context.read<InstituteDashboardService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
         ),
 
         Provider<AdminInstituteService>(
@@ -94,17 +132,23 @@ void main() {
         ),
         ChangeNotifierProvider<AdminInstituteController>(
           create: (context) =>
-              AdminInstituteController(context.read<AdminInstituteService>()),
+              AdminInstituteController(
+                context.read<AdminInstituteService>(),
+                dataChangeBus: context.read<AppDataChangeBus>(),
+              ),
         ),
 
         // Institute Owner Reservations
         Provider<institute_res.ReservationService>(
-          create: (context) =>
-              institute_res.ReservationService(apiClient: context.read<ApiClient>()),
+          create: (context) => institute_res.ReservationService(
+            apiClient: context.read<ApiClient>(),
+          ),
         ),
         ChangeNotifierProvider<InstituteReservationController>(
           create: (context) => InstituteReservationController(
             context.read<institute_res.ReservationService>(),
+            realtimeService: context.read<RealtimeService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
           ),
         ),
       ],

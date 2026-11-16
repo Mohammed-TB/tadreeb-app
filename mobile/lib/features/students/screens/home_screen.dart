@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,7 +13,6 @@ import 'package:project_1/features/students/widgets/header_home.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
 import 'package:project_1/features/students/widgets/most_popular_courses.dart';
 import 'package:project_1/features/students/widgets/most_popular_institutes.dart';
-import 'package:project_1/features/students/widgets/active_reservations_reminder.dart';
 import 'package:project_1/features/students/widgets/home_hero_banner.dart';
 import 'package:project_1/features/students/widgets/latest_courses_section.dart';
 import 'package:project_1/features/students/widgets/why_choose_us_section.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _isInitialLoading = true;
 
   @override
   void initState() {
@@ -53,23 +55,38 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<CourseController>().getCourses();
-      context.read<InstituteController>().getInstitutes();
-      context.read<ReservationController>().fetchMyReservations();
-      context.read<FavoriteController>().loadFavorites();
+      unawaited(_loadInitialData());
     });
+  }
+
+  Future<void> _loadInitialData() async {
+    final courseController = context.read<CourseController>();
+    final instituteController = context.read<InstituteController>();
+    final favoriteController = context.read<FavoriteController>();
+
+    unawaited(context.read<ReservationController>().fetchMyReservations());
+
+    try {
+      await Future.wait([
+        courseController.getCourses(),
+        instituteController.getInstitutes(),
+        favoriteController.loadFavorites(),
+      ]);
+    } finally {
+      if (mounted) setState(() => _isInitialLoading = false);
+    }
   }
 
   @override
@@ -82,9 +99,11 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _onRefresh() async {
     await Future.wait([
       context.read<CourseController>().getCourses(forceRefresh: true),
-      context.read<InstituteController>().getInstitutes(),
-      context.read<ReservationController>().fetchMyReservations(),
-      context.read<FavoriteController>().loadFavorites(),
+      context.read<InstituteController>().getInstitutes(forceRefresh: true),
+      context.read<ReservationController>().fetchMyReservations(
+        forceRefresh: true,
+      ),
+      context.read<FavoriteController>().loadFavorites(forceRefresh: true),
     ]);
   }
 
@@ -115,7 +134,8 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
         final logo = institute.imageUrl;
-        final hasValidImage = logo != null &&
+        final hasValidImage =
+            logo != null &&
             (logo.startsWith('http://') || logo.startsWith('https://'));
 
         return Container(
@@ -155,11 +175,12 @@ class _HomeScreenState extends State<HomeScreen>
                           ? Image.network(
                               logo,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(
-                                Icons.apartment_rounded,
-                                color: AppColors.primary,
-                                size: 30,
-                              ),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.apartment_rounded,
+                                    color: AppColors.primary,
+                                    size: 30,
+                                  ),
                             )
                           : const Icon(
                               Icons.apartment_rounded,
@@ -263,9 +284,9 @@ class _HomeScreenState extends State<HomeScreen>
                   borderRadius: 12,
                   onTap: () {
                     Navigator.of(bottomSheetContext).pop();
-                    context
-                        .read<CourseController>()
-                        .setSearchQuery(institute.name);
+                    context.read<CourseController>().setSearchQuery(
+                      institute.name,
+                    );
                     context.go('/courses_screen');
                   },
                 ),
@@ -280,9 +301,14 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final courseController = context.watch<CourseController>();
-    final reservationController = context.watch<ReservationController>();
     final favoriteController = context.watch<FavoriteController>();
     final isSearching = _searchController.text.trim().isNotEmpty;
+
+    if (_isInitialLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -327,22 +353,17 @@ class _HomeScreenState extends State<HomeScreen>
                         onExploreTap: () => context.go('/courses_screen'),
                       ),
 
-                      // 4. بطاقة تذكير الحجوزات النشطة
-                      ActiveReservationsReminder(
-                        activeCount: reservationController.pendingPaymentCount +
-                            reservationController.underReviewCount,
-                        onViewReservations: () =>
-                            context.go('/my_reservations'),
-                      ),
-
                       const SizedBox(height: AppSpacing.md),
 
                       // 5. التصنيفات
-                      ListCategory(
-                        categories: courseController.availableCategories,
-                        selectedCategory:
-                            courseController.selectedCategory ?? 'الكل',
-                        onCategorySelected: courseController.selectCategory,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ListCategory(
+                          categories: courseController.availableCategories,
+                          selectedCategory:
+                              courseController.selectedCategory ?? 'الكل',
+                          onCategorySelected: courseController.selectCategory,
+                        ),
                       ),
 
                       const SizedBox(height: AppSpacing.sectionGap),
@@ -368,8 +389,9 @@ class _HomeScreenState extends State<HomeScreen>
                         favorites: favoriteController,
                         onShowDetails: _showDetailsCourse,
                         onSeeAll: () {
-                          courseController
-                              .setSortOption(CourseSortOption.dateNewest);
+                          courseController.setSortOption(
+                            CourseSortOption.dateNewest,
+                          );
                           context.go('/courses_screen');
                         },
                       ),
@@ -505,5 +527,4 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -9,7 +8,6 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/button.dart';
 import '../../../core/widgets/search.dart';
 import '../../courses/controllers/reservation_controller.dart';
-import '../models/student_reservation_model.dart';
 import '../widgets/student_reservation_card.dart';
 
 /// شاشة حجوزاتي الخاصة بالطالب متطابقة 100% مع الـ Backend ونظام التصميم
@@ -22,7 +20,6 @@ class MyReservationsScreen extends StatefulWidget {
 
 class _MyReservationsScreenState extends State<MyReservationsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -44,11 +41,12 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Consumer<ReservationController>(
+      child: Container(
+        color: AppColors.background,
+        child: Consumer<ReservationController>(
           builder: (context, controller, _) {
-            final hasActiveFilters = controller.searchQuery.isNotEmpty ||
+            final hasActiveFilters =
+                controller.searchQuery.isNotEmpty ||
                 (controller.statusFilter != null &&
                     controller.statusFilter != 'ALL');
 
@@ -59,9 +57,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   // ترويسة شاشة حجوزاتي
-                  SliverToBoxAdapter(
-                    child: _buildHeader(context, controller),
-                  ),
+                  SliverToBoxAdapter(child: _buildHeader()),
 
                   // محتوى الشاشة
                   SliverPadding(
@@ -106,15 +102,9 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                           ...controller.filteredReservations.map(
                             (r) => StudentReservationCard(
                               reservation: r,
-                              isUploading: controller.isUploadingFor(r.id),
                               onTap: () => context.push(
                                 '/reservation-details',
                                 extra: r,
-                              ),
-                              onUploadReceipt: () => _handlePickAndUploadReceipt(
-                                context,
-                                controller,
-                                r,
                               ),
                             ),
                           ),
@@ -132,72 +122,33 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    ReservationController controller,
-  ) {
+  Widget _buildHeader() {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-      ),
+      color: AppColors.primary,
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
+        child: SizedBox(
+          height: 56,
+          width: double.infinity,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                ),
-                child: const Icon(
-                  Icons.receipt_long_rounded,
-                  size: 22,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'حجوزاتي وتدريباتي',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.textOnPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      'متابعة حالة الحجز وسندات التحويل البنكي',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textOnPrimary.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () => controller.fetchMyReservations(),
-                tooltip: 'تحديث الحجوزات',
-                color: AppColors.textOnPrimary,
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-              Builder(
-                builder: (headerContext) => IconButton(
-                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
-                  tooltip: 'القائمة الرئيسية',
+              Text(
+                'حجوزاتي',
+                style: AppTypography.titleMedium.copyWith(
                   color: AppColors.textOnPrimary,
-                  icon: const Icon(Icons.menu),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              PositionedDirectional(
+                start: 4,
+                child: Builder(
+                  builder: (headerContext) => IconButton(
+                    onPressed: () => Scaffold.of(headerContext).openDrawer(),
+                    tooltip: 'القائمة الرئيسية',
+                    color: AppColors.textOnPrimary,
+                    icon: const Icon(Icons.menu_rounded),
+                  ),
                 ),
               ),
             ],
@@ -208,38 +159,135 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   }
 
   Widget _buildFilterChips(ReservationController controller) {
-    final filters = <(String, String?)>[
-      ('الكل (${controller.totalCount})', null),
-      ('بانتظار السداد (${controller.pendingPaymentCount})', 'pendingPayment'),
-      ('قيد المراجعة (${controller.underReviewCount})', 'paymentSubmitted'),
-      ('مؤكد ومقبول (${controller.confirmedCount})', 'confirmed'),
-      ('مرفوض (${controller.rejectedCount})', 'rejected'),
-    ];
+    final filters =
+        <
+          ({
+            String label,
+            String? status,
+            int count,
+            IconData icon,
+            Color color,
+          })
+        >[
+          (
+            label: 'الكل',
+            status: null,
+            count: controller.totalCount,
+            icon: Icons.tune_rounded,
+            color: AppColors.primary,
+          ),
+          (
+            label: 'بانتظار السداد',
+            status: 'pendingPayment',
+            count: controller.pendingPaymentCount,
+            icon: Icons.payments_outlined,
+            color: AppColors.accentDark,
+          ),
+          (
+            label: 'قيد المراجعة',
+            status: 'paymentSubmitted',
+            count: controller.underReviewCount,
+            icon: Icons.hourglass_top_rounded,
+            color: AppColors.primary,
+          ),
+          (
+            label: 'مؤكد',
+            status: 'confirmed',
+            count: controller.confirmedCount,
+            icon: Icons.check_circle_outline_rounded,
+            color: AppColors.success,
+          ),
+          (
+            label: 'مرفوض',
+            status: 'rejected',
+            count: controller.rejectedCount,
+            icon: Icons.cancel_outlined,
+            color: AppColors.error,
+          ),
+        ];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
-        children: filters.map((f) {
-          final isSelected = controller.statusFilter == f.$2;
+        children: filters.map((filter) {
+          final selectedStatus = controller.statusFilter == 'ALL'
+              ? null
+              : controller.statusFilter;
+          final isSelected = selectedStatus == filter.status;
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-            child: ChoiceChip(
-              label: Text(f.$1),
-              selected: isSelected,
-              onSelected: (_) => controller.setStatusFilter(f.$2),
-              selectedColor: AppColors.primaryLight,
-              backgroundColor: AppColors.surface,
-              side: BorderSide(
-                color: isSelected ? AppColors.primary : AppColors.border,
-                width: isSelected ? 1.2 : 1.0,
-              ),
-              labelStyle: AppTypography.labelSmall.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => controller.setStatusFilter(filter.status),
+                borderRadius: BorderRadius.circular(24),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 9, 9, 9),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : AppColors.border,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.16),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        filter.icon,
+                        size: 16,
+                        color: isSelected ? Colors.white : filter.color,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        filter.label,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        constraints: const BoxConstraints(minWidth: 22),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : filter.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${filter.count}',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isSelected ? Colors.white : filter.color,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
@@ -355,59 +403,5 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
         ],
       ),
     );
-  }
-
-  /// رفع أو إعادة رفع سند الدفع
-  Future<void> _handlePickAndUploadReceipt(
-    BuildContext context,
-    ReservationController controller,
-    StudentReservationModel reservation,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-
-    // اختيار الصورة من المعرض
-    final image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
-    if (image == null) return;
-
-    final bytes = await image.readAsBytes();
-    final fileName = image.name;
-    final ext = fileName.split('.').last.toLowerCase();
-    final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
-
-    final success = await controller.uploadReceipt(
-      reservationId: reservation.id,
-      fileBytes: bytes,
-      fileName: fileName,
-      contentType: contentType,
-    );
-
-    if (success) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text('تم رفع سند الدفع بنجاح وهو قيد مراجعة المعهد'),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('فشل رفع السند: ${controller.errorMessage}'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 }

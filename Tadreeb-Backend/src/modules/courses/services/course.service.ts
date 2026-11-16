@@ -9,6 +9,13 @@ import {
   UpdateCourseInput,
   CourseStatus,
 } from "../types/course.types";
+import {
+  emitCoursePublished,
+  emitCourseUnpublished,
+  emitCourseUpdated,
+  emitSeatAvailabilityUpdated,
+} from "../../../realtime/realtime.events";
+import { parseCourseDate } from "../utils/course-date";
 
 
 
@@ -78,11 +85,11 @@ private async getOwnerInstitute(userId: string) {
 
     const start = input.startDate === undefined
       ? undefined
-      : new Date(input.startDate);
+      : parseCourseDate(input.startDate);
 
     const end = input.endDate === undefined
       ? undefined
-      : new Date(input.endDate);
+      : parseCourseDate(input.endDate);
 
     if (start && Number.isNaN(start.getTime())) {
       throw new Error("Invalid course start date");
@@ -117,7 +124,10 @@ private async getOwnerInstitute(userId: string) {
       throw new Error("All required course fields must be provided");
     }
 
-    if (new Date(input.startDate) <= new Date()) {
+    const startDate = parseCourseDate(input.startDate);
+    const endDate = parseCourseDate(input.endDate);
+
+    if (startDate <= new Date()) {
       throw new Error("Course start date must be in the future");
     }
 
@@ -129,8 +139,8 @@ private async getOwnerInstitute(userId: string) {
       price: input.price,
       depositAmount: input.depositAmount,
       capacity: input.capacity,
-      startDate: input.startDate,
-      endDate: input.endDate,
+      startDate,
+      endDate,
       location: input.location.trim(),
       whatWillLearn: this.normalizeStringList(input.whatWillLearn),
       features: this.normalizeStringList(input.features),
@@ -180,8 +190,11 @@ private async getOwnerInstitute(userId: string) {
   ) {
     const course = await this.getMyCourseById(userId, courseId);
 
-    if (course.status !== CourseStatus.DRAFT) {
-      throw new Error("Only draft courses can be edited");
+    if (
+      course.status !== CourseStatus.DRAFT &&
+      course.status !== CourseStatus.PUBLISHED
+    ) {
+      throw new Error("Only draft or published courses can be edited");
     }
 
     this.validateCourseData({
@@ -229,18 +242,18 @@ private async getOwnerInstitute(userId: string) {
     }
 
     if (input.capacity !== undefined) {
-      if (input.capacity < course.enrolledCount) {
-        throw new Error("Capacity cannot be less than enrolled students");
+      if (input.capacity < course.enrolledCount + course.reservedCount) {
+        throw new Error("Capacity cannot be less than occupied seats");
       }
       course.capacity = input.capacity;
     }
 
     if (input.startDate !== undefined) {
-      course.startDate = new Date(input.startDate);
+      course.startDate = parseCourseDate(input.startDate);
     }
 
     if (input.endDate !== undefined) {
-      course.endDate = new Date(input.endDate);
+      course.endDate = parseCourseDate(input.endDate);
     }
 
     // التحقق من السعر والعربون بعد دمج القيم الجديدة والقديمة.
@@ -252,11 +265,21 @@ private async getOwnerInstitute(userId: string) {
       throw new Error("End date must be after start date");
     }
 
-    if (course.startDate <= new Date()) {
+    if (
+      course.startDate <= new Date() &&
+      (course.status === CourseStatus.DRAFT || input.startDate !== undefined)
+    ) {
       throw new Error("Course start date must be in the future");
     }
 
-    return course.save();
+    const updatedCourse = await course.save();
+    if (updatedCourse.status === CourseStatus.PUBLISHED) {
+      emitCourseUpdated(updatedCourse);
+      if (input.capacity !== undefined) {
+        emitSeatAvailabilityUpdated(updatedCourse);
+      }
+    }
+    return updatedCourse;
   }
 
   private normalizeStringList(values: string[] | undefined): string[] {
@@ -277,7 +300,9 @@ private async getOwnerInstitute(userId: string) {
 
     course.status = CourseStatus.PUBLISHED;
 
-    return course.save();
+    const publishedCourse = await course.save();
+    emitCoursePublished(publishedCourse);
+    return publishedCourse;
   }
 
   // إغلاق التسجيل في الدورة.
@@ -290,7 +315,9 @@ private async getOwnerInstitute(userId: string) {
 
     course.status = CourseStatus.CLOSED;
 
-    return course.save();
+    const closedCourse = await course.save();
+    emitCourseUnpublished(closedCourse);
+    return closedCourse;
   }
 
   // حذف دورة مسودة فقط.

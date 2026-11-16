@@ -28,7 +28,7 @@ class Button extends StatelessWidget {
       vertical: AppSpacing.xs,
     ),
     this.icon,
-    this.iconPosition = IconAlignment.start,
+    this.iconPosition = IconAlignment.end,
     this.isLoading = false,
     this.isDisabled = false,
     this.backgroundColor,

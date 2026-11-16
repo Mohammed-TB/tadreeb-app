@@ -12,6 +12,7 @@ class ListCategory extends StatefulWidget {
     this.onCategorySelected,
     this.selectedCategory,
     this.initialSelectedIndex = 0,
+    this.height = 45,
   });
 
   final List<String> categories;
@@ -22,6 +23,7 @@ class ListCategory extends StatefulWidget {
 
   // التصنيف المحدد افتراضيًا
   final int initialSelectedIndex;
+  final double height;
 
   @override
   State<ListCategory> createState() => _ListCategoryState();
@@ -78,7 +80,7 @@ class _ListCategoryState extends State<ListCategory> {
     }
 
     return SizedBox(
-      height: 45,
+      height: widget.height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: widget.categories.length,
@@ -124,7 +126,7 @@ class _ListCategoryState extends State<ListCategory> {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary
-                : AppColors.field,
+                : AppColors.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected

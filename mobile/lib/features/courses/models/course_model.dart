@@ -1,3 +1,4 @@
+import '../../../core/utils/saudi_date.dart';
 
 enum CourseStatus {
   draft,
@@ -59,7 +60,7 @@ class CourseModel {
     this.features = const [],
     required this.instituteId,
     this.createdAt,
-    this.updatedAt, 
+    this.updatedAt,
   });
 
   // المقاعد المتاحة فعليًا.
@@ -94,10 +95,12 @@ class CourseModel {
       enrolledCount: _toInt(json['enrolledCount']),
       reservedCount: _toInt(json['reservedCount']),
 
-      startDate: _parseDate(json['startDate']) ??
+      startDate:
+          SaudiDate.parseCalendarDate(json['startDate']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
 
-      endDate: _parseDate(json['endDate']) ??
+      endDate:
+          SaudiDate.parseCalendarDate(json['endDate']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
 
       location: json['location']?.toString() ?? '',
@@ -125,8 +128,8 @@ class CourseModel {
       'price': price,
       'depositAmount': depositAmount,
       'capacity': capacity,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'startDate': SaudiDate.toApiDate(startDate),
+      'endDate': SaudiDate.toApiDate(endDate),
       'location': location,
       'whatWillLearn': whatWillLearn,
       'features': features,
@@ -172,7 +175,7 @@ class CourseModel {
       whatWillLearn: whatWillLearn ?? this.whatWillLearn,
       features: features ?? this.features,
       instituteId: instituteId ?? this.instituteId,
-      
+
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

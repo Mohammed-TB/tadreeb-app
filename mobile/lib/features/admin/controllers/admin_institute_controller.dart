@@ -1,13 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../models/admin_institute_model.dart';
 import '../services/admin_institute_service.dart';
 
 class AdminInstituteController extends ChangeNotifier {
-  AdminInstituteController(this._service);
+  AdminInstituteController(this._service, {AppDataChangeBus? dataChangeBus}) {
+    _dataChangeSubscription = dataChangeBus?.changes.listen((change) {
+      if (change.audience == AppDataAudience.admin &&
+          change.domain == AppDataDomain.institutes &&
+          change.origin != AppDataChangeOrigin.adminInstitutes) {
+        unawaited(loadInstitutes(forceRefresh: true));
+      }
+    });
+  }
 
   final AdminInstituteService _service;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
 
   List<AdminInstituteModel> _institutes = [];
   List<AdminInstituteModel> get institutes => List.unmodifiable(_institutes);
@@ -33,6 +45,12 @@ class AdminInstituteController extends ChangeNotifier {
 
   int _total = 0;
   int get total => _total;
+
+  @override
+  void dispose() {
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
+  }
 
   Future<void> loadInstitutes({bool forceRefresh = false}) async {
     if (_isLoading) {

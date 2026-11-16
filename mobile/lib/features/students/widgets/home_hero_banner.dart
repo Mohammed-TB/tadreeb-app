@@ -16,15 +16,11 @@ class HomeHeroBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF8A2BE2), Color(0xFF6F1BC0)],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.28),
+              color: AppColors.primaryLight,
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -41,7 +37,7 @@ class HomeHeroBanner extends StatelessWidget {
                 height: 110,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppColors.primary,
                 ),
               ),
             ),
@@ -53,7 +49,7 @@ class HomeHeroBanner extends StatelessWidget {
                 height: 90,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: AppColors.primary,
                 ),
               ),
             ),
@@ -70,7 +66,7 @@ class HomeHeroBanner extends StatelessWidget {
                           style: GoogleFonts.cairo(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             height: 1.3,
                           ),
                         ),
@@ -79,15 +75,17 @@ class HomeHeroBanner extends StatelessWidget {
                           'احجز مقعدك الآن بدفع العربون بسهولة وأمان',
                           style: GoogleFonts.cairo(
                             fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 18),
                         SizedBox(
                           width: 200,
                           child: Button(
-                            text: 'استكشف الدورات',
+                            iconPosition: IconAlignment.end,
                             icon: Icons.arrow_forward_rounded,
+
+                            text: 'استكشف الدورات',
                             variant: AppButtonVariant.accent,
                             onTap: onExploreTap,
                           ),

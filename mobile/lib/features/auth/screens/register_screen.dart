@@ -107,19 +107,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     subTitle: 'أنشئ حسابًا واكتشف الدورات',
                   ),
                   Positioned(
-                    top: 20,
-                    right: 20,
-                    child: InkWell(
-                      onTap: () => context.go('/login'),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.arrow_back, size: 20),
+                    top: 12,
+                    right: 12,
+                    child: IconButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/login');
+                        }
+                      },
+                      tooltip: 'العودة إلى تسجيل الدخول',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        minimumSize: const Size(48, 48),
+                        shape: const CircleBorder(),
                       ),
+                      icon: const Icon(Icons.arrow_back, size: 20),
                     ),
                   ),
                 ],

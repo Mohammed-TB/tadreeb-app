@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/saudi_date.dart';
 import '../models/course_model.dart';
 import '../models/course_pagination_model.dart';
 
@@ -33,6 +34,16 @@ class CourseService {
           .toList(),
       pagination: CoursePaginationModel.fromJson(response['pagination']),
     );
+  }
+
+  Future<CourseModel> getCourseById(String courseId) async {
+    final response = await _apiClient.get('/api/courses/$courseId');
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('بيانات الدورة غير صالحة');
+    }
+
+    return CourseModel.fromJson(data);
   }
 
   Future<List<CourseModel>> getMyCourses() async {
@@ -79,8 +90,8 @@ class CourseService {
         'price': price.toString(),
         'depositAmount': depositAmount.toString(),
         'capacity': capacity.toString(),
-        'startDate': startDate.toIso8601String(),
-        'endDate': endDate.toIso8601String(),
+        'startDate': SaudiDate.toApiDate(startDate),
+        'endDate': SaudiDate.toApiDate(endDate),
         'location': location,
         'whatWillLearn': jsonEncode(whatWillLearn),
         'features': jsonEncode(features),

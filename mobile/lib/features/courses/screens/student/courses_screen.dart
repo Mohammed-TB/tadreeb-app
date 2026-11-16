@@ -82,133 +82,131 @@ class _CoursesScreenState extends State<CoursesScreen> {
           ),
         ),
 
-        // Page content
+        // Fixed search and category controls
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Search(
-                    hinText: 'ابحث عن دورة',
-                    onChanged: controller.setSearchQuery,
-                    controller: _searchController,
-                    hasActiveFilter: controller.hasActiveFilter,
-                    onFilterTap: () => CourseFilterSheet.show(context),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
+                child: Search(
+                  hinText: 'ابحث عن دورة',
+                  onChanged: controller.setSearchQuery,
+                  controller: _searchController,
+                  hasActiveFilter: controller.hasActiveFilter,
+                  onFilterTap: () => CourseFilterSheet.show(context),
+                ),
+              ),
 
-                if (controller.hasActiveFilter)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.tune_rounded,
-                                size: 14,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'مرتب حسب: ${controller.sortOption.label}',
-                                style: GoogleFonts.cairo(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              GestureDetector(
-                                onTap: () => controller.resetSortOption(),
-                                child: const Icon(
-                                  Icons.close_rounded,
-                                  size: 15,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
+              if (controller.hasActiveFilter)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ListCategory(
-                    categories: controller.availableCategories,
-                    selectedCategory:
-                        controller.selectedCategory ?? 'الكل',
-                    onCategorySelected: controller.selectCategory,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.tune_rounded,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'مرتب حسب: ${controller.sortOption.label}',
+                              style: GoogleFonts.cairo(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => controller.resetSortOption(),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 15,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: ListCategory(
+                  categories: controller.availableCategories,
+                  selectedCategory: controller.selectedCategory ?? 'الكل',
+                  onCategorySelected: controller.selectCategory,
+                  height: 48,
+                ),
+              ),
 
-                if (controller.isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (courses.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        controller.courses.isEmpty
-                            ? 'لا توجد دورات متاحة حالياً'
-                            : 'لا توجد نتائج مطابقة للبحث أو التصنيف',
+              Expanded(
+                child: controller.isLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : courses.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            controller.courses.isEmpty
+                                ? 'لا توجد دورات متاحة حالياً'
+                                : 'لا توجد نتائج مطابقة للبحث أو التصنيف',
+                          ),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.fromLTRB(16,8,16,0),
+                        child: ListView.separated(
+                          padding: EdgeInsets.zero,
+                          itemCount: courses.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppSpacing.cardGap),
+                          itemBuilder: (context, index) {
+                            final course = courses[index];
+                            return CourseCard(
+                              course: course,
+                              isHorizontal: true,
+                              showDetailsCourse: () =>
+                                  _showDetailsCourse(course),
+                              isFavorite: favorites.isCourseFavorite(course.id),
+                              isFavoriteBusy: favorites.isCourseSaving(
+                                course.id,
+                              ),
+                              onFavoriteTap: favorites.canToggleFavorites
+                                  ? () => _toggleFavorite(course)
+                                  : null,
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: courses.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.cardGap),
-                      itemBuilder: (context, index) {
-                        final course = courses[index];
-
-                        return CourseCard(
-                          course: course,
-                          isHorizontal: true,
-                          showDetailsCourse: () => _showDetailsCourse(course),
-                          isFavorite: favorites.isCourseFavorite(course.id),
-                          isFavoriteBusy: favorites.isCourseSaving(course.id),
-                          onFavoriteTap: favorites.canToggleFavorites
-                              ? () => _toggleFavorite(course)
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

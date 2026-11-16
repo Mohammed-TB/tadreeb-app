@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../features/auth/controllers/auth_controller.dart';
 import '../features/auth/models/user_model.dart';
+import '../core/realtime/realtime_service.dart';
 import '../features/courses/screens/student/courses_screen.dart';
 import '../features/courses/screens/student/course_registration_screen.dart';
 import '../features/favorites/screens/favorites_screen.dart';
@@ -45,14 +48,25 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final AuthController _authController;
+  late final RealtimeService _realtimeService;
+  late final StreamSubscription<RealtimeEvent> _realtimeSubscription;
   late final GoRouter _router;
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  String? _activeUserId;
 
   @override
   void initState() {
     super.initState();
     _authController = context.read<AuthController>();
+    _realtimeService = context.read<RealtimeService>();
+    _authController.addListener(_syncRealtimeSession);
+    _realtimeSubscription = _realtimeService.events.listen(
+      _showRealtimeNotice,
+    );
+    WidgetsBinding.instance.addObserver(this);
+    _syncRealtimeSession();
     _router = GoRouter(
       initialLocation: '/onboarding',
       refreshListenable: _authController,
@@ -288,10 +302,60 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  void _syncRealtimeSession() {
+    final user = _authController.currentUser;
+    if (user == null) {
+      if (_activeUserId != null) {
+        _activeUserId = null;
+        _realtimeService.disconnect();
+      }
+      return;
+    }
+
+    if (_activeUserId == user.id) return;
+    _activeUserId = user.id;
+    unawaited(_realtimeService.connect(role: user.role.name));
+  }
+
+  void _showRealtimeNotice(RealtimeEvent event) {
+    final message = switch (event.name) {
+      'coursePublished' => 'أصبحت دورة جديدة متاحة',
+      'courseUpdated' => 'تم تحديث بيانات إحدى الدورات',
+      'courseUnpublished' => 'تغيرت حالة إحدى الدورات',
+      'registrationCreated' => 'وصل تسجيل جديد إلى المعهد',
+      'registrationConfirmed' => 'تم تأكيد التسجيل',
+      'registrationRejected' => 'تم تحديث حالة التسجيل',
+      'paymentSubmitted' => 'تم إرسال سند دفع جديد للمراجعة',
+      'seatHoldExpired' => 'انتهت مهلة حجز مقعد',
+      _ => null,
+    };
+    if (message == null) return;
+
+    _scaffoldMessengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _realtimeService.onAppResumed();
+    }
+  }
+
   String? _redirect(BuildContext context, GoRouterState state) {
     final location = state.matchedLocation;
-    if (_authController.isInitializing) {
-      return location == '/onboarding' ? null : '/onboarding';
+    if (_authController.isInitializing &&
+        location != '/onboarding' &&
+        location != '/login' &&
+        location != '/register') {
+      return '/onboarding';
     }
     final user = _authController.currentUser;
 
@@ -360,6 +424,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
 
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
@@ -373,6 +438,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    _authController.removeListener(_syncRealtimeSession);
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_realtimeSubscription.cancel());
     _router.dispose();
     super.dispose();
   }

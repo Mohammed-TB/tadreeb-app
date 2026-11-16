@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/saudi_date.dart';
 import '../../courses/services/course_service.dart';
 import '../widgets/add_course/course_basics_step.dart';
 import '../widgets/add_course/course_fees_step.dart';
@@ -57,9 +58,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
   @override
   void initState() {
     super.initState();
-    final tomorrow = DateUtils.dateOnly(
-      DateTime.now(),
-    ).add(const Duration(days: 1));
+    final tomorrow = SaudiDate.today().add(const Duration(days: 1));
     _startDate = tomorrow;
     _endDate = tomorrow.add(const Duration(days: 7));
   }
@@ -136,13 +135,13 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
   Future<void> _selectDate({required bool isStartDate}) async {
     final initialDate = isStartDate ? _startDate : _endDate;
     final firstDate = isStartDate
-        ? DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 1))
+        ? SaudiDate.today().add(const Duration(days: 1))
         : _startDate.add(const Duration(days: 1));
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate.isBefore(firstDate) ? firstDate : initialDate,
       firstDate: firstDate,
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      lastDate: SaudiDate.today().add(const Duration(days: 3650)),
       locale: const Locale('ar'),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
@@ -294,7 +293,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         leading: IconButton(
-            onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
           tooltip: 'رجوع',
           icon: const Icon(Icons.arrow_forward_rounded),
         ),

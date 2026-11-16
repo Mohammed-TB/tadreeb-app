@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { HydratedDocument } from "mongoose";
 
 import Course from "../../courses/models/course.model";
 import Institute, {
@@ -7,7 +7,17 @@ import Institute, {
 import User, { UserRole, UserStatus } from "../../users/user.model";
 
 import Reservation from "../models/reservation.model";
+import { ICourse } from "../../courses/types/course.types";
+import { IReservation } from "../types/reservation.types";
 import receiptUploadService from "./receipt-upload.service";
+import {
+  emitPaymentSubmitted,
+  emitRegistrationConfirmed,
+  emitRegistrationCreated,
+  emitRegistrationRejected,
+  emitSeatAvailabilityUpdated,
+} from "../../../realtime/realtime.events";
+import { getSaudiDayStart } from "../../courses/utils/course-date";
 
 import {
   BookingType,
@@ -28,38 +38,111 @@ class ReservationService {
   }
 
   // حجز مقعد مؤقت مع منع تجاوز سعة الدورة.
-  private async reserveSeat(
-    courseId: mongoose.Types.ObjectId,
-    session: mongoose.ClientSession,
-  ): Promise<any> {
-    const course: any = await Course.findOneAndUpdate(
-      {
-        _id: courseId,
-        status: "published",
-        startDate: { $gt: new Date() },
-        endDate: { $gte: new Date() },
-        $expr: {
-          $lt: [
-            {
-              $add: [
-                { $ifNull: ["$enrolledCount", 0] },
-                { $ifNull: ["$reservedCount", 0] },
-              ],
-            },
-            "$capacity",
-          ],
-        },
-      } as any,
-      { $inc: { reservedCount: 1 } },
-      { new: true, session },
-    );
 
-    if (!course) {
-      throw new Error("Course is unavailable or full");
-    }
+// حجز مقعد مؤقت مع منع تجاوز سعة الدورة.
+private async reserveSeat(
+  courseId: mongoose.Types.ObjectId,
+  session: mongoose.ClientSession,
+): Promise<any> {
 
-    return course;
+  console.log("\n🔥 RESERVE SEAT FUNCTION CALLED");
+  console.log("Course ID:", courseId.toString());
+
+  // 1. قراءة بيانات الدورة للتشخيص.
+  const diagnosticCourse = await Course.findById(courseId)
+    .select(
+      "title status capacity enrolledCount reservedCount startDate endDate"
+    )
+    .session(session)
+    .lean();
+
+  if (!diagnosticCourse) {
+    console.log("❌ COURSE NOT FOUND");
+    throw new Error("Course not found");
   }
+
+  // 2. حساب الشروط بصورة منفصلة.
+  const saudiDayStart = getSaudiDayStart();
+
+  const enrolledCount = diagnosticCourse.enrolledCount ?? 0;
+  const reservedCount = diagnosticCourse.reservedCount ?? 0;
+
+  const statusPassed = diagnosticCourse.status === "published";
+
+  const datePassed =
+    diagnosticCourse.endDate >= saudiDayStart;
+
+  const seatsPassed =
+    enrolledCount + reservedCount < diagnosticCourse.capacity;
+
+  console.log("========== COURSE BOOKING DIAGNOSTIC ==========");
+
+  console.log({
+    title: diagnosticCourse.title,
+    courseId: courseId.toString(),
+
+    status: diagnosticCourse.status,
+    statusPassed,
+
+    endDate: diagnosticCourse.endDate.toISOString(),
+    saudiDayStart: saudiDayStart.toISOString(),
+    datePassed,
+
+    capacity: diagnosticCourse.capacity,
+    enrolledCount,
+    reservedCount,
+
+    totalOccupied: enrolledCount + reservedCount,
+    availableSeats:
+      diagnosticCourse.capacity - enrolledCount - reservedCount,
+    seatsPassed,
+  });
+
+  console.log("================================================");
+
+  // 3. محاولة حجز المقعد ذرياً.
+  const course = await Course.findOneAndUpdate(
+    {
+      _id: courseId,
+      status: "published",
+      endDate: { $gte: saudiDayStart },
+      $expr: {
+        $lt: [
+          {
+            $add: [
+              { $ifNull: ["$enrolledCount", 0] },
+              { $ifNull: ["$reservedCount", 0] },
+            ],
+          },
+          "$capacity",
+        ],
+      },
+    } as any,
+    {
+      $inc: { reservedCount: 1 },
+    },
+    {
+      new: true,
+      session,
+    },
+  );
+
+  // 4. تسجيل نتيجة التحديث.
+  if (!course) {
+    console.log("❌ ATOMIC BOOKING QUERY FAILED");
+    throw new Error("Course is unavailable or full");
+  }
+
+  console.log("✅ SEAT RESERVED SUCCESSFULLY");
+  console.log({
+    reservedCount: course.reservedCount,
+    enrolledCount: course.enrolledCount,
+    capacity: course.capacity,
+  });
+
+  return course;
+}
+
 
   // =====================================================
   // 1. التسجيل الإلكتروني بواسطة الطالب.
@@ -86,7 +169,8 @@ class ReservationService {
     const session = await mongoose.startSession();
 
     try {
-      let result: any;
+      let result: HydratedDocument<IReservation> | undefined;
+      let reservedCourse: HydratedDocument<ICourse> | undefined;
 
       await session.withTransaction(async () => {
         const student = await User.findById(studentId).session(session);
@@ -104,6 +188,7 @@ class ReservationService {
           new mongoose.Types.ObjectId(courseId),
           session,
         );
+        reservedCourse = course;
 
         const institute = await Institute.findOne({
           _id: course.instituteId,
@@ -170,6 +255,11 @@ class ReservationService {
         result = reservation;
       });
 
+      if (!result || !reservedCourse) {
+        throw new Error("Online reservation transaction returned no result");
+      }
+      emitRegistrationCreated(result);
+      emitSeatAvailabilityUpdated(reservedCourse);
       return result;
     } finally {
       await session.endSession();
@@ -208,7 +298,8 @@ class ReservationService {
     const session = await mongoose.startSession();
 
     try {
-      let result: any;
+      let result: HydratedDocument<IReservation> | undefined;
+      let updatedCourse: HydratedDocument<ICourse> | undefined;
 
       await session.withTransaction(async () => {
         const owner = await User.findById(ownerId).session(session);
@@ -238,7 +329,7 @@ class ReservationService {
           instituteId: owner.instituteId,
           status: "published",
           startDate: { $gt: new Date() },
-          endDate: { $gte: new Date() },
+          endDate: { $gte: getSaudiDayStart() },
         } as any).session(session);
 
         if (!course) {
@@ -250,7 +341,7 @@ class ReservationService {
         }
 
         // تأكيد المقعد مباشرة للتسجيل الحضوري.
-        const updatedCourse: any = await Course.findOneAndUpdate(
+        const reservedCourse: any = await Course.findOneAndUpdate(
           {
             _id: course._id,
             instituteId: owner.instituteId,
@@ -271,9 +362,10 @@ class ReservationService {
           { new: true, session },
         );
 
-        if (!updatedCourse) {
+        if (!reservedCourse) {
           throw new Error("No available seats");
         }
+        updatedCourse = reservedCourse;
 
         const amountToPay = this.getAmountToPay(
           input.paymentOption,
@@ -313,6 +405,12 @@ class ReservationService {
         result = reservation;
       });
 
+      if (!result || !updatedCourse) {
+        throw new Error("In-person reservation transaction returned no result");
+      }
+      emitRegistrationCreated(result);
+      emitRegistrationConfirmed(result);
+      emitSeatAvailabilityUpdated(updatedCourse);
       return result;
     } finally {
       await session.endSession();
@@ -330,7 +428,8 @@ class ReservationService {
     const session = await mongoose.startSession();
 
     try {
-      let result: any;
+      let result: HydratedDocument<IReservation> | undefined;
+      let updatedCourse: HydratedDocument<ICourse> | undefined;
 
       await session.withTransaction(async () => {
         const owner = await User.findById(ownerId).session(session);
@@ -375,6 +474,7 @@ class ReservationService {
         if (!course) {
           throw new Error("Could not confirm reserved course seat");
         }
+        updatedCourse = course;
 
         // اعتماد المبلغ الموجود في السند.
         reservation.amountPaid = reservation.amountToPay;
@@ -394,6 +494,11 @@ class ReservationService {
         result = reservation;
       });
 
+      if (!result || !updatedCourse) {
+        throw new Error("Reservation approval transaction returned no result");
+      }
+      emitRegistrationConfirmed(result);
+      emitSeatAvailabilityUpdated(updatedCourse);
       return result;
     } finally {
       await session.endSession();
@@ -419,7 +524,7 @@ class ReservationService {
     const session = await mongoose.startSession();
 
     try {
-      let result: any;
+      let result: HydratedDocument<IReservation> | undefined;
 
       await session.withTransaction(async () => {
         const owner = await User.findById(ownerId).session(session);
@@ -470,6 +575,10 @@ class ReservationService {
         result = reservation;
       });
 
+      if (!result) {
+        throw new Error("Reservation rejection transaction returned no result");
+      }
+      emitRegistrationRejected(result);
       return result;
     } finally {
       await session.endSession();
@@ -610,6 +719,7 @@ class ReservationService {
         }
       }
 
+      emitPaymentSubmitted(updatedReservation);
       return updatedReservation;
     } catch (error) {
       // تنظيف الصورة الجديدة إذا فشل تحديث الحجز.

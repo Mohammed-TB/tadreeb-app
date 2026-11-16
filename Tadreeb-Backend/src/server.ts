@@ -1,7 +1,9 @@
+import { createServer } from "node:http";
 import dotenv from "dotenv";
 import app from "./app";
 import connectDatabase from "./config/database";
 import { startReservationExpirationJob } from "./jobs/reservation-expiration.job";
+import { initializeRealtimeGateway } from "./realtime/realtime.gateway";
 
 // تحميل متغيرات البيئة من ملف .env.
 dotenv.config();
@@ -13,10 +15,13 @@ const PORT = process.env.PORT || 5000;
 const startServer = async (): Promise<void> => {
   try {
     await connectDatabase();
-// تشغيل الفحص الدوري بعد نجاح الاتصال بقاعدة البيانات.
-startReservationExpirationJob();
+    // تشغيل الفحص الدوري بعد نجاح الاتصال بقاعدة البيانات.
+    startReservationExpirationJob();
 
-    app.listen(PORT, () => {
+    const httpServer = createServer(app);
+    initializeRealtimeGateway(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(`Tadreeb API running at http://localhost:${PORT}`);
     });
   } catch (error) {

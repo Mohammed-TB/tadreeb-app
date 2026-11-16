@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../../core/realtime/realtime_service.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../models/course_model.dart';
 import '../services/course_service.dart';
 
@@ -27,9 +31,21 @@ enum CourseSortOption {
 }
 
 class CourseController extends ChangeNotifier {
-  CourseController(this._courseService);
+  CourseController(
+    this._courseService, {
+    RealtimeService? realtimeService,
+    AppDataChangeBus? dataChangeBus,
+  }) {
+    _realtimeSubscription = realtimeService?.events.listen(_onRealtimeEvent);
+    _dataChangeSubscription = dataChangeBus?.changes.listen(
+      _onLocalDataChange,
+    );
+  }
 
   final CourseService _courseService;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
+  Timer? _realtimeRefreshTimer;
 
   // Courses
   List<CourseModel> _courses = [];
@@ -67,6 +83,7 @@ class CourseController extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
   bool _hasFetched = false;
+  bool _refreshRequested = false;
 
   bool _isLoadingMore = false;
   bool get isLoadingMore => _isLoadingMore;
@@ -153,7 +170,11 @@ class CourseController extends ChangeNotifier {
 
   // GET Courses
   Future<void> getCourses({bool forceRefresh = false}) async {
-    if (_isLoading || (_hasFetched && !forceRefresh)) {
+    if (_isLoading) {
+      if (forceRefresh) _refreshRequested = true;
+      return;
+    }
+    if (_hasFetched && !forceRefresh) {
       return;
     }
 
@@ -176,7 +197,46 @@ class CourseController extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+      if (_refreshRequested) {
+        _refreshRequested = false;
+        unawaited(getCourses(forceRefresh: true));
+      }
     }
+  }
+
+  void _onRealtimeEvent(RealtimeEvent event) {
+    final isStudentReconnect =
+        event.name == 'syncRequired' && event.role == 'student';
+    final isCourseChange = {
+      'coursePublished',
+      'courseUpdated',
+      'courseUnpublished',
+      'seatAvailabilityUpdated',
+    }.contains(event.name);
+    if ((!isStudentReconnect && !isCourseChange) ||
+        (isCourseChange && event.role != 'student')) {
+      return;
+    }
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(getCourses(forceRefresh: true)),
+    );
+  }
+
+  void _onLocalDataChange(AppDataChange change) {
+    if (change.audience != AppDataAudience.student ||
+        (change.domain != AppDataDomain.courses &&
+            change.domain != AppDataDomain.reservations)) {
+      return;
+    }
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(getCourses(forceRefresh: true)),
+    );
   }
 
   // Load More Courses
@@ -206,5 +266,13 @@ class CourseController extends ChangeNotifier {
       _isLoadingMore = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _realtimeRefreshTimer?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 }

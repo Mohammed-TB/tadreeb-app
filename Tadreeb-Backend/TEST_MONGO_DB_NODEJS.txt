@@ -111,3 +111,55 @@ Authorization → Bearer STUDENT_TOKEN
 http://localhost:5000/api/reservations/RESERVATION_ID/receipt
 
 Authorization → Bearer STUDENT_TOKEN
+
+   Account Student
+email salem@tadreeb.com
+password password123
+
+  "data": {
+    "user": {
+      "id": "6afa8f87da7e8a9fdec7b721",
+      "name": "سالمين سعيد محمد سالم",
+      "email": "salme@tadreeb.com",
+      "phone": "773222222",
+      "role": "student",
+      "status": "active"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YWZhOGY4N2RhN2U4YTlmZGVjN2I3MjEiLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc5NDgwNTc0NCwiZXhwIjoxNzk1NDEwNTQ0fQ.H2RDoLLP2SO5tKrgnoIQEW6A4_c4LaP9v1wBfF2wWKg"
+  }
+
+
+
+  {
+  "_id": {
+    "$oid": "6afa0d0049e6a9df92dfaf09"
+  },
+  "title": "تعلم الترجمة",
+  "description": "تعلم الترجمة إلى مستوى متقدم",
+  "category": "أخرى",
+  "price": 3000,
+  "depositAmount": 1000,
+  "capacity": 20,
+  "enrolledCount": 0,
+  "reservedCount": 1,
+  "whatWillLearn": [],
+  "features": [],
+  "startDate": {
+    "$date": "2026-11-16T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2026-11-23T00:00:00.000Z"
+  },
+  "location": "الشحر -حضرموت",
+  "status": "published",
+  "instituteId": {
+    "$oid": "6af7a7e4c4fd261f280dec6f"
+  },
+  "createdAt": {
+    "$date": "2026-11-15T19:50:24.903Z"
+  },
+  "updatedAt": {
+    "$date": "2026-11-15T19:54:50.189Z"
+  },
+  "__v": 0
+}

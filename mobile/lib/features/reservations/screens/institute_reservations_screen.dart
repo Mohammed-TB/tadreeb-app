@@ -4,12 +4,16 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/saudi_date.dart';
 import '../../../../core/widgets/button.dart';
 import '../../../../core/widgets/search.dart';
 import '../../../../core/widgets/text_filed_form.dart';
 import '../controllers/institute_reservation_controller.dart';
 import '../models/reservation_model.dart';
+import '../../courses/models/course_model.dart';
+import '../../courses/services/course_service.dart';
 import '../widgets/reservation_card.dart';
+import '../widgets/in_person_registration_sheet.dart';
 
 /// شاشة إدارة حجوزات المعهد للمالك بتصميم موحد وهادئ يطابق شاشة حجوزاتي بدون تشتت
 class InstituteReservationsScreen extends StatefulWidget {
@@ -61,6 +65,24 @@ class _InstituteReservationsScreenState
                 slivers: [
                   // ترويسة متطابقة مع ترويسة شاشة حجوزاتي
                   SliverToBoxAdapter(child: _buildHeader()),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        AppSpacing.screenHorizontal,
+                        AppSpacing.md,
+                        AppSpacing.screenHorizontal,
+                        0,
+                      ),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: FilledButton.icon(
+                          onPressed: _openInPersonRegistration,
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          label: const Text('تسجيل حضوري'),
+                        ),
+                      ),
+                    ),
+                  ),
 
                   // المحتوى الداخلي
                   SliverPadding(
@@ -124,6 +146,50 @@ class _InstituteReservationsScreenState
         ),
       ),
     );
+  }
+
+  Future<void> _openInPersonRegistration() async {
+    try {
+      final allCourses = await context.read<CourseService>().getMyCourses();
+      if (!mounted) return;
+      final courses = allCourses
+          .where(
+            (course) =>
+                course.id != null &&
+                course.status == CourseStatus.published &&
+                SaudiDate.isTodayOrLater(course.endDate),
+          )
+          .toList();
+
+      if (courses.isEmpty) {
+        _showMessage('لا توجد دورات منشورة متاحة للتسجيل الحضوري');
+        return;
+      }
+
+      final created = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => InPersonRegistrationSheet(
+          courses: courses,
+          controller: context.read<InstituteReservationController>(),
+        ),
+      );
+
+      if (created == true && mounted) {
+        _showMessage('تم تسجيل الطالب حضورياً بنجاح');
+      }
+    } catch (error) {
+      if (mounted) _showMessage('تعذر فتح نموذج التسجيل: $error');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
   }
 
   /// ترويسة متطابقة ونظيفة

@@ -10,6 +10,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../../../core/widgets/button.dart';
 import '../services/admin_institute_service.dart';
 import '../widgets/admin_institute_form_tabs.dart';
@@ -167,6 +168,11 @@ class _AdminAddInstituteScreenState extends State<AdminAddInstituteScreen>
         logoContentType: _logoContentType,
       );
       if (!mounted) return;
+      context.read<AppDataChangeBus>().notifyChanged(
+        AppDataDomain.institutes,
+        AppDataChangeOrigin.adminInstitutes,
+        audience: AppDataAudience.admin,
+      );
       _formData.ownerPassword.clear();
       context.pop(true);
     } on ApiException catch (error) {

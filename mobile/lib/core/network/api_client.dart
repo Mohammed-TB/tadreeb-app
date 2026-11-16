@@ -280,9 +280,22 @@ Future<Map<String, dynamic>> _send(
       return 'ليس لديك صلاحية تنفيذ هذا الإجراء';
     }
 
-    if (statusCode == 409 ||
-        message == 'Email is already registered') {
+    if (message == 'Email is already registered') {
       return 'البريد الإلكتروني مسجل مسبقًا';
+    }
+
+    if (statusCode == 409) {
+      if (message.contains('already have a reservation')) {
+        return 'لديك تسجيل مسبق في هذه الدورة';
+      }
+
+      if (message.contains('unavailable') ||
+          message.contains('full') ||
+          message.contains('available seats')) {
+        return 'الدورة غير متاحة أو لا توجد مقاعد شاغرة';
+      }
+
+      return 'تعذر إكمال الطلب بسبب تعارض في البيانات';
     }
 
     if (statusCode == 400) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../../../core/widgets/button.dart';
 import '../../../core/widgets/search.dart';
 import '../../courses/models/course_model.dart';
@@ -27,17 +30,43 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   CourseStatus? _statusFilter;
   bool _isLoading = true;
   String? _errorMessage;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
 
   @override
   void initState() {
     super.initState();
+    _dataChangeSubscription = context
+        .read<AppDataChangeBus>()
+        .changes
+        .listen(_onDataChange);
+    _loadCourses();
+  }
+
+  void _onDataChange(AppDataChange change) {
+    if (!mounted ||
+        change.audience != AppDataAudience.instituteOwner ||
+        change.origin == AppDataChangeOrigin.courseManagement ||
+        (change.domain != AppDataDomain.courses &&
+            change.domain != AppDataDomain.reservations)) {
+      return;
+    }
+
     _loadCourses();
   }
 
   @override
   void dispose() {
+    unawaited(_dataChangeSubscription?.cancel());
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _notifyCourseChange() {
+    context.read<AppDataChangeBus>().notifyChanged(
+      AppDataDomain.courses,
+      AppDataChangeOrigin.courseManagement,
+      audience: AppDataAudience.instituteOwner,
+    );
   }
 
   /// جلب دورات المعهد من الـ Backend
@@ -84,6 +113,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
     );
 
     if (created == true && mounted) {
+      _notifyCourseChange();
       _showMessage('تم إنشاء الدورة بنجاح');
       _loadCourses();
     }
@@ -101,8 +131,14 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
     );
     if (!confirmed || !mounted) return;
 
+    final changeBus = context.read<AppDataChangeBus>();
     try {
       await context.read<CourseService>().publishCourse(course.id!);
+      changeBus.notifyChanged(
+        AppDataDomain.courses,
+        AppDataChangeOrigin.courseManagement,
+        audience: AppDataAudience.instituteOwner,
+      );
       if (!mounted) return;
       _showMessage('تم نشر الدورة بنجاح');
       _loadCourses();
@@ -126,8 +162,14 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
     );
     if (!confirmed || !mounted) return;
 
+    final changeBus = context.read<AppDataChangeBus>();
     try {
       await context.read<CourseService>().closeCourse(course.id!);
+      changeBus.notifyChanged(
+        AppDataDomain.courses,
+        AppDataChangeOrigin.courseManagement,
+        audience: AppDataAudience.instituteOwner,
+      );
       if (!mounted) return;
       _showMessage('تم إغلاق التسجيل في الدورة بنجاح');
       _loadCourses();
@@ -151,8 +193,14 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
     );
     if (!confirmed || !mounted) return;
 
+    final changeBus = context.read<AppDataChangeBus>();
     try {
       await context.read<CourseService>().deleteCourse(course.id!);
+      changeBus.notifyChanged(
+        AppDataDomain.courses,
+        AppDataChangeOrigin.courseManagement,
+        audience: AppDataAudience.instituteOwner,
+      );
       if (!mounted) return;
       _showMessage('تم حذف مسودة الدورة بنجاح');
       _loadCourses();

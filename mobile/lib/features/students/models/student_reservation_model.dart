@@ -1,3 +1,5 @@
+import '../../../core/utils/saudi_date.dart';
+
 /// نموذج حجز الطالب المسترجع من الـ API (GET /api/reservations/my)
 class StudentReservationModel {
   final String id;
@@ -23,7 +25,8 @@ class StudentReservationModel {
   final double amountToPay;
   final double amountPaid;
   final String paymentStatus; // unpaid | partial | paid
-  final String status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
+  final String
+  status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
 
   final String? receiptPublicId;
   final String? receiptUrl;
@@ -132,7 +135,9 @@ class StudentReservationModel {
     final norm = status.replaceAll('_', '').toLowerCase();
     if (norm == 'expired') return true;
     final now = DateTime.now();
-    if (norm == 'pendingpayment' && expiresAt != null && expiresAt!.isBefore(now)) {
+    if (norm == 'pendingpayment' &&
+        expiresAt != null &&
+        expiresAt!.isBefore(now)) {
       return true;
     }
     if (norm == 'rejected' &&
@@ -162,8 +167,8 @@ class StudentReservationModel {
       cPrice = _toDouble(rawCourse['price']);
       cDeposit = _toDouble(rawCourse['depositAmount']);
       cLoc = rawCourse['location']?.toString();
-      cStart = _parseDate(rawCourse['startDate']);
-      cEnd = _parseDate(rawCourse['endDate']);
+      cStart = SaudiDate.parseCalendarDate(rawCourse['startDate']);
+      cEnd = SaudiDate.parseCalendarDate(rawCourse['endDate']);
     } else if (rawCourse != null) {
       cId = rawCourse.toString();
     }
@@ -210,7 +215,9 @@ class StudentReservationModel {
       receiptPublicId: json['receiptPublicId']?.toString(),
       receiptUrl: json['receiptUrl']?.toString(),
       rejectionReason: json['rejectionReason']?.toString(),
-      receiptResubmissionDeadline: _parseDate(json['receiptResubmissionDeadline']),
+      receiptResubmissionDeadline: _parseDate(
+        json['receiptResubmissionDeadline'],
+      ),
       expiresAt: _parseDate(json['expiresAt']),
       attendanceStatus: json['attendanceStatus']?.toString() ?? 'notMarked',
       createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),

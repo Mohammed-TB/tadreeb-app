@@ -2,21 +2,36 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/realtime/realtime_service.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../../courses/models/course_model.dart';
 import '../../institutes/models/institute_model.dart';
 import '../models/favorite.model.dart';
 import '../services/favorite.service.dart';
 
 class FavoriteController extends ChangeNotifier {
-  FavoriteController(this._favoriteService);
+  FavoriteController(
+    this._favoriteService, {
+    RealtimeService? realtimeService,
+    AppDataChangeBus? dataChangeBus,
+  }) {
+    _realtimeSubscription = realtimeService?.events.listen(_onRealtimeEvent);
+    _dataChangeSubscription = dataChangeBus?.changes.listen(
+      _onLocalDataChange,
+    );
+  }
 
   final FavoriteService _favoriteService;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
+  Timer? _realtimeRefreshTimer;
 
   List<CourseModel> _courses = [];
   List<InstituteModel> _institutes = [];
   final Map<String, _PendingFavorite> _pending = {};
   bool _isLoading = false;
   bool _hasLoaded = false;
+  bool _refreshRequested = false;
   String? _errorMessage;
 
   List<CourseModel> get courses => List.unmodifiable(_courses);
@@ -38,9 +53,11 @@ class FavoriteController extends ChangeNotifier {
       _pending['${FavoriteTargetType.institute.name}:$id']?.saving ?? false;
 
   Future<void> loadFavorites({bool forceRefresh = false}) async {
-    if (_isLoading ||
-        _pending.isNotEmpty ||
-        (_hasLoaded && !forceRefresh)) {
+    if (_isLoading || _pending.isNotEmpty) {
+      if (forceRefresh) _refreshRequested = true;
+      return;
+    }
+    if (_hasLoaded && !forceRefresh) {
       return;
     }
 
@@ -57,7 +74,49 @@ class FavoriteController extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+      _refreshFavoritesIfRequested();
     }
+  }
+
+  void _onRealtimeEvent(RealtimeEvent event) {
+    final isStudentReconnect =
+        event.name == 'syncRequired' && event.role == 'student';
+    final isCourseChange = {
+      'coursePublished',
+      'courseUpdated',
+      'courseUnpublished',
+      'seatAvailabilityUpdated',
+    }.contains(event.name);
+    if ((!isStudentReconnect && !isCourseChange) ||
+        (isCourseChange && event.role != 'student')) {
+      return;
+    }
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => unawaited(loadFavorites(forceRefresh: true)),
+    );
+  }
+
+  void _onLocalDataChange(AppDataChange change) {
+    if (change.audience != AppDataAudience.student ||
+        (change.domain != AppDataDomain.courses &&
+            change.domain != AppDataDomain.institutes)) {
+      return;
+    }
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(loadFavorites(forceRefresh: true)),
+    );
+  }
+
+  void _refreshFavoritesIfRequested() {
+    if (!_refreshRequested || _isLoading || _pending.isNotEmpty) return;
+    _refreshRequested = false;
+    unawaited(loadFavorites(forceRefresh: true));
   }
 
   Future<void> toggleCourse(CourseModel course) {
@@ -149,6 +208,7 @@ class FavoriteController extends ChangeNotifier {
         if (!waiter.isCompleted) waiter.completeError(error, stackTrace);
       }
       notifyListeners();
+      _refreshFavoritesIfRequested();
       return;
     } finally {
       pending.saving = false;
@@ -186,6 +246,15 @@ class FavoriteController extends ChangeNotifier {
       if (!waiter.isCompleted) waiter.complete();
     }
     notifyListeners();
+    _refreshFavoritesIfRequested();
+  }
+
+  @override
+  void dispose() {
+    _realtimeRefreshTimer?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 }
 

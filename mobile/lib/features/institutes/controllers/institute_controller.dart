@@ -1,13 +1,30 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
+import '../../../core/realtime/realtime_service.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../models/institute_model.dart';
 import '../services/institute_service.dart';
 
 class InstituteController extends ChangeNotifier {
   final InstituteService _instituteService;
 
-  InstituteController(this._instituteService);
+  InstituteController(
+    this._instituteService, {
+    RealtimeService? realtimeService,
+    AppDataChangeBus? dataChangeBus,
+  }) {
+    _realtimeSubscription = realtimeService?.events.listen(_onRealtimeEvent);
+    _dataChangeSubscription = dataChangeBus?.changes.listen(
+      _onLocalDataChange,
+    );
+  }
 
   List<InstituteModel> _institutes = [];
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
+  Timer? _realtimeRefreshTimer;
   int _currentPage = 0;
   int _totalPages = 1;
   int _total = 0;
@@ -24,6 +41,26 @@ class InstituteController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   String? get errorMessage => _errorMessage;
+
+  void _onRealtimeEvent(RealtimeEvent event) {
+    if (event.name != 'syncRequired' || event.role != 'student') return;
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => unawaited(getInstitutes(forceRefresh: true)),
+    );
+  }
+
+  void _onLocalDataChange(AppDataChange change) {
+    if (change.domain != AppDataDomain.institutes) return;
+
+    _realtimeRefreshTimer?.cancel();
+    _realtimeRefreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(getInstitutes(forceRefresh: true)),
+    );
+  }
 
   Future<void> getInstitutes({
     String? search,
@@ -85,5 +122,13 @@ class InstituteController extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _realtimeRefreshTimer?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 }

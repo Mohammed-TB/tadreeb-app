@@ -24,6 +24,7 @@ class ReservationController {
   // POST: حجز إلكتروني بواسطة الطالب.
   async createOnline(req: Request, res: Response) {
     try {
+      console.log("🔥 BACKEND: createOnline reached");
       const { courseId, studentName, studentPhone, paymentOption } = req.body;
 
       if (

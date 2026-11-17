@@ -6,12 +6,14 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/utils/saudi_date.dart';
 import '../../../../core/widgets/button.dart';
+import '../../../../core/widgets/app_drawer.dart';
 import '../../../../core/widgets/search.dart';
 import '../../../../core/widgets/text_filed_form.dart';
 import '../controllers/institute_reservation_controller.dart';
 import '../models/reservation_model.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/services/course_service.dart';
+import 'institute_reservation_details_screen.dart';
 import '../widgets/reservation_card.dart';
 import '../widgets/in_person_registration_sheet.dart';
 
@@ -49,7 +51,15 @@ class _InstituteReservationsScreenState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        drawer: const AppDrawer(),
         backgroundColor: AppColors.background,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _openInPersonRegistration,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.textOnPrimary,
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text('تسجيل حضوري'),
+        ),
         body: Consumer<InstituteReservationController>(
           builder: (context, controller, _) {
             final hasActiveFilters =
@@ -65,24 +75,6 @@ class _InstituteReservationsScreenState
                 slivers: [
                   // ترويسة متطابقة مع ترويسة شاشة حجوزاتي
                   SliverToBoxAdapter(child: _buildHeader()),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        AppSpacing.screenHorizontal,
-                        AppSpacing.md,
-                        AppSpacing.screenHorizontal,
-                        0,
-                      ),
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: FilledButton.icon(
-                          onPressed: _openInPersonRegistration,
-                          icon: const Icon(Icons.person_add_alt_1_rounded),
-                          label: const Text('تسجيل حضوري'),
-                        ),
-                      ),
-                    ),
-                  ),
 
                   // المحتوى الداخلي
                   SliverPadding(
@@ -127,15 +119,12 @@ class _InstituteReservationsScreenState
                           ...controller.filteredReservations.map(
                             (r) => ReservationCard(
                               reservation: r,
-                              isProcessing: controller.isProcessing(r.id),
-                              onApprove: () => _handleApprove(controller, r),
-                              onReject: () => _handleReject(controller, r),
-                              onViewReceipt: () =>
-                                  _handleViewReceipt(controller, r),
+                              onTap: () =>
+                                  _openReservationDetails(controller, r),
                             ),
                           ),
 
-                        const SizedBox(height: AppSpacing.xxxl),
+                        const SizedBox(height: 96),
                       ]),
                     ),
                   ),
@@ -143,6 +132,21 @@ class _InstituteReservationsScreenState
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  void _openReservationDetails(
+    InstituteReservationController controller,
+    ReservationModel reservation,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => InstituteReservationDetailsScreen(
+          reservation: reservation,
+          onApprove: () => _handleApprove(controller, reservation),
+          onReject: () => _handleReject(controller, reservation),
         ),
       ),
     );
@@ -241,8 +245,8 @@ class _InstituteReservationsScreenState
                 builder: (headerContext) => IconButton(
                   onPressed: () => Scaffold.of(headerContext).openDrawer(),
                   tooltip: 'القائمة الرئيسية',
-                  color: AppColors.textOnPrimary,
-                  icon: const Icon(Icons.menu),
+                  color: Colors.white,
+                  icon: const Icon(Icons.menu, color: Colors.white),
                 ),
               ),
             ],
@@ -639,86 +643,6 @@ class _InstituteReservationsScreenState
         SnackBar(
           content: Text('تعذر رفض الحجز: ${controller.errorMessage}'),
           backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  /// معاينة الإيصال البنكي
-  Future<void> _handleViewReceipt(
-    InstituteReservationController controller,
-    ReservationModel reservation,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final url = await controller.getReceiptUrl(reservation.id);
-    if (!mounted) return;
-
-    if (url != null && url.isNotEmpty) {
-      showDialog(
-        context: context,
-        builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'إيصال الدفع البنكي',
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: InteractiveViewer(
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (ctx, child, progress) {
-                          if (progress == null) return child;
-                          return const Padding(
-                            padding: EdgeInsets.all(AppSpacing.xl),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (c, e, s) => Container(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          color: AppColors.field,
-                          child: const Text('تعذر تحميل صورة الإيصال'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    } else {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('لا يوجد إيصال مرفوع لهذا الحجز'),
           behavior: SnackBarBehavior.floating,
         ),
       );

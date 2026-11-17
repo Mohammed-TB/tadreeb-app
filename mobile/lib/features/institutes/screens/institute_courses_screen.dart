@@ -258,7 +258,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
                     Expanded(
                       child: Button(
                         text: 'إلغاء',
-                        variant: AppButtonVariant.outline,
+                        variant: AppButtonVariant.secondary,
                         height: 40,
                         onTap: () => Navigator.pop(dialogContext, false),
                       ),
@@ -267,7 +267,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
                     Expanded(
                       child: Button(
                         text: confirmText,
-                        variant: confirmVariant,
+                        variant: AppButtonVariant.accent,
                         height: 40,
                         onTap: () => Navigator.pop(dialogContext, true),
                       ),

@@ -154,13 +154,6 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      'بيانات التسجيل في دورات معهدك',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textOnPrimary.withValues(alpha: 0.8),
-                      ),
-                    ),
                   ],
                 ),
               ),

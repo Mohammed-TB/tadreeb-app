@@ -79,125 +79,133 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.md + bottomInset,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'تسجيل طالب حضورياً',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
+        
+        child: Container(
+          
+          decoration:BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12)
+          ) ,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md + bottomInset,
+            ),
+            child: SingleChildScrollView(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'تسجيل طالب حضورياً',
+                      style: AppTypography.titleLarge.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  DropdownButtonFormField<String>(
-                    initialValue: _courseId,
-                    decoration: const InputDecoration(labelText: 'الدورة'),
-                    items: widget.courses
-                        .map(
-                          (course) => DropdownMenuItem(
-                            value: course.id!,
-                            child: Text(
-                              '${course.title} · ${course.availableSeats} مقعد',
-                              overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: AppSpacing.md),
+                    DropdownButtonFormField<String>(
+                      initialValue: _courseId,
+                      decoration: const InputDecoration(labelText: 'الدورة'),
+                      items: widget.courses
+                          .map(
+                            (course) => DropdownMenuItem(
+                              value: course.id!,
+                              child: Text(
+                                '${course.title} · ${course.availableSeats} مقعد',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _isSubmitting
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _courseId = value);
-                            }
-                          },
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'اسم الطالب'),
-                    textInputAction: TextInputAction.next,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'أدخل اسم الطالب'
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(labelText: 'رقم الهاتف'),
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'أدخل رقم الهاتف'
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  DropdownButtonFormField<String>(
-                    initialValue: _paymentOption,
-                    decoration: const InputDecoration(
-                      labelText: 'طريقة الدفع المسجلة',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'full', child: Text('كامل')),
-                      DropdownMenuItem(value: 'deposit', child: Text('عربون')),
-                    ],
-                    onChanged: _isSubmitting
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _paymentOption = value);
-                            }
-                          },
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextFormField(
-                    controller: _amountPaidController,
-                    decoration: const InputDecoration(
-                      labelText: 'المبلغ المدفوع',
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    validator: (value) {
-                      final amount = double.tryParse(value?.trim() ?? '');
-                      if (amount == null || !amount.isFinite || amount < 0) {
-                        return 'أدخل مبلغاً صحيحاً';
-                      }
-                      final selected = widget.courses.firstWhere(
-                        (course) => course.id == _courseId,
-                      );
-                      if (amount > selected.price) {
-                        return 'المبلغ لا يمكن أن يتجاوز سعر الدورة';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  FilledButton.icon(
-                    onPressed: _isSubmitting ? null : _submit,
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.person_add_alt_1_rounded),
-                    label: Text(
-                      _isSubmitting ? 'جارٍ التسجيل...' : 'تأكيد التسجيل',
+                          .toList(),
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _courseId = value);
+                              }
+                            },
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'اسم الطالب'),
+                      textInputAction: TextInputAction.next,
+                      validator: (value) => value == null || value.trim().isEmpty
+                          ? 'أدخل اسم الطالب'
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) => value == null || value.trim().isEmpty
+                          ? 'أدخل رقم الهاتف'
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<String>(
+                      initialValue: _paymentOption,
+                      decoration: const InputDecoration(
+                        labelText: 'طريقة الدفع المسجلة',
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'full', child: Text('كامل')),
+                        DropdownMenuItem(value: 'deposit', child: Text('عربون')),
+                      ],
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _paymentOption = value);
+                              }
+                            },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _amountPaidController,
+                      decoration: const InputDecoration(
+                        labelText: 'المبلغ المدفوع',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        final amount = double.tryParse(value?.trim() ?? '');
+                        if (amount == null || !amount.isFinite || amount < 0) {
+                          return 'أدخل مبلغاً صحيحاً';
+                        }
+                        final selected = widget.courses.firstWhere(
+                          (course) => course.id == _courseId,
+                        );
+                        if (amount > selected.price) {
+                          return 'المبلغ لا يمكن أن يتجاوز سعر الدورة';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    FilledButton.icon(
+                      onPressed: _isSubmitting ? null : _submit,
+                      icon: _isSubmitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.person_add_alt_1_rounded),
+                      label: Text(
+                        _isSubmitting ? 'جارٍ التسجيل...' : 'تأكيد التسجيل',
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

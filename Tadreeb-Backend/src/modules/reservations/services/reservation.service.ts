@@ -609,12 +609,22 @@ private async reserveSeat(
       throw new Error("Institute owner not found");
     }
 
-    return Reservation.find({
+    const reservations = await Reservation.find({
       instituteId: owner.instituteId,
     })
       .populate("courseId", "title price depositAmount")
       .populate("studentId", "name email phone")
+      .select("+receiptPublicId +receiptFormat +receiptUrl")
       .sort({ createdAt: -1 });
+
+    return reservations.map((reservation) => {
+      const data = reservation.toObject();
+      const hasReceipt = Boolean(data.receiptPublicId || data.receiptUrl);
+      delete data.receiptPublicId;
+      delete data.receiptFormat;
+      delete data.receiptUrl;
+      return { ...data, hasReceipt };
+    });
   }
 
   // رفع سند التحويل بواسطة الطالب صاحب الحجز.

@@ -1,4 +1,3 @@
-/// نموذج حجز المعهد المطابق 100% للـ Backend (Tadreeb-Backend).
 class ReservationModel {
   final String id;
   final String studentName;
@@ -14,7 +13,9 @@ class ReservationModel {
   final double amountToPay;
   final double amountPaid;
   final String paymentStatus; // unpaid | partial | paid
-  final String status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
+  final String
+  status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
+  final bool receiptAvailable;
   final String? receiptPublicId;
   final String? receiptUrl;
   final String? rejectionReason;
@@ -40,6 +41,7 @@ class ReservationModel {
     required this.amountPaid,
     required this.paymentStatus,
     required this.status,
+    this.receiptAvailable = false,
     this.receiptPublicId,
     this.receiptUrl,
     this.rejectionReason,
@@ -61,7 +63,8 @@ class ReservationModel {
 
   /// هل يوجد إيصال مرفوع للمعاينة؟
   bool get hasReceipt {
-    return (receiptPublicId != null && receiptPublicId!.isNotEmpty) ||
+    return receiptAvailable ||
+        (receiptPublicId != null && receiptPublicId!.isNotEmpty) ||
         (receiptUrl != null && receiptUrl!.isNotEmpty);
   }
 
@@ -106,10 +109,13 @@ class ReservationModel {
       amountPaid: _toDouble(json['amountPaid']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
       status: json['status']?.toString() ?? 'pendingPayment',
+      receiptAvailable: json['hasReceipt'] == true,
       receiptPublicId: json['receiptPublicId']?.toString(),
       receiptUrl: json['receiptUrl']?.toString(),
       rejectionReason: json['rejectionReason']?.toString(),
-      receiptResubmissionDeadline: _parseDate(json['receiptResubmissionDeadline']),
+      receiptResubmissionDeadline: _parseDate(
+        json['receiptResubmissionDeadline'],
+      ),
       attendanceStatus: json['attendanceStatus']?.toString() ?? 'notMarked',
       expiresAt: _parseDate(json['expiresAt']),
       createdAt: _parseDate(json['createdAt']) ?? DateTime.now(),
@@ -131,6 +137,7 @@ class ReservationModel {
       'amountPaid': amountPaid,
       'paymentStatus': paymentStatus,
       'status': status,
+      'hasReceipt': hasReceipt,
       if (receiptPublicId != null) 'receiptPublicId': receiptPublicId,
       if (rejectionReason != null) 'rejectionReason': rejectionReason,
     };

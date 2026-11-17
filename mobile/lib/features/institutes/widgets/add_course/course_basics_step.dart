@@ -19,11 +19,14 @@ class CourseBasicsStep extends StatelessWidget {
     required this.category,
     required this.onCategoryChanged,
     required this.imageBytes,
+    required this.imageUrl,
     required this.isPickingImage,
     required this.onPickImage,
     required this.onRemoveImage,
     required this.onWhatWillLearnChanged,
     required this.onFeaturesChanged,
+    required this.initialWhatWillLearn,
+    required this.initialFeatures,
   });
 
   final GlobalKey<FormState> formKey;
@@ -32,11 +35,14 @@ class CourseBasicsStep extends StatelessWidget {
   final String? category;
   final ValueChanged<String?> onCategoryChanged;
   final Uint8List? imageBytes;
+  final String? imageUrl;
   final bool isPickingImage;
   final VoidCallback onPickImage;
   final VoidCallback onRemoveImage;
   final ValueChanged<List<String>> onWhatWillLearnChanged;
   final ValueChanged<List<String>> onFeaturesChanged;
+  final List<String> initialWhatWillLearn;
+  final List<String> initialFeatures;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +59,7 @@ class CourseBasicsStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           CourseImagePickerCard(
             imageBytes: imageBytes,
+            imageUrl: imageUrl,
             isPickingImage: isPickingImage,
             onPickImage: onPickImage,
             onRemoveImage: onRemoveImage,
@@ -93,10 +100,18 @@ class CourseBasicsStep extends StatelessWidget {
                 borderSide: const BorderSide(color: AppColors.border),
               ),
             ),
-            items: categories
-                .where((item) => item != 'الكل')
-                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                .toList(),
+            items: [
+              ...categories
+                  .where((item) => item != 'الكل')
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  ),
+              if (category != null && !categories.contains(category))
+                DropdownMenuItem(
+                  value: category,
+                  child: Text(category!),
+                ),
+            ],
             onChanged: onCategoryChanged,
             validator: (value) => value == null ? 'اختر تصنيف الدورة' : null,
           ),
@@ -117,6 +132,7 @@ class CourseBasicsStep extends StatelessWidget {
             label: 'ماذا سيتعلم الطالب؟',
             hint: 'مثال: إتقان أساسيات البرمجة',
             icon: Icons.school_outlined,
+            initialItems: initialWhatWillLearn,
             onChanged: onWhatWillLearnChanged,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -124,6 +140,7 @@ class CourseBasicsStep extends StatelessWidget {
             label: 'مميزات الدورة',
             hint: 'مثال: تطبيقات ومشاريع عملية',
             icon: Icons.stars_outlined,
+            initialItems: initialFeatures,
             onChanged: onFeaturesChanged,
           ),
         ],

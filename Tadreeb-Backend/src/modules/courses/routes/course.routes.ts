@@ -38,8 +38,11 @@ router.get("/:courseId", (req, res) =>
 );
 
 // تعديل دورة.
-router.put("/:courseId", (req, res) =>
-  courseController.updateCourse(req, res)
+router.put(
+  "/:courseId",
+  upload.single("image"),
+  validateImageContent,
+  (req, res) => courseController.updateCourse(req, res),
 );
 
 // نشر دورة.

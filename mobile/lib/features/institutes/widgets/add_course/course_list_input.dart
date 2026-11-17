@@ -11,19 +11,26 @@ class CourseListInput extends StatefulWidget {
     required this.hint,
     required this.icon,
     required this.onChanged,
+    this.initialItems = const [],
   });
 
   final String label;
   final String hint;
   final IconData icon;
   final ValueChanged<List<String>> onChanged;
+  final List<String> initialItems;
 
   @override
   State<CourseListInput> createState() => _CourseListInputState();
 }
 
 class _CourseListInputState extends State<CourseListInput> {
-  final List<TextEditingController> _controllers = [TextEditingController()];
+  late final List<TextEditingController> _controllers =
+      widget.initialItems.isEmpty
+      ? [TextEditingController()]
+      : widget.initialItems
+            .map((item) => TextEditingController(text: item))
+            .toList();
 
   void _emitChanged() {
     widget.onChanged(

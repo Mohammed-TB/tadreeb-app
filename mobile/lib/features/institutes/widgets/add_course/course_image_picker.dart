@@ -11,12 +11,14 @@ class CourseImagePickerCard extends StatelessWidget {
   const CourseImagePickerCard({
     super.key,
     required this.imageBytes,
+    required this.imageUrl,
     required this.isPickingImage,
     required this.onPickImage,
     required this.onRemoveImage,
   });
 
   final Uint8List? imageBytes;
+  final String? imageUrl;
   final bool isPickingImage;
   final VoidCallback onPickImage;
   final VoidCallback onRemoveImage;
@@ -41,7 +43,7 @@ class CourseImagePickerCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
               ),
-              child: imageBytes == null
+              child: imageBytes == null && (imageUrl == null || imageUrl!.isEmpty)
                   ? _buildPlaceholder()
                   : _buildPreview(),
             ),
@@ -81,7 +83,23 @@ class CourseImagePickerCard extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.memory(imageBytes!, fit: BoxFit.cover),
+        if (imageBytes != null)
+          Image.memory(imageBytes!, fit: BoxFit.cover)
+        else
+          Image.network(
+            imageUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const ColoredBox(
+              color: AppColors.field,
+              child: Center(
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: AppColors.textHint,
+                  size: 38,
+                ),
+              ),
+            ),
+          ),
         PositionedDirectional(
           top: AppSpacing.xs,
           end: AppSpacing.xs,

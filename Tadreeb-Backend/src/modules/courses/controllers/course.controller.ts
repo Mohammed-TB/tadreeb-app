@@ -133,15 +133,31 @@ class CourseController {
 
   // تعديل دورة.
   async updateCourse(req: Request, res: Response): Promise<void> {
+    let uploadedImage: { url: string; publicId: string } | undefined;
+
     try {
+      if (req.file) {
+        uploadedImage = await courseImageService.upload(req.file.buffer);
+      }
+
       const input = {
         ...req.body,
+        ...(req.body.price !== undefined && {
+          price: Number(req.body.price),
+        }),
+        ...(req.body.depositAmount !== undefined && {
+          depositAmount: Number(req.body.depositAmount),
+        }),
+        ...(req.body.capacity !== undefined && {
+          capacity: Number(req.body.capacity),
+        }),
         ...(req.body.whatWillLearn !== undefined && {
           whatWillLearn: this.parseStringArray(req.body.whatWillLearn),
         }),
         ...(req.body.features !== undefined && {
           features: this.parseStringArray(req.body.features),
         }),
+        ...(uploadedImage && { image: uploadedImage.url }),
       };
       const result = await courseService.updateCourse(
         req.user!.userId,
@@ -156,6 +172,16 @@ class CourseController {
         data: result,
       });
     } catch (error) {
+      if (uploadedImage) {
+        try {
+          await courseImageService.delete(uploadedImage.publicId);
+        } catch (cleanupError) {
+          console.error(
+            "Failed to clean up uploaded course image:",
+            cleanupError,
+          );
+        }
+      }
       this.handleError(res, error);
     }
   }

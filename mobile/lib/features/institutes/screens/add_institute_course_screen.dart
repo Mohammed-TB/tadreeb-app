@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/utils/saudi_date.dart';
+import '../../courses/models/course_model.dart';
 import '../../courses/services/course_service.dart';
 import '../widgets/add_course/course_basics_step.dart';
 import '../widgets/add_course/course_fees_step.dart';
@@ -16,7 +17,9 @@ import '../widgets/add_course/course_schedule_step.dart';
 
 /// شاشة إضافة دورة جديدة للمعهد بمراحل متعددة
 class AddInstituteCourseScreen extends StatefulWidget {
-  const AddInstituteCourseScreen({super.key});
+  const AddInstituteCourseScreen({super.key, this.course});
+
+  final CourseModel? course;
 
   @override
   State<AddInstituteCourseScreen> createState() =>
@@ -45,22 +48,41 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
   late DateTime _endDate;
   int _currentStep = 0;
   String? _category;
+  String? _imageUrl;
   Uint8List? _imageBytes;
   String? _imageName;
   String? _imageContentType;
   bool _isPickingImage = false;
   bool _isSubmitting = false;
-  List<String> _whatWillLearn = const [];
-  List<String> _features = const [];
+  bool _isImageRemoved = false;
+  List<String> _whatWillLearn = [];
+  List<String> _features = [];
 
   static const _stepTitles = ['المعلومات', 'المواعيد', 'الرسوم'];
 
   @override
   void initState() {
     super.initState();
-    final tomorrow = SaudiDate.today().add(const Duration(days: 1));
-    _startDate = tomorrow;
-    _endDate = tomorrow.add(const Duration(days: 7));
+    final course = widget.course;
+    if (course == null) {
+      final tomorrow = SaudiDate.today().add(const Duration(days: 1));
+      _startDate = tomorrow;
+      _endDate = tomorrow.add(const Duration(days: 7));
+      return;
+    }
+
+    _titleController.text = course.title;
+    _descriptionController.text = course.description;
+    _priceController.text = course.price.toString();
+    _depositController.text = course.depositAmount.toString();
+    _capacityController.text = course.capacity.toString();
+    _locationController.text = course.location;
+    _category = course.category;
+    _imageUrl = course.image;
+    _startDate = course.startDate;
+    _endDate = course.endDate;
+    _whatWillLearn = List.of(course.whatWillLearn);
+    _features = List.of(course.features);
   }
 
   @override
@@ -116,6 +138,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
         _imageBytes = bytes;
         _imageName = image.name;
         _imageContentType = contentType;
+        _isImageRemoved = false;
       });
     } on Exception catch (error) {
       if (mounted) _showMessage('تعذر اختيار الصورة: $error');
@@ -129,6 +152,8 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
       _imageBytes = null;
       _imageName = null;
       _imageContentType = null;
+      _imageUrl = null;
+      _isImageRemoved = true;
     });
   }
 
@@ -197,6 +222,10 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
       }
       return false;
     }
+    if (index == 1 && !_startDate.isAfter(SaudiDate.today())) {
+      _showMessage('يجب أن يكون تاريخ بداية الدورة بعد اليوم');
+      return false;
+    }
     if (index == 2) {
       final price = double.tryParse(_priceController.text.trim());
       final deposit = double.tryParse(_depositController.text.trim());
@@ -217,8 +246,6 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
       );
-    } else {
-      _submit();
     }
   }
 
@@ -244,22 +271,51 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
 
     setState(() => _isSubmitting = true);
     try {
-      await context.read<CourseService>().createCourse(
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        category: _category!,
-        price: double.parse(_priceController.text.trim()),
-        depositAmount: double.parse(_depositController.text.trim()),
-        capacity: int.parse(_capacityController.text.trim()),
-        startDate: _startDate,
-        endDate: _endDate,
-        location: _locationController.text.trim(),
-        whatWillLearn: _whatWillLearn,
-        features: _features,
-        imageBytes: _imageBytes,
-        imageName: _imageName,
-        imageContentType: _imageContentType,
-      );
+      final service = context.read<CourseService>();
+      final title = _titleController.text.trim();
+      final description = _descriptionController.text.trim();
+      final category = _category!;
+      final price = double.parse(_priceController.text.trim());
+      final depositAmount = double.parse(_depositController.text.trim());
+      final capacity = int.parse(_capacityController.text.trim());
+      final location = _locationController.text.trim();
+      if (widget.course case final course?) {
+        await service.updateCourse(
+          courseId: course.id!,
+          title: title,
+          description: description,
+          category: category,
+          price: price,
+          depositAmount: depositAmount,
+          capacity: capacity,
+          startDate: _startDate,
+          endDate: _endDate,
+          location: location,
+          whatWillLearn: _whatWillLearn,
+          features: _features,
+          image: _isImageRemoved ? '' : _imageUrl,
+          imageBytes: _imageBytes,
+          imageName: _imageName,
+          imageContentType: _imageContentType,
+        );
+      } else {
+        await service.createCourse(
+          title: title,
+          description: description,
+          category: category,
+          price: price,
+          depositAmount: depositAmount,
+          capacity: capacity,
+          startDate: _startDate,
+          endDate: _endDate,
+          location: location,
+          whatWillLearn: _whatWillLearn,
+          features: _features,
+          imageBytes: _imageBytes,
+          imageName: _imageName,
+          imageContentType: _imageContentType,
+        );
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on Exception catch (error) {
@@ -298,7 +354,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
           icon: const Icon(Icons.arrow_forward_rounded),
         ),
         title: Text(
-          'إضافة دورة',
+          widget.course == null ? 'إضافة دورة' : 'تعديل دورة',
           style: AppTypography.titleLarge.copyWith(
             color: AppColors.textPrimary,
           ),
@@ -331,11 +387,14 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
               category: _category,
               onCategoryChanged: (value) => setState(() => _category = value),
               imageBytes: _imageBytes,
+              imageUrl: _imageUrl,
               isPickingImage: _isPickingImage,
               onPickImage: _pickImage,
               onRemoveImage: _removeImage,
               onWhatWillLearnChanged: (items) => _whatWillLearn = items,
               onFeaturesChanged: (items) => _features = items,
+              initialWhatWillLearn: _whatWillLearn,
+              initialFeatures: _features,
             ),
             CourseScheduleStep(
               formKey: _scheduleFormKey,
@@ -368,7 +427,10 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
             isLastStep: currentStep == _stepTitles.length - 1,
             isSubmitting: _isSubmitting,
             onPrevious: _previousStep,
-            onNext: _nextStep,
+            onNext: currentStep == _stepTitles.length - 1 ? _submit : _nextStep,
+            lastStepLabel: widget.course == null
+                ? 'إنشاء الدورة'
+                : 'حفظ التعديل',
           ),
         ),
       ),

@@ -9,11 +9,7 @@ void main() {
     final client = MockClient((request) async {
       expect(request.method, 'GET');
       expect(request.headers['if-none-match'], 'W/"courses-v1"');
-      return http.Response(
-        '',
-        304,
-        headers: {'etag': 'W/"courses-v1"'},
-      );
+      return http.Response('', 304, headers: {'etag': 'W/"courses-v1"'});
     });
     addTearDown(client.close);
 
@@ -31,5 +27,37 @@ void main() {
     expect(response.notModified, isTrue);
     expect(response.data, isNull);
     expect(response.etag, 'W/"courses-v1"');
+  });
+
+  test('sends multipart PUT fields', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'PUT');
+      expect(request.url.path, '/api/institutes/me/courses/course-1');
+      expect(
+        request.headers['content-type'],
+        startsWith('multipart/form-data;'),
+      );
+      final multipartBody = (request as http.Request).body;
+      expect(multipartBody, contains('name="title"'));
+      expect(multipartBody, contains('Updated course'));
+      return http.Response(
+        '{"success":true,"data":{}}',
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    addTearDown(client.close);
+
+    final apiClient = ApiClient(
+      tokenStorage: TokenStorageService(),
+      client: client,
+      baseUrl: 'https://api.example.test',
+    );
+
+    await apiClient.putMultipart(
+      '/api/institutes/me/courses/course-1',
+      fields: {'title': 'Updated course'},
+      authenticated: false,
+    );
   });
 }

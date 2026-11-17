@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +6,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/search.dart';
+import '../../../core/utils/saudi_date.dart';
 import '../../auth/controllers/auth_controller.dart';
 
 class HeaderHome extends StatelessWidget {
@@ -32,6 +32,7 @@ class HeaderHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().currentUser;
+    final greeting = SaudiDate.currentHour() < 12 ? 'صباح الخير' : 'مساء الخير';
 
     return Container(
       width: double.infinity,
@@ -44,13 +45,12 @@ class HeaderHome extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(12),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          
           // Welcome and actions
           Row(
             children: [
@@ -61,7 +61,7 @@ class HeaderHome extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        'صباح الخير، ${user?.name ?? 'طالبنا العزيز'}',
+                        '$greeting، ${user?.name ?? 'طالبنا العزيز'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.titleMedium.copyWith(
@@ -91,10 +91,7 @@ class HeaderHome extends StatelessWidget {
                   IconButton(
                     onPressed: onMenuTap,
                     tooltip: 'القائمة',
-                    icon: const Icon(
-                      Icons.menu,
-                      color: Colors.white,
-                    ),
+                    icon: const Icon(Icons.menu, color: Colors.white),
                   ),
                 ],
               ),
@@ -127,11 +124,7 @@ class HeaderHome extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppColors.surface,
       ),
-      child: const Icon(
-        Icons.person,
-        size: 28,
-        color: AppColors.textSecondary,
-      ),
+      child: const Icon(Icons.person, size: 28, color: AppColors.textSecondary),
     );
   }
 
@@ -143,10 +136,7 @@ class HeaderHome extends StatelessWidget {
       icon: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Icon(
-            Icons.notifications_outlined,
-            color: Colors.white,
-          ),
+          const Icon(Icons.notifications_outlined, color: Colors.white),
           Positioned(
             top: -4,
             right: -4,

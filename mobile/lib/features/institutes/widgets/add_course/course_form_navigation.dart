@@ -60,10 +60,7 @@ class CourseFormStepProgress extends StatelessWidget {
                             switchInCurve: Curves.easeOutBack,
                             switchOutCurve: Curves.easeIn,
                             transitionBuilder: (child, animation) =>
-                                ScaleTransition(
-                                  scale: animation,
-                                  child: child,
-                                ),
+                                ScaleTransition(scale: animation, child: child),
                             child: index < currentStep
                                 ? Icon(
                                     Icons.check_rounded,
@@ -121,14 +118,15 @@ class CourseFormStepProgress extends StatelessWidget {
                       child: Text(
                         steps[index],
                         textAlign: TextAlign.center,
-                        style: (index == currentStep
-                                ? AppTypography.labelMedium
-                                : AppTypography.labelSmall)
-                            .copyWith(
-                              color: index == currentStep
-                                  ? AppColors.primaryDark
-                                  : AppColors.textSecondary,
-                            ),
+                        style:
+                            (index == currentStep
+                                    ? AppTypography.labelMedium
+                                    : AppTypography.labelSmall)
+                                .copyWith(
+                                  color: index == currentStep
+                                      ? AppColors.primaryDark
+                                      : AppColors.textSecondary,
+                                ),
                       ),
                     ),
                   ),
@@ -149,6 +147,7 @@ class CourseFormStepActions extends StatelessWidget {
     this.isLastStep = false,
     this.isFirstStep = false,
     this.isSubmitting = false,
+    this.lastStepLabel = 'إنشاء الدورة',
   });
 
   final VoidCallback? onPrevious;
@@ -156,11 +155,20 @@ class CourseFormStepActions extends StatelessWidget {
   final bool isLastStep;
   final bool isFirstStep;
   final bool isSubmitting;
+  final String lastStepLabel;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: isSubmitting ? null : onPrevious,
+            child: Text(isFirstStep ? 'إلغاء' : 'السابق'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+
         Expanded(
           flex: 2,
           child: FilledButton(
@@ -174,14 +182,7 @@ class CourseFormStepActions extends StatelessWidget {
                       color: AppColors.textOnPrimary,
                     ),
                   )
-                : Text(isLastStep ? 'إنشاء الدورة' : 'التالي'),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: OutlinedButton(
-            onPressed: isSubmitting ? null : onPrevious,
-            child: Text(isFirstStep ? 'إلغاء' : 'السابق'),
+                : Text(isLastStep ? lastStepLabel : 'التالي'),
           ),
         ),
       ],

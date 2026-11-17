@@ -12,6 +12,7 @@ class InstituteCourseCard extends StatelessWidget {
     super.key,
     required this.course,
     this.onTap,
+    this.onEdit,
     this.onPublish,
     this.onClose,
     this.onDelete,
@@ -19,6 +20,7 @@ class InstituteCourseCard extends StatelessWidget {
 
   final CourseModel course;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onPublish;
   final VoidCallback? onClose;
   final VoidCallback? onDelete;
@@ -41,8 +43,9 @@ class InstituteCourseCard extends StatelessWidget {
 
     final capacity = course.capacity > 0 ? course.capacity : 1;
     final occupancyRatio = (course.enrolledCount / capacity).clamp(0.0, 1.0);
-    final hasActions = (course.status == CourseStatus.draft &&
-            (onPublish != null || onDelete != null)) ||
+    final hasActions =
+        (course.status == CourseStatus.draft &&
+            (onEdit != null || onPublish != null || onDelete != null)) ||
         (course.status == CourseStatus.published && onClose != null);
 
     return Container(
@@ -177,11 +180,28 @@ class InstituteCourseCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(14),
                             ),
                             onSelected: (value) {
+                              if (value == 'edit') onEdit?.call();
                               if (value == 'publish') onPublish?.call();
                               if (value == 'close') onClose?.call();
                               if (value == 'delete') onDelete?.call();
                             },
                             itemBuilder: (context) => [
+                              if (course.status == CourseStatus.draft &&
+                                  onEdit != null)
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit_outlined,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: AppSpacing.xs),
+                                      Text('تعديل المسودة'),
+                                    ],
+                                  ),
+                                ),
                               if (course.status == CourseStatus.draft &&
                                   onPublish != null)
                                 const PopupMenuItem(
@@ -228,7 +248,9 @@ class InstituteCourseCard extends StatelessWidget {
                                       SizedBox(width: AppSpacing.xs),
                                       Text(
                                         'حذف المسودة',
-                                        style: TextStyle(color: AppColors.error),
+                                        style: TextStyle(
+                                          color: AppColors.error,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -372,7 +394,8 @@ class InstituteCourseCard extends StatelessWidget {
                         const Spacer(),
 
                         // زر الإجراء السريع بحسب الحالة
-                        if (course.status == CourseStatus.draft && onPublish != null)
+                        if (course.status == CourseStatus.draft &&
+                            onPublish != null)
                           FilledButton.tonalIcon(
                             onPressed: onPublish,
                             icon: const Icon(Icons.publish_rounded, size: 16),
@@ -456,11 +479,11 @@ class InstituteCourseCard extends StatelessWidget {
   }
 
   String _statusLabel(CourseStatus status) => switch (status) {
-        CourseStatus.draft => 'مسودة',
-        CourseStatus.published => 'منشورة',
-        CourseStatus.closed => 'مغلقة',
-        CourseStatus.completed => 'مكتملة',
-      };
+    CourseStatus.draft => 'مسودة',
+    CourseStatus.published => 'منشورة',
+    CourseStatus.closed => 'مغلقة',
+    CourseStatus.completed => 'مكتملة',
+  };
 
   String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 }

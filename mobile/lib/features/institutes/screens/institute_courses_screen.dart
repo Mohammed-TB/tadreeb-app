@@ -35,10 +35,9 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   @override
   void initState() {
     super.initState();
-    _dataChangeSubscription = context
-        .read<AppDataChangeBus>()
-        .changes
-        .listen(_onDataChange);
+    _dataChangeSubscription = context.read<AppDataChangeBus>().changes.listen(
+      _onDataChange,
+    );
     _loadCourses();
   }
 
@@ -107,14 +106,31 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   /// فتح شاشة إضافة دورة جديدة
   Future<void> _openAddCourse() async {
     final created = await Navigator.of(context, rootNavigator: true).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => const AddInstituteCourseScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddInstituteCourseScreen()),
     );
 
     if (created == true && mounted) {
       _notifyCourseChange();
       _showMessage('تم إنشاء الدورة بنجاح');
+      _loadCourses();
+    }
+  }
+
+  Future<void> _editCourse(CourseModel course) async {
+    if (course.status != CourseStatus.draft || course.id == null) {
+      _showMessage('يمكن تعديل المسودات فقط');
+      return;
+    }
+
+    final updated = await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => AddInstituteCourseScreen(course: course),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      _notifyCourseChange();
+      _showMessage('تم تعديل المسودة بنجاح');
       _loadCourses();
     }
   }
@@ -282,7 +298,8 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   List<CourseModel> get _filteredCourses {
     final query = _searchController.text.trim().toLowerCase();
     return _courses.where((course) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           course.title.toLowerCase().contains(query) ||
           course.category.toLowerCase().contains(query);
       final matchesStatus =
@@ -334,9 +351,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               // 1. ترويسة الصفحة الموحدة
-              SliverToBoxAdapter(
-                child: const InstituteCoursesHeader(),
-              ),
+              SliverToBoxAdapter(child: const InstituteCoursesHeader()),
 
               // 2. المحتوى الداخلي المريح والمنسق
               SliverPadding(
@@ -416,11 +431,12 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
                     else
                       ...courses.map(
                         (course) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AppSpacing.sm,
-                          ),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: InstituteCourseCard(
                             course: course,
+                            onEdit: course.status == CourseStatus.draft
+                                ? () => _editCourse(course)
+                                : null,
                             onPublish: () => _publishCourse(course),
                             onClose: () => _closeCourse(course),
                             onDelete: () => _deleteCourse(course),

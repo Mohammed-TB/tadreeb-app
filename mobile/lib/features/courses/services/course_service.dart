@@ -79,10 +79,7 @@ class CourseService {
         '/api/courses',
         queryParameters: queryParameters,
       );
-      return PublicDataResult(
-        data: _parseCourses(response),
-        changed: true,
-      );
+      return PublicDataResult(data: _parseCourses(response), changed: true);
     }
 
     final key = cache.keyFor('/api/courses', queryParameters);
@@ -273,6 +270,54 @@ class CourseService {
     final data = response['data'];
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر قراءة بيانات الدورة المنشأة');
+    }
+    return CourseModel.fromJson(data);
+  }
+
+  Future<CourseModel> updateCourse({
+    required String courseId,
+    required String title,
+    required String description,
+    required String category,
+    required double price,
+    required double depositAmount,
+    required int capacity,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String location,
+    required List<String> whatWillLearn,
+    required List<String> features,
+    String? image,
+    List<int>? imageBytes,
+    String? imageName,
+    String? imageContentType,
+  }) async {
+    final response = await _apiClient.putMultipart(
+      '/api/institutes/me/courses/$courseId',
+      authenticated: true,
+      fields: {
+        'title': title,
+        'description': description,
+        'category': category,
+        'price': price.toString(),
+        'depositAmount': depositAmount.toString(),
+        'capacity': capacity.toString(),
+        'startDate': SaudiDate.toApiDate(startDate),
+        'endDate': SaudiDate.toApiDate(endDate),
+        'location': location,
+        'whatWillLearn': jsonEncode(whatWillLearn),
+        'features': jsonEncode(features),
+        'image': ?image,
+      },
+      fileBytes: imageBytes,
+      fileField: imageBytes == null ? null : 'image',
+      fileName: imageName,
+      contentType: imageContentType,
+    );
+
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر قراءة بيانات الدورة المعدلة');
     }
     return CourseModel.fromJson(data);
   }

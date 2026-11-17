@@ -12,8 +12,6 @@ import {
 import {
   emitCoursePublished,
   emitCourseUnpublished,
-  emitCourseUpdated,
-  emitSeatAvailabilityUpdated,
 } from "../../../realtime/realtime.events";
 import { parseCourseDate } from "../utils/course-date";
 
@@ -190,11 +188,8 @@ private async getOwnerInstitute(userId: string) {
   ) {
     const course = await this.getMyCourseById(userId, courseId);
 
-    if (
-      course.status !== CourseStatus.DRAFT &&
-      course.status !== CourseStatus.PUBLISHED
-    ) {
-      throw new Error("Only draft or published courses can be edited");
+    if (course.status !== CourseStatus.DRAFT) {
+      throw new Error("Only draft courses can be edited");
     }
 
     this.validateCourseData({
@@ -273,12 +268,6 @@ private async getOwnerInstitute(userId: string) {
     }
 
     const updatedCourse = await course.save();
-    if (updatedCourse.status === CourseStatus.PUBLISHED) {
-      emitCourseUpdated(updatedCourse);
-      if (input.capacity !== undefined) {
-        emitSeatAvailabilityUpdated(updatedCourse);
-      }
-    }
     return updatedCourse;
   }
 

@@ -82,8 +82,51 @@ class ApiClient {
     String? fileField,
     String? fileName,
     String? contentType,
+  }) {
+    return _sendMultipart(
+      'POST',
+      path,
+      fields: fields,
+      authenticated: authenticated,
+      fileBytes: fileBytes,
+      fileField: fileField,
+      fileName: fileName,
+      contentType: contentType,
+    );
+  }
+
+  Future<Map<String, dynamic>> putMultipart(
+    String path, {
+    required Map<String, String> fields,
+    required bool authenticated,
+    List<int>? fileBytes,
+    String? fileField,
+    String? fileName,
+    String? contentType,
+  }) {
+    return _sendMultipart(
+      'PUT',
+      path,
+      fields: fields,
+      authenticated: authenticated,
+      fileBytes: fileBytes,
+      fileField: fileField,
+      fileName: fileName,
+      contentType: contentType,
+    );
+  }
+
+  Future<Map<String, dynamic>> _sendMultipart(
+    String method,
+    String path, {
+    required Map<String, String> fields,
+    required bool authenticated,
+    List<int>? fileBytes,
+    String? fileField,
+    String? fileName,
+    String? contentType,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$path'))
+    final request = http.MultipartRequest(method, Uri.parse('$_baseUrl$path'))
       ..headers['Accept'] = 'application/json';
 
     if (authenticated) {
@@ -313,6 +356,10 @@ class ApiClient {
 
       if (message == 'This email is linked to another Google account') {
         return 'هذا البريد مرتبط بحساب Google آخر';
+      }
+
+      if (message == 'Course start date must be in the future') {
+        return 'يجب أن يكون تاريخ بداية الدورة بعد اليوم';
       }
 
       return 'البيانات المدخلة غير صحيحة. تحقق منها';

@@ -5,8 +5,10 @@ class SaudiDate {
   static final _dateOnlyPattern = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
   static final _timezoneSuffixPattern = RegExp(r'(?:Z|[+-]\d{2}:?\d{2})$');
 
+  static int currentHour() => _currentSaudiTime().hour;
+
   static DateTime today() {
-    final nowInSaudi = DateTime.now().toUtc().add(_saudiOffset);
+    final nowInSaudi = _currentSaudiTime();
     return DateTime(nowInSaudi.year, nowInSaudi.month, nowInSaudi.day);
   }
 
@@ -48,4 +50,7 @@ class SaudiDate {
     final dateInSaudi = instant.toUtc().add(_saudiOffset);
     return DateTime(dateInSaudi.year, dateInSaudi.month, dateInSaudi.day);
   }
+
+  static DateTime _currentSaudiTime() =>
+      DateTime.now().toUtc().add(_saudiOffset);
 }

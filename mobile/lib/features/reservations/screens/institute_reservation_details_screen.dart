@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/app_date_time_formatter.dart';
 import '../../../../core/widgets/app_drawer.dart';
 import '../controllers/institute_reservation_controller.dart';
 import '../models/reservation_model.dart';
@@ -30,6 +31,8 @@ class _InstituteReservationDetailsScreenState
   String? _receiptUrl;
   bool _isLoadingReceipt = false;
   String? _receiptError;
+  String? _balanceReceiptUrl;
+  bool _isLoadingBalanceReceipt = false;
 
   @override
   void initState() {
@@ -37,6 +40,11 @@ class _InstituteReservationDetailsScreenState
     _receiptUrl = widget.reservation.receiptUrl;
     if (widget.reservation.hasReceipt) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadReceipt());
+    }
+    if (widget.reservation.hasBalanceReceipt) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _loadBalanceReceipt(),
+      );
     }
   }
 
@@ -56,6 +64,20 @@ class _InstituteReservationDetailsScreenState
       if (_receiptUrl == null || _receiptUrl!.isEmpty) {
         _receiptError = controller.errorMessage ?? 'تعذر تحميل صورة السند';
       }
+    });
+  }
+
+  Future<void> _loadBalanceReceipt() async {
+    if (!mounted) return;
+    setState(() => _isLoadingBalanceReceipt = true);
+    final controller = context.read<InstituteReservationController>();
+    final url = await controller.getBalancePaymentReceiptUrl(
+      widget.reservation.id,
+    );
+    if (!mounted) return;
+    setState(() {
+      _balanceReceiptUrl = url;
+      _isLoadingBalanceReceipt = false;
     });
   }
 
@@ -140,22 +162,40 @@ class _InstituteReservationDetailsScreenState
                     ),
                     _InfoRow(
                       label: 'تاريخ الحجز',
-                      value: _formatDateTime(reservation.createdAt),
+                      value: AppDateTimeFormatter.formatDateTime(
+                        reservation.createdAt,
+                        dayFirst: true,
+                        use24HourClock: true,
+                        separator: ' - ',
+                      ),
                     ),
                     _InfoRow(
                       label: 'آخر تحديث',
-                      value: _formatDateTime(reservation.updatedAt),
+                      value: AppDateTimeFormatter.formatDateTime(
+                        reservation.updatedAt,
+                        dayFirst: true,
+                        use24HourClock: true,
+                        separator: ' - ',
+                      ),
                     ),
                     if (reservation.expiresAt != null)
                       _InfoRow(
                         label: 'انتهاء مهلة السداد',
-                        value: _formatDateTime(reservation.expiresAt!),
+                        value: AppDateTimeFormatter.formatDateTime(
+                          reservation.expiresAt!,
+                          dayFirst: true,
+                          use24HourClock: true,
+                          separator: ' - ',
+                        ),
                       ),
                     if (reservation.receiptResubmissionDeadline != null)
                       _InfoRow(
                         label: 'آخر موعد لإعادة رفع السند',
-                        value: _formatDateTime(
+                        value: AppDateTimeFormatter.formatDateTime(
                           reservation.receiptResubmissionDeadline!,
+                          dayFirst: true,
+                          use24HourClock: true,
+                          separator: ' - ',
                         ),
                       ),
                     _InfoRow(
@@ -208,6 +248,10 @@ class _InstituteReservationDetailsScreenState
                 ],
                 const SizedBox(height: AppSpacing.sm),
                 _buildReceiptSection(reservation),
+                if (reservation.hasBalanceReceipt) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildBalancePaymentSection(reservation, controller),
+                ],
                 if (reservation.canApproveOrReject) ...[
                   const SizedBox(height: AppSpacing.md),
                   Row(
@@ -290,6 +334,160 @@ class _InstituteReservationDetailsScreenState
     );
   }
 
+  Widget _buildBalancePaymentSection(
+    ReservationModel reservation,
+    InstituteReservationController controller,
+  ) {
+    final isPending = reservation.balancePaymentStatus == 'pending';
+    final isProcessing = controller.isProcessing(reservation.id);
+    return _SectionCard(
+      title: 'سند إكمال الرسوم',
+      icon: Icons.receipt_long_outlined,
+      children: [
+        _InfoRow(
+          label: 'المبلغ المرفق',
+          value: _formatAmount(reservation.balancePaymentAmount),
+        ),
+        _InfoRow(
+          label: 'حالة الدفعة',
+          value: switch (reservation.balancePaymentStatus) {
+            'pending' => 'بانتظار المراجعة',
+            'approved' => 'معتمدة',
+            'rejected' => 'مرفوضة',
+            _ => 'لا توجد دفعة',
+          },
+        ),
+        if (reservation.balancePaymentRejectionReason?.isNotEmpty == true)
+          _InfoRow(
+            label: 'سبب الرفض',
+            value: reservation.balancePaymentRejectionReason!,
+          ),
+        if (_isLoadingBalanceReceipt)
+          const Padding(
+            padding: EdgeInsets.all(AppSpacing.xl),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_balanceReceiptUrl != null && _balanceReceiptUrl!.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: InteractiveViewer(
+              child: Image.network(
+                _balanceReceiptUrl!,
+                width: double.infinity,
+                height: 320,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const SizedBox(
+                  height: 120,
+                  child: Center(child: Text('تعذر عرض صورة السند')),
+                ),
+              ),
+            ),
+          )
+        else
+          TextButton.icon(
+            onPressed: _loadBalanceReceipt,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة تحميل سند الدفعة'),
+          ),
+        if (isPending) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isProcessing
+                      ? null
+                      : () => _rejectBalancePayment(controller, reservation),
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('رفض السند'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: isProcessing
+                      ? null
+                      : () => _approveBalancePayment(controller, reservation),
+                  icon: const Icon(Icons.check_circle_outline_rounded),
+                  label: const Text('اعتماد الدفعة'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _approveBalancePayment(
+    InstituteReservationController controller,
+    ReservationModel reservation,
+  ) async {
+    final success = await controller.approveBalancePayment(reservation.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'تم اعتماد الدفعة وتحديث رصيد الطالب'
+              : 'تعذر اعتماد الدفعة: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _rejectBalancePayment(
+    InstituteReservationController controller,
+    ReservationModel reservation,
+  ) async {
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('رفض سند الدفعة'),
+        content: TextField(
+          controller: reasonController,
+          autofocus: true,
+          maxLength: 500,
+          decoration: const InputDecoration(
+            labelText: 'سبب الرفض',
+            hintText: 'اكتب سببًا ليتمكن الطالب من إعادة الإرسال',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = reasonController.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('تأكيد الرفض'),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null || !mounted) return;
+
+    final success = await controller.rejectBalancePayment(
+      reservation.id,
+      reason: reason,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'تم رفض السند وإشعار الطالب'
+              : 'تعذر رفض السند: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+        ),
+      ),
+    );
+  }
+
   String _bookingTypeLabel(String value) =>
       value == 'inPerson' ? 'حضوري' : 'إلكتروني';
 
@@ -327,15 +525,6 @@ class _InstituteReservationDetailsScreenState
       'absent' => 'غائب',
       _ => 'لم يُحدد',
     };
-  }
-
-  String _formatDateTime(DateTime value) {
-    final date = value.toLocal();
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$day/$month/${date.year} - $hour:$minute';
   }
 
   String _formatAmount(double value) => '${value.toStringAsFixed(2)} ر.س';

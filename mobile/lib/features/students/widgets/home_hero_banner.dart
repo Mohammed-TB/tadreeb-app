@@ -80,7 +80,7 @@ class HomeHeroBanner extends StatelessWidget {
                         ),
                         const SizedBox(height: 18),
                         SizedBox(
-                          width: 200,
+                          width: 160,
                           child: Button(
                             iconPosition: IconAlignment.end,
                             icon: Icons.arrow_forward_rounded,

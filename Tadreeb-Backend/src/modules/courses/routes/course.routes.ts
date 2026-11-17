@@ -55,6 +55,11 @@ router.patch("/:courseId/close", (req, res) =>
   courseController.closeCourse(req, res)
 );
 
+// إعادة فتح التسجيل.
+router.patch("/:courseId/reopen", (req, res) =>
+  courseController.reopenCourse(req, res)
+);
+
 // حذف دورة مسودة.
 router.delete("/:courseId", (req, res) =>
   courseController.deleteCourse(req, res)

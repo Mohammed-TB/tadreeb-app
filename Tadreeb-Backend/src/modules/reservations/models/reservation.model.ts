@@ -4,6 +4,7 @@ import {
   BookingType,
   PaymentOption,
   PaymentStatus,
+  BalancePaymentStatus,
   ReservationStatus,
   AttendanceStatus,
 } from "../types/reservation.types";
@@ -103,6 +104,36 @@ receiptFormat: {
 receiptUrl: {
   type: String,
   select: false,
+},
+
+balancePaymentAmount: {
+  type: Number,
+  min: 0,
+  default: 0,
+},
+
+balancePaymentStatus: {
+  type: String,
+  enum: Object.values(BalancePaymentStatus),
+  default: BalancePaymentStatus.NONE,
+},
+
+balanceReceiptPublicId: {
+  type: String,
+  trim: true,
+  select: false,
+},
+
+balanceReceiptFormat: {
+  type: String,
+  trim: true,
+  select: false,
+},
+
+balancePaymentRejectionReason: {
+  type: String,
+  trim: true,
+  maxlength: 500,
 },
 
     rejectionReason: {

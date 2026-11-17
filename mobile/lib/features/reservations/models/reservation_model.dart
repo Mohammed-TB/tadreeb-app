@@ -13,6 +13,10 @@ class ReservationModel {
   final double amountToPay;
   final double amountPaid;
   final String paymentStatus; // unpaid | partial | paid
+  final double balancePaymentAmount;
+  final String balancePaymentStatus; // none | pending | approved | rejected
+  final bool hasBalanceReceipt;
+  final String? balancePaymentRejectionReason;
   final String
   status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
   final bool receiptAvailable;
@@ -40,6 +44,10 @@ class ReservationModel {
     required this.amountToPay,
     required this.amountPaid,
     required this.paymentStatus,
+    this.balancePaymentAmount = 0,
+    this.balancePaymentStatus = 'none',
+    this.hasBalanceReceipt = false,
+    this.balancePaymentRejectionReason,
     required this.status,
     this.receiptAvailable = false,
     this.receiptPublicId,
@@ -108,6 +116,17 @@ class ReservationModel {
       amountToPay: _toDouble(json['amountToPay']),
       amountPaid: _toDouble(json['amountPaid']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
+      balancePaymentAmount: _toDouble(json['balancePaymentAmount']),
+      balancePaymentStatus: json['balancePaymentStatus']?.toString() ?? 'none',
+      hasBalanceReceipt:
+          json['hasBalanceReceipt'] == true ||
+          const {
+            'pending',
+            'approved',
+            'rejected',
+          }.contains(json['balancePaymentStatus']?.toString().toLowerCase()),
+      balancePaymentRejectionReason: json['balancePaymentRejectionReason']
+          ?.toString(),
       status: json['status']?.toString() ?? 'pendingPayment',
       receiptAvailable: json['hasReceipt'] == true,
       receiptPublicId: json['receiptPublicId']?.toString(),
@@ -136,6 +155,11 @@ class ReservationModel {
       'amountToPay': amountToPay,
       'amountPaid': amountPaid,
       'paymentStatus': paymentStatus,
+      'balancePaymentAmount': balancePaymentAmount,
+      'balancePaymentStatus': balancePaymentStatus,
+      'hasBalanceReceipt': hasBalanceReceipt,
+      if (balancePaymentRejectionReason != null)
+        'balancePaymentRejectionReason': balancePaymentRejectionReason,
       'status': status,
       'hasReceipt': hasReceipt,
       if (receiptPublicId != null) 'receiptPublicId': receiptPublicId,

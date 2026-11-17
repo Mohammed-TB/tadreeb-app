@@ -130,17 +130,12 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                ),
-                child: const Icon(
-                  Icons.business_outlined,
-                  size: 24,
-                  color: AppColors.primary,
+              Builder(
+                builder: (headerContext) => IconButton(
+                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
+                  tooltip: 'القائمة الرئيسية',
+                  color: AppColors.textOnPrimary,
+                  icon: const Icon(Icons.menu),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -169,15 +164,7 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Builder(
-                builder: (headerContext) => IconButton(
-                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
-                  tooltip: 'القائمة',
-                  color: AppColors.textOnPrimary,
-                  icon: const Icon(Icons.menu),
-                ),
-              ),
+
             ],
           ),
         ),

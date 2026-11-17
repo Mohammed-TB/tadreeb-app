@@ -120,6 +120,7 @@ class InstituteReservationController extends ChangeNotifier {
       'registrationConfirmed',
       'registrationRejected',
       'paymentSubmitted',
+      'balancePaymentSubmitted',
       'seatHoldExpired',
     }.contains(event.name);
     if ((!isInstituteReconnect && !isRegistrationChange) ||
@@ -238,6 +239,64 @@ class InstituteReservationController extends ChangeNotifier {
       return null;
     }
   }
+
+  Future<String?> getBalancePaymentReceiptUrl(String reservationId) async {
+    try {
+      return await _reservationService.getBalancePaymentReceiptUrl(
+        reservationId,
+      );
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> _reviewBalancePayment(
+    String reservationId,
+    Future<ReservationModel> Function() review,
+  ) async {
+    if (_processingIds.contains(reservationId)) return false;
+    _processingIds.add(reservationId);
+    notifyListeners();
+
+    try {
+      final updated = await review();
+      final index = _reservations.indexWhere((r) => r.id == reservationId);
+      if (index != -1) {
+        _reservations[index] = updated;
+      } else {
+        await fetchReservations();
+      }
+      _dataChangeBus?.notifyChanged(
+        AppDataDomain.reservations,
+        AppDataChangeOrigin.instituteReservations,
+        audience: AppDataAudience.instituteOwner,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _processingIds.remove(reservationId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> approveBalancePayment(String reservationId) =>
+      _reviewBalancePayment(
+        reservationId,
+        () => _reservationService.approveBalancePayment(reservationId),
+      );
+
+  Future<bool> rejectBalancePayment(
+    String reservationId, {
+    required String reason,
+  }) => _reviewBalancePayment(
+    reservationId,
+    () =>
+        _reservationService.rejectBalancePayment(reservationId, reason: reason),
+  );
 
   Future<bool> createInPersonReservation({
     required String courseId,

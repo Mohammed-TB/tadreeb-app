@@ -25,6 +25,10 @@ class StudentReservationModel {
   final double amountToPay;
   final double amountPaid;
   final String paymentStatus; // unpaid | partial | paid
+  final double balancePaymentAmount;
+  final String balancePaymentStatus; // none | pending | approved | rejected
+  final bool hasBalanceReceipt;
+  final String? balancePaymentRejectionReason;
   final String
   status; // pendingPayment | paymentSubmitted | confirmed | rejected | expired | cancelled
 
@@ -59,6 +63,10 @@ class StudentReservationModel {
     required this.amountToPay,
     required this.amountPaid,
     required this.paymentStatus,
+    this.balancePaymentAmount = 0,
+    this.balancePaymentStatus = 'none',
+    this.hasBalanceReceipt = false,
+    this.balancePaymentRejectionReason,
     required this.status,
     this.receiptPublicId,
     this.receiptUrl,
@@ -111,6 +119,17 @@ class StudentReservationModel {
         return paymentStatus;
     }
   }
+
+  double get remainingAmount {
+    final remaining = totalAmount - amountPaid;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  bool get canPayBalance =>
+      normalizedStatus == 'confirmed' &&
+      paymentStatus.toLowerCase() == 'partial' &&
+      balancePaymentStatus.toLowerCase() != 'pending' &&
+      remainingAmount > 0;
 
   /// هل يستطيع الطالب رفع أو إعادة رفع سند الدفع؟
   /// في الـ Backend:
@@ -211,6 +230,11 @@ class StudentReservationModel {
       amountToPay: _toDouble(json['amountToPay']),
       amountPaid: _toDouble(json['amountPaid']),
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
+      balancePaymentAmount: _toDouble(json['balancePaymentAmount']),
+      balancePaymentStatus: json['balancePaymentStatus']?.toString() ?? 'none',
+      hasBalanceReceipt: json['hasBalanceReceipt'] == true,
+      balancePaymentRejectionReason: json['balancePaymentRejectionReason']
+          ?.toString(),
       status: json['status']?.toString() ?? 'pendingPayment',
       receiptPublicId: json['receiptPublicId']?.toString(),
       receiptUrl: json['receiptUrl']?.toString(),

@@ -89,6 +89,16 @@ class ReservationCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (reservation.balancePaymentStatus == 'pending') ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'دفعة متبقية بانتظار المراجعة',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.accentDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

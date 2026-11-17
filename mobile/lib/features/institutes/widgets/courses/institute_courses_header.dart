@@ -23,17 +23,12 @@ class InstituteCoursesHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                ),
-                child: const Icon(
-                  Icons.auto_stories_outlined,
-                  size: 22,
-                  color: AppColors.primary,
+                            Builder(
+                builder: (headerContext) => IconButton(
+                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
+                  tooltip: 'القائمة الرئيسية',
+                  color: AppColors.textOnPrimary,
+                  icon: const Icon(Icons.menu),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -53,15 +48,7 @@ class InstituteCoursesHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Builder(
-                builder: (headerContext) => IconButton(
-                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
-                  tooltip: 'القائمة الرئيسية',
-                  color: AppColors.textOnPrimary,
-                  icon: const Icon(Icons.menu),
-                ),
-              ),
+
             ],
           ),
         ),

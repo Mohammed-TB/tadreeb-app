@@ -37,6 +37,13 @@ studentReservationRouter.post(
   (req, res) => reservationController.uploadReceipt(req, res),
 );
 
+studentReservationRouter.post(
+  "/:reservationId/balance-payment",
+  upload.single("receipt"),
+  validateReceiptImage,
+  (req, res) => reservationController.uploadBalancePaymentReceipt(req, res),
+);
+
 // عرض سند الطالب الخاص به فقط.
 studentReservationRouter.get(
   "/:reservationId/receipt",
@@ -67,6 +74,21 @@ instituteReservationRouter.get("/", (req, res) =>
 instituteReservationRouter.get(
   "/:reservationId/receipt",
   (req, res) => reservationController.getReceiptUrl(req, res),
+);
+
+instituteReservationRouter.get(
+  "/:reservationId/balance-payment/receipt",
+  (req, res) => reservationController.getBalancePaymentReceiptUrl(req, res),
+);
+
+instituteReservationRouter.patch(
+  "/:reservationId/balance-payment/approve",
+  (req, res) => reservationController.approveBalancePayment(req, res),
+);
+
+instituteReservationRouter.patch(
+  "/:reservationId/balance-payment/reject",
+  (req, res) => reservationController.rejectBalancePayment(req, res),
 );
 
 // الموافقة على السند.

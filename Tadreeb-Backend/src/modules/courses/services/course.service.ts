@@ -13,7 +13,7 @@ import {
   emitCoursePublished,
   emitCourseUnpublished,
 } from "../../../realtime/realtime.events";
-import { parseCourseDate } from "../utils/course-date";
+import { getSaudiDayStart, parseCourseDate } from "../utils/course-date";
 
 
 
@@ -307,6 +307,27 @@ private async getOwnerInstitute(userId: string) {
     const closedCourse = await course.save();
     emitCourseUnpublished(closedCourse);
     return closedCourse;
+  }
+
+  // إعادة فتح التسجيل في دورة مغلقة ما زالت متاحة وبها مقاعد.
+  async reopenCourse(userId: string, courseId: string) {
+    const course = await this.getMyCourseById(userId, courseId);
+
+    if (course.status !== CourseStatus.CLOSED) {
+      throw new Error("Only closed courses can be reopened");
+    }
+    if (course.endDate < getSaudiDayStart()) {
+      throw new Error("Course has ended and cannot be reopened");
+    }
+    if (course.enrolledCount + course.reservedCount >= course.capacity) {
+      throw new Error("Course is full and cannot be reopened");
+    }
+
+    course.status = CourseStatus.PUBLISHED;
+
+    const reopenedCourse = await course.save();
+    emitCoursePublished(reopenedCourse);
+    return reopenedCourse;
   }
 
   // حذف دورة مسودة فقط.

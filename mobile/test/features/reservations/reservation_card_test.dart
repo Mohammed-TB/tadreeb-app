@@ -62,4 +62,36 @@ void main() {
     await tester.tap(find.byType(ReservationCard));
     expect(opened, isTrue);
   });
+
+  testWidgets('highlights a pending balance payment on the institute card', (
+    tester,
+  ) async {
+    final reservation = ReservationModel(
+      id: 'reservation-1',
+      studentName: 'أحمد محمد',
+      studentPhone: '0500000000',
+      courseId: 'course-1',
+      bookingType: 'online',
+      paymentOption: 'deposit',
+      totalAmount: 1000,
+      amountToPay: 250,
+      amountPaid: 250,
+      paymentStatus: 'partial',
+      balancePaymentAmount: 750,
+      balancePaymentStatus: 'pending',
+      status: 'confirmed',
+      createdAt: DateTime(2026, 11, 17),
+      updatedAt: DateTime(2026, 11, 17),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReservationCard(reservation: reservation, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(find.text('دفعة متبقية بانتظار المراجعة'), findsOneWidget);
+  });
 }

@@ -11,6 +11,8 @@ import { ICourse } from "../../courses/types/course.types";
 import { IReservation } from "../types/reservation.types";
 import receiptUploadService from "./receipt-upload.service";
 import {
+  emitBalancePaymentReviewed,
+  emitBalancePaymentSubmitted,
   emitPaymentSubmitted,
   emitRegistrationConfirmed,
   emitRegistrationCreated,
@@ -23,6 +25,7 @@ import {
   BookingType,
   PaymentOption,
   PaymentStatus,
+  BalancePaymentStatus,
   ReservationStatus,
   AttendanceStatus,
 } from "../types/reservation.types";
@@ -614,16 +617,21 @@ private async reserveSeat(
     })
       .populate("courseId", "title price depositAmount")
       .populate("studentId", "name email phone")
-      .select("+receiptPublicId +receiptFormat +receiptUrl")
+      .select(
+        "+receiptPublicId +receiptFormat +receiptUrl +balanceReceiptPublicId +balanceReceiptFormat",
+      )
       .sort({ createdAt: -1 });
 
     return reservations.map((reservation) => {
       const data = reservation.toObject();
       const hasReceipt = Boolean(data.receiptPublicId || data.receiptUrl);
+      const hasBalanceReceipt = Boolean(data.balanceReceiptPublicId);
       delete data.receiptPublicId;
       delete data.receiptFormat;
       delete data.receiptUrl;
-      return { ...data, hasReceipt };
+      delete data.balanceReceiptPublicId;
+      delete data.balanceReceiptFormat;
+      return { ...data, hasReceipt, hasBalanceReceipt };
     });
   }
 
@@ -743,19 +751,216 @@ private async reserveSeat(
     }
   }
 
+  async uploadBalancePaymentReceipt(
+    studentId: string,
+    reservationId: string,
+    fileBuffer: Buffer,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      studentId,
+      bookingType: BookingType.ONLINE,
+    }).select("+balanceReceiptPublicId +balanceReceiptFormat");
+
+    if (!reservation) {
+      throw new Error("Reservation not found");
+    }
+
+    const remainingAmount = reservation.totalAmount - reservation.amountPaid;
+    if (
+      reservation.status !== ReservationStatus.CONFIRMED ||
+      reservation.paymentStatus !== PaymentStatus.PARTIAL ||
+      remainingAmount <= 0 ||
+      reservation.balancePaymentStatus === BalancePaymentStatus.PENDING
+    ) {
+      throw new Error("Balance payment is not available for this reservation");
+    }
+
+    const oldPublicId = reservation.balanceReceiptPublicId;
+    const uploadedReceipt =
+      await receiptUploadService.uploadReceipt(fileBuffer);
+
+    try {
+      const updatedReservation = await Reservation.findOneAndUpdate(
+        {
+          _id: reservationId,
+          studentId,
+          bookingType: BookingType.ONLINE,
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PARTIAL,
+          balancePaymentStatus: { $ne: BalancePaymentStatus.PENDING },
+          amountPaid: reservation.amountPaid,
+        },
+        {
+          $set: {
+            balancePaymentAmount: remainingAmount,
+            balancePaymentStatus: BalancePaymentStatus.PENDING,
+            balanceReceiptPublicId: uploadedReceipt.publicId,
+            balanceReceiptFormat: uploadedReceipt.format,
+          },
+          $unset: {
+            balancePaymentRejectionReason: 1,
+          },
+        },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedReservation) {
+        throw new Error("Balance payment status changed; please refresh");
+      }
+
+      if (oldPublicId && oldPublicId !== uploadedReceipt.publicId) {
+        try {
+          await receiptUploadService.deleteReceipt(oldPublicId);
+        } catch (cleanupError) {
+          console.error("Failed to delete previous balance receipt:", cleanupError);
+        }
+      }
+
+      emitBalancePaymentSubmitted(updatedReservation);
+      return updatedReservation;
+    } catch (error) {
+      try {
+        await receiptUploadService.deleteReceipt(uploadedReceipt.publicId);
+      } catch (cleanupError) {
+        console.error("Failed to delete unused balance receipt:", cleanupError);
+      }
+      throw error;
+    }
+  }
+
+  async approveBalancePayment(ownerId: string, reservationId: string) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const owner = await User.findOne({
+      _id: ownerId,
+      role: UserRole.INSTITUTE_OWNER,
+      status: UserStatus.ACTIVE,
+    });
+
+    if (!owner?.instituteId) {
+      throw new Error("Active institute owner required");
+    }
+
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      instituteId: owner.instituteId,
+      status: ReservationStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PARTIAL,
+      balancePaymentStatus: BalancePaymentStatus.PENDING,
+    });
+
+    if (!reservation) {
+      throw new Error("Pending balance payment not found");
+    }
+
+    const amountPaid = reservation.amountPaid + reservation.balancePaymentAmount;
+    if (amountPaid > reservation.totalAmount) {
+      throw new Error("Balance payment exceeds the remaining amount");
+    }
+
+    const updatedReservation = await Reservation.findOneAndUpdate(
+      {
+        _id: reservationId,
+        instituteId: owner.instituteId,
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PARTIAL,
+        balancePaymentStatus: BalancePaymentStatus.PENDING,
+        amountPaid: reservation.amountPaid,
+        balancePaymentAmount: reservation.balancePaymentAmount,
+      },
+      {
+        $set: {
+          amountPaid,
+          paymentStatus:
+            amountPaid >= reservation.totalAmount
+              ? PaymentStatus.PAID
+              : PaymentStatus.PARTIAL,
+          balancePaymentStatus: BalancePaymentStatus.APPROVED,
+        },
+        $unset: {
+          balancePaymentRejectionReason: 1,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedReservation) {
+      throw new Error("Balance payment status changed; please refresh");
+    }
+
+    emitBalancePaymentReviewed(updatedReservation);
+    return updatedReservation;
+  }
+
+  async rejectBalancePayment(
+    ownerId: string,
+    reservationId: string,
+    reason: string,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+    if (!reason.trim()) {
+      throw new Error("Rejection reason is required");
+    }
+
+    const owner = await User.findOne({
+      _id: ownerId,
+      role: UserRole.INSTITUTE_OWNER,
+      status: UserStatus.ACTIVE,
+    });
+
+    if (!owner?.instituteId) {
+      throw new Error("Active institute owner required");
+    }
+
+    const reservation = await Reservation.findOneAndUpdate(
+      {
+        _id: reservationId,
+        instituteId: owner.instituteId,
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PARTIAL,
+        balancePaymentStatus: BalancePaymentStatus.PENDING,
+      },
+      {
+        $set: {
+          balancePaymentStatus: BalancePaymentStatus.REJECTED,
+          balancePaymentRejectionReason: reason.trim(),
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!reservation) {
+      throw new Error("Pending balance payment not found");
+    }
+
+    emitBalancePaymentReviewed(reservation);
+    return reservation;
+  }
 
   // إنشاء رابط مؤقت بعد التحقق من صاحب الصلاحية.
   async getReceiptAccessUrl(
     requesterId: string,
     role: UserRole,
     reservationId: string,
+    receiptType: "initial" | "balance" = "initial",
   ) {
     if (!mongoose.Types.ObjectId.isValid(reservationId)) {
       throw new Error("Invalid reservation ID");
     }
 
     const reservation = await Reservation.findById(reservationId)
-      .select("+receiptPublicId +receiptFormat");
+      .select(
+        "+receiptPublicId +receiptFormat +balanceReceiptPublicId +balanceReceiptFormat",
+      );
 
     if (!reservation) {
       throw new Error("Reservation not found");
@@ -785,14 +990,23 @@ private async reserveSeat(
       throw new Error("Not authorized to view this receipt");
     }
 
-    if (!reservation.receiptPublicId || !reservation.receiptFormat) {
+    const publicId =
+      receiptType === "balance"
+        ? reservation.balanceReceiptPublicId
+        : reservation.receiptPublicId;
+    const format =
+      receiptType === "balance"
+        ? reservation.balanceReceiptFormat
+        : reservation.receiptFormat;
+
+    if (!publicId || !format) {
       throw new Error("Receipt is not available");
     }
 
     return {
       receiptUrl: receiptUploadService.generateReceiptUrl(
-        reservation.receiptPublicId,
-        reservation.receiptFormat,
+        publicId,
+        format,
       ),
       expiresIn: 300,
     };

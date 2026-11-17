@@ -15,6 +15,7 @@ class InstituteCourseCard extends StatelessWidget {
     this.onEdit,
     this.onPublish,
     this.onClose,
+    this.onReopen,
     this.onDelete,
   });
 
@@ -23,6 +24,7 @@ class InstituteCourseCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onPublish;
   final VoidCallback? onClose;
+  final VoidCallback? onReopen;
   final VoidCallback? onDelete;
 
   @override
@@ -46,7 +48,8 @@ class InstituteCourseCard extends StatelessWidget {
     final hasActions =
         (course.status == CourseStatus.draft &&
             (onEdit != null || onPublish != null || onDelete != null)) ||
-        (course.status == CourseStatus.published && onClose != null);
+        (course.status == CourseStatus.published && onClose != null) ||
+        (course.status == CourseStatus.closed && onReopen != null);
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -183,6 +186,7 @@ class InstituteCourseCard extends StatelessWidget {
                               if (value == 'edit') onEdit?.call();
                               if (value == 'publish') onPublish?.call();
                               if (value == 'close') onClose?.call();
+                              if (value == 'reopen') onReopen?.call();
                               if (value == 'delete') onDelete?.call();
                             },
                             itemBuilder: (context) => [
@@ -231,6 +235,22 @@ class InstituteCourseCard extends StatelessWidget {
                                       ),
                                       SizedBox(width: AppSpacing.xs),
                                       Text('إغلاق التسجيل'),
+                                    ],
+                                  ),
+                                ),
+                              if (course.status == CourseStatus.closed &&
+                                  onReopen != null)
+                                const PopupMenuItem(
+                                  value: 'reopen',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.replay_rounded,
+                                        color: AppColors.success,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: AppSpacing.xs),
+                                      Text('إعادة فتح الدورة'),
                                     ],
                                   ),
                                 ),

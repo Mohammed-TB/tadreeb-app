@@ -147,6 +147,7 @@ class ReservationController extends ChangeNotifier {
       'registrationConfirmed',
       'registrationRejected',
       'seatHoldExpired',
+      'balancePaymentReviewed',
     }.contains(event.name);
     if ((!isStudentReconnect && !isStatusChange) ||
         (isStatusChange && event.role != 'student')) {
@@ -186,14 +187,14 @@ class ReservationController extends ChangeNotifier {
 
     try {
       debugPrint('========== CREATE REGISTRATION START ==========');
-debugPrint('Course ID: $courseId');
+      debugPrint('Course ID: $courseId');
       final id = await _reservationService.createOnlineReservation(
         courseId: courseId,
         studentName: studentName,
         studentPhone: studentPhone,
         paymentOption: paymentOption,
       );
-       debugPrint('========== CREATE REGISTRATION SUCCESS ==========');
+      debugPrint('========== CREATE REGISTRATION SUCCESS ==========');
       _reservationId = id;
       _successMessage = 'تم إنشاء الحجز بنجاح';
       _dataChangeBus?.notifyChanged(
@@ -254,6 +255,45 @@ debugPrint('Course ID: $courseId');
     }
   }
 
+  Future<bool> uploadBalancePaymentReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    if (_isUploadingReceipt) return false;
+
+    _isUploadingReceipt = true;
+    _uploadingReservationId = reservationId;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+
+    try {
+      await _reservationService.uploadBalancePaymentReceipt(
+        reservationId: reservationId,
+        fileBytes: fileBytes,
+        fileName: fileName,
+        contentType: contentType,
+      );
+      _successMessage = 'تم رفع سند الدفعة المتبقية وهو قيد مراجعة المعهد';
+      _dataChangeBus?.notifyChanged(
+        AppDataDomain.reservations,
+        AppDataChangeOrigin.studentReservations,
+        audience: AppDataAudience.student,
+      );
+      await fetchMyReservations(forceRefresh: true);
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isUploadingReceipt = false;
+      _uploadingReservationId = null;
+      notifyListeners();
+    }
+  }
+
   // رابط صورة السند
   Future<String?> getReceiptUrl(String reservationId) async {
     try {
@@ -263,6 +303,7 @@ debugPrint('Course ID: $courseId');
       notifyListeners();
       return null;
     }
+
   }
 
   void clearMessages() {

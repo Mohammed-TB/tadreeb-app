@@ -130,39 +130,22 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.groups_2_outlined,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'الطلاب المسجلون',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.textOnPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               Builder(
                 builder: (headerContext) => IconButton(
                   onPressed: () => Scaffold.of(headerContext).openDrawer(),
                   tooltip: 'القائمة الرئيسية',
                   color: AppColors.textOnPrimary,
                   icon: const Icon(Icons.menu),
+                ),
+              ),
+
+              const SizedBox(width: AppSpacing.sm),
+
+              Text(
+                'الطلاب المسجلون',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.textOnPrimary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],

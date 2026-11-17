@@ -72,6 +72,24 @@ class ReservationService {
     );
   }
 
+  /// رفع سند سداد المتبقي: POST /api/reservations/:id/balance-payment
+  Future<void> uploadBalancePaymentReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    await _apiClient.postMultipart(
+      '/api/reservations/$reservationId/balance-payment',
+      authenticated: true,
+      fields: const {},
+      fileBytes: fileBytes,
+      fileField: 'receipt',
+      fileName: fileName,
+      contentType: contentType,
+    );
+  }
+
   /// جلب رابط سند الدفع الخاص بالطالب: GET /api/reservations/:id/receipt
   Future<String?> getReceiptUrl(String reservationId) async {
     final response = await _apiClient.get(
@@ -86,4 +104,5 @@ class ReservationService {
     if (data is String) return data;
     return response['url']?.toString();
   }
+
 }

@@ -346,6 +346,18 @@ class CourseService {
     return CourseModel.fromJson(data);
   }
 
+  Future<CourseModel> reopenCourse(String courseId) async {
+    final response = await _apiClient.patch(
+      '/api/institutes/me/courses/$courseId/reopen',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر قراءة بيانات الدورة بعد إعادة الفتح');
+    }
+    return CourseModel.fromJson(data);
+  }
+
   Future<void> deleteCourse(String courseId) async {
     await _apiClient.delete(
       '/api/institutes/me/courses/$courseId',

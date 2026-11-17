@@ -68,6 +68,47 @@ class ReservationService {
     return response['url']?.toString();
   }
 
+  Future<ReservationModel> approveBalancePayment(String reservationId) async {
+    final response = await _apiClient.patch(
+      '/api/institutes/me/reservations/$reservationId/balance-payment/approve',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر اعتماد دفعة الرسوم المتبقية');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
+  Future<ReservationModel> rejectBalancePayment(
+    String reservationId, {
+    required String reason,
+  }) async {
+    final response = await _apiClient.patch(
+      '/api/institutes/me/reservations/$reservationId/balance-payment/reject',
+      authenticated: true,
+      body: {'reason': reason},
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر رفض سند الدفعة المتبقية');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
+  Future<String?> getBalancePaymentReceiptUrl(String reservationId) async {
+    final response = await _apiClient.get(
+      '/api/institutes/me/reservations/$reservationId/balance-payment/receipt',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return data['receiptUrl']?.toString() ?? data['url']?.toString();
+    }
+    if (data is String) return data;
+    return response['url']?.toString();
+  }
+
   /// تسجيل طالب حضورياً بالمعهد: POST /api/institutes/me/reservations/in-person
   Future<ReservationModel> createInPersonReservation({
     required String courseId,

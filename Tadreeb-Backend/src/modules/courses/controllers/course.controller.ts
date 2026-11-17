@@ -222,6 +222,24 @@ class CourseController {
     }
   }
 
+  // إعادة فتح التسجيل في دورة مغلقة.
+  async reopenCourse(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await courseService.reopenCourse(
+        req.user!.userId,
+        this.getCourseId(req),
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Course reopened successfully",
+        data: result,
+      });
+    } catch (error) {
+      this.handleError(res, error);
+    }
+  }
+
   // حذف دورة مسودة.
   async deleteCourse(req: Request, res: Response): Promise<void> {
     try {

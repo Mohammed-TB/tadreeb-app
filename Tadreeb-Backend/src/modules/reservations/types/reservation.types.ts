@@ -25,6 +25,13 @@ export enum PaymentStatus {
   PAID = "paid",
 }
 
+export enum BalancePaymentStatus {
+  NONE = "none",
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+}
+
 export enum AttendanceStatus {
   NOT_MARKED = "notMarked",
   ATTENDED = "attended",
@@ -54,6 +61,11 @@ export interface IReservation {
   receiptPublicId?: string;
   receiptFormat?: string;
   receiptUrl?: string;
+  balancePaymentAmount: number;
+  balancePaymentStatus: BalancePaymentStatus;
+  balanceReceiptPublicId?: string;
+  balanceReceiptFormat?: string;
+  balancePaymentRejectionReason?: string;
   rejectionReason?: string;
   receiptResubmissionDeadline?: Date;
 

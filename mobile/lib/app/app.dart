@@ -19,6 +19,7 @@ import '../features/students/screens/institutes_screen.dart';
 import '../features/institutes/models/institute_model.dart';
 import '../features/students/screens/my_reservations_screen.dart';
 import '../features/students/screens/reservation_details_screen.dart';
+import '../features/students/screens/reservation_balance_payment_screen.dart';
 import '../features/students/models/student_reservation_model.dart';
 import '../features/institutes/routing/institute_shell.dart';
 import '../features/institutes/screens/add_institute_course_screen.dart';
@@ -124,6 +125,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               return const MyReservationsScreen();
             }
             return ReservationDetailsScreen(reservation: extra);
+          },
+        ),
+
+        GoRoute(
+          path: '/reservation-balance-payment',
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! StudentReservationModel) {
+              return const MyReservationsScreen();
+            }
+            return ReservationBalancePaymentScreen(reservation: extra);
           },
         ),
 

@@ -52,13 +52,18 @@ class _InstituteReservationsScreenState
       textDirection: TextDirection.rtl,
       child: Scaffold(
         drawer: const AppDrawer(),
+        
         backgroundColor: AppColors.background,
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openInPersonRegistration,
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          icon: const Icon(Icons.person_add_alt_1_rounded),
-          label: const Text('تسجيل حضوري'),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: FloatingActionButton.extended(
+            onPressed: _openInPersonRegistration,
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.textOnPrimary,
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            label: const Text('تسجيل حضوري'),
+            
+          ),
         ),
         body: Consumer<InstituteReservationController>(
           builder: (context, controller, _) {
@@ -212,19 +217,14 @@ class _InstituteReservationsScreenState
           ),
           child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                ),
-                child: const Icon(
-                  Icons.event_note_rounded,
-                  size: 22,
-                  color: AppColors.primary,
-                ),
-              ),
+           Builder(
+            builder: (context) => IconButton(
+              tooltip: 'القائمة الرئيسية',
+              color: Colors.white,
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -239,14 +239,6 @@ class _InstituteReservationsScreenState
                       ),
                     ),
                   ],
-                ),
-              ),
-              Builder(
-                builder: (headerContext) => IconButton(
-                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
-                  tooltip: 'القائمة الرئيسية',
-                  color: Colors.white,
-                  icon: const Icon(Icons.menu, color: Colors.white),
                 ),
               ),
             ],
@@ -526,6 +518,7 @@ class _InstituteReservationsScreenState
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
+          backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),

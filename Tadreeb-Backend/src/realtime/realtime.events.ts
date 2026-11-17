@@ -125,6 +125,28 @@ export const emitPaymentSubmitted = (
   );
 };
 
+export const emitBalancePaymentSubmitted = (
+  reservation: RegistrationEventSource,
+): void => {
+  emitToInstitute(
+    idString(reservation.instituteId),
+    "balancePaymentSubmitted",
+    registrationEventPayload(reservation),
+  );
+};
+
+export const emitBalancePaymentReviewed = (
+  reservation: RegistrationEventSource,
+): void => {
+  if (reservation.studentId) {
+    emitToUser(
+      idString(reservation.studentId),
+      "balancePaymentReviewed",
+      registrationEventPayload(reservation),
+    );
+  }
+};
+
 export const emitSeatHoldExpired = (
   reservation: RegistrationEventSource,
 ): void => {

@@ -9,6 +9,7 @@ import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
+import 'package:project_1/core/utils/app_date_time_formatter.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/course_service.dart';
 import 'package:project_1/features/courses/controllers/reservation_controller.dart';
@@ -232,12 +233,6 @@ class _CourseDates extends StatelessWidget {
 
   final CourseModel course;
 
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -273,14 +268,20 @@ class _CourseDates extends StatelessWidget {
               Expanded(
                 child: _CourseDateItem(
                   label: 'تاريخ البداية',
-                  value: _formatDate(course.startDate),
+                  value: AppDateTimeFormatter.formatDate(
+                    course.startDate,
+                    dayFirst: true,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _CourseDateItem(
                   label: 'تاريخ النهاية',
-                  value: _formatDate(course.endDate),
+                  value: AppDateTimeFormatter.formatDate(
+                    course.endDate,
+                    dayFirst: true,
+                  ),
                 ),
               ),
             ],

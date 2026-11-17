@@ -12,6 +12,7 @@ class ReservationController {
       message.includes("not found") ? 404 :
       message.includes("not available") || message.includes("full") ? 409 :
       message.includes("already have") ? 409 :
+      message.includes("status changed") || message.includes("exceeds") ? 409 :
       message.includes("required") ? 400 :
       400;
 
@@ -244,9 +245,96 @@ class ReservationController {
     }
   }
 
+  async uploadBalancePaymentReceipt(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a receipt image",
+        });
+      }
+
+      const reservation = await reservationService.uploadBalancePaymentReceipt(
+        req.user!.userId,
+        reservationId,
+        req.file.buffer,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Balance payment receipt submitted successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  async approveBalancePayment(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+      const reservation = await reservationService.approveBalancePayment(
+        req.user!.userId,
+        reservationId,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Balance payment approved successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  async rejectBalancePayment(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+      const { reason } = req.body;
+      if (typeof reason !== "string" || !reason.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Rejection reason is required",
+        });
+      }
+
+      const reservation = await reservationService.rejectBalancePayment(
+        req.user!.userId,
+        reservationId,
+        reason,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Balance payment rejected",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
 
   // GET: الحصول على رابط مؤقت للسند بعد التحقق من الصلاحية.
-async getReceiptUrl(req: Request, res: Response) {
+  async getReceiptUrl(req: Request, res: Response) {
   try {
     const reservationId = req.params.reservationId;
 
@@ -261,6 +349,32 @@ async getReceiptUrl(req: Request, res: Response) {
       req.user!.userId,
       req.user!.role,
       reservationId,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return this.handleError(res, error);
+  }
+}
+
+async getBalancePaymentReceiptUrl(req: Request, res: Response) {
+  try {
+    const reservationId = req.params.reservationId;
+    if (typeof reservationId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reservation ID",
+      });
+    }
+
+    const result = await reservationService.getReceiptAccessUrl(
+      req.user!.userId,
+      req.user!.role,
+      reservationId,
+      "balance",
     );
 
     return res.status(200).json({

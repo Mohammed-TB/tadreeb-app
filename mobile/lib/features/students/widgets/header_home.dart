@@ -28,7 +28,7 @@ class HeaderHome extends StatelessWidget {
   final VoidCallback? onClear;
   final TextEditingController? searchController;
   final bool hasActiveFilter;
-
+  
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().currentUser;
@@ -36,10 +36,10 @@ class HeaderHome extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      height: 165,
+      height: 150,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        40,
+        36,
         AppSpacing.md,
         AppSpacing.sm,
       ),
@@ -57,7 +57,12 @@ class HeaderHome extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    _buildProfileIcon(),
+                                      IconButton(
+                    onPressed: onMenuTap,
+                    tooltip: 'القائمة',
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                  ),
+                    // _buildProfileIcon(),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
@@ -73,10 +78,10 @@ class HeaderHome extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.sm),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     onPressed: () => context.push('/favorites'),
@@ -88,17 +93,13 @@ class HeaderHome extends StatelessWidget {
 
                   _buildNotificationButton(),
 
-                  IconButton(
-                    onPressed: onMenuTap,
-                    tooltip: 'القائمة',
-                    icon: const Icon(Icons.menu, color: Colors.white),
-                  ),
+
                 ],
               ),
             ],
           ),
 
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: 4),
 
           // Search field
           Search(
@@ -116,17 +117,17 @@ class HeaderHome extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileIcon() {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.surface,
-      ),
-      child: const Icon(Icons.person, size: 28, color: AppColors.textSecondary),
-    );
-  }
+  // Widget _buildProfileIcon() {
+  //   return Container(
+  //     width: 40,
+  //     height: 40,
+  //     decoration: const BoxDecoration(
+  //       shape: BoxShape.circle,
+  //       color: AppColors.surface,
+  //     ),
+  //     child: const Icon(Icons.person, size: 28, color: AppColors.textSecondary),
+  //   );
+  // }
 
   Widget _buildNotificationButton() {
     return IconButton(

@@ -147,6 +147,16 @@ export const emitBalancePaymentReviewed = (
   }
 };
 
+export const emitInPersonBalancePaymentRecorded = (
+  reservation: RegistrationEventSource,
+): void => {
+  emitToInstitute(
+    idString(reservation.instituteId),
+    "inPersonBalancePaymentRecorded",
+    registrationEventPayload(reservation),
+  );
+};
+
 export const emitSeatHoldExpired = (
   reservation: RegistrationEventSource,
 ): void => {

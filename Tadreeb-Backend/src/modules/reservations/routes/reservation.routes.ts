@@ -91,11 +91,17 @@ instituteReservationRouter.patch(
   (req, res) => reservationController.rejectBalancePayment(req, res),
 );
 
+instituteReservationRouter.patch(
+  "/:reservationId/balance-payment/in-person",
+  (req, res) => reservationController.recordInPersonBalancePayment(req, res),
+);
+
 // الموافقة على السند.
 instituteReservationRouter.patch(
   "/:reservationId/approve",
   (req, res) => reservationController.approveReservation(req, res),
 );
+
 
 // رفض السند.
 instituteReservationRouter.patch(

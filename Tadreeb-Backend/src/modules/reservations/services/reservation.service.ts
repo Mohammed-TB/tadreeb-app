@@ -12,6 +12,7 @@ import { IReservation } from "../types/reservation.types";
 import receiptUploadService from "./receipt-upload.service";
 import {
   emitBalancePaymentReviewed,
+  emitInPersonBalancePaymentRecorded,
   emitBalancePaymentSubmitted,
   emitPaymentSubmitted,
   emitRegistrationConfirmed,
@@ -20,12 +21,15 @@ import {
   emitSeatAvailabilityUpdated,
 } from "../../../realtime/realtime.events";
 import { getSaudiDayStart } from "../../courses/utils/course-date";
+import { isValidE164Phone } from "../../../shared/phone-number";
+import { normalizeFourPartName } from "../../../shared/student-name";
 
 import {
   BookingType,
   PaymentOption,
   PaymentStatus,
   BalancePaymentStatus,
+  BalancePaymentMethod,
   ReservationStatus,
   AttendanceStatus,
 } from "../types/reservation.types";
@@ -168,6 +172,10 @@ private async reserveSeat(
     if (!studentName.trim() || !studentPhone.trim()) {
       throw new Error("Student name and phone are required");
     }
+    const normalizedStudentPhone = studentPhone.trim();
+    if (!isValidE164Phone(normalizedStudentPhone)) {
+      throw new Error("Student phone must be in E.164 format");
+    }
 
     const session = await mongoose.startSession();
 
@@ -239,7 +247,7 @@ private async reserveSeat(
               instituteId: course.instituteId,
               studentId: student._id,
               studentName: studentName.trim(),
-              studentPhone: studentPhone.trim(),
+              studentPhone: normalizedStudentPhone,
               bookingType: BookingType.ONLINE,
               createdBy: student._id,
               paymentOption,
@@ -279,23 +287,26 @@ private async reserveSeat(
       studentName: string;
       studentPhone: string;
       paymentOption: PaymentOption;
-      amountPaid: number;
     },
   ) {
     if (!mongoose.Types.ObjectId.isValid(input.courseId)) {
       throw new Error("Invalid course ID");
     }
 
-    if (!input.studentName?.trim() || !input.studentPhone?.trim()) {
-      throw new Error("Student name and phone are required");
+    const studentName = normalizeFourPartName(input.studentName);
+    if (!studentName) {
+      throw new Error("Student name must include the full four-part name");
+    }
+    if (!input.studentPhone?.trim()) {
+      throw new Error("Student phone is required");
+    }
+    const normalizedStudentPhone = input.studentPhone.trim();
+    if (!isValidE164Phone(normalizedStudentPhone)) {
+      throw new Error("Student phone must be in E.164 format");
     }
 
     if (!Object.values(PaymentOption).includes(input.paymentOption)) {
       throw new Error("Invalid payment option");
-    }
-
-    if (!Number.isFinite(input.amountPaid) || input.amountPaid < 0) {
-      throw new Error("Invalid paid amount");
     }
 
     const session = await mongoose.startSession();
@@ -339,10 +350,6 @@ private async reserveSeat(
           throw new Error("Course not found or unavailable");
         }
 
-        if (input.amountPaid > course.price) {
-          throw new Error("Paid amount cannot exceed course price");
-        }
-
         // تأكيد المقعد مباشرة للتسجيل الحضوري.
         const reservedCourse: any = await Course.findOneAndUpdate(
           {
@@ -375,11 +382,18 @@ private async reserveSeat(
           course.price,
           course.depositAmount,
         );
+        if (
+          input.paymentOption === PaymentOption.DEPOSIT &&
+          course.depositAmount <= 0
+        ) {
+          throw new Error("Deposit payment is not available for this course");
+        }
+        const amountPaid = amountToPay;
 
         const paymentStatus =
-          input.amountPaid >= course.price
+          amountPaid >= course.price
             ? PaymentStatus.PAID
-            : input.amountPaid > 0
+            : amountPaid > 0
               ? PaymentStatus.PARTIAL
               : PaymentStatus.UNPAID;
 
@@ -389,14 +403,14 @@ private async reserveSeat(
             {
               courseId: course._id,
               instituteId: owner.instituteId,
-              studentName: input.studentName.trim(),
-              studentPhone: input.studentPhone.trim(),
+              studentName,
+              studentPhone: normalizedStudentPhone,
               bookingType: BookingType.IN_PERSON,
               createdBy: owner._id,
               paymentOption: input.paymentOption,
               totalAmount: course.price,
               amountToPay,
-              amountPaid: input.amountPaid,
+              amountPaid,
               paymentStatus,
               status: ReservationStatus.CONFIRMED,
               attendanceStatus: AttendanceStatus.NOT_MARKED,
@@ -775,7 +789,8 @@ private async reserveSeat(
       reservation.status !== ReservationStatus.CONFIRMED ||
       reservation.paymentStatus !== PaymentStatus.PARTIAL ||
       remainingAmount <= 0 ||
-      reservation.balancePaymentStatus === BalancePaymentStatus.PENDING
+      reservation.balancePaymentStatus === BalancePaymentStatus.PENDING ||
+      reservation.balancePaymentStatus === BalancePaymentStatus.APPROVED
     ) {
       throw new Error("Balance payment is not available for this reservation");
     }
@@ -792,18 +807,26 @@ private async reserveSeat(
           bookingType: BookingType.ONLINE,
           status: ReservationStatus.CONFIRMED,
           paymentStatus: PaymentStatus.PARTIAL,
-          balancePaymentStatus: { $ne: BalancePaymentStatus.PENDING },
+          balancePaymentStatus: {
+            $nin: [
+              BalancePaymentStatus.PENDING,
+              BalancePaymentStatus.APPROVED,
+            ],
+          },
           amountPaid: reservation.amountPaid,
         },
         {
           $set: {
             balancePaymentAmount: remainingAmount,
             balancePaymentStatus: BalancePaymentStatus.PENDING,
+            balancePaymentMethod: BalancePaymentMethod.BANK_TRANSFER,
             balanceReceiptPublicId: uploadedReceipt.publicId,
             balanceReceiptFormat: uploadedReceipt.format,
           },
           $unset: {
             balancePaymentRejectionReason: 1,
+            balancePaymentRecordedAt: 1,
+            balancePaymentRecordedBy: 1,
           },
         },
         { new: true, runValidators: true },
@@ -883,6 +906,7 @@ private async reserveSeat(
               ? PaymentStatus.PAID
               : PaymentStatus.PARTIAL,
           balancePaymentStatus: BalancePaymentStatus.APPROVED,
+          balancePaymentMethod: BalancePaymentMethod.BANK_TRANSFER,
         },
         $unset: {
           balancePaymentRejectionReason: 1,
@@ -896,6 +920,98 @@ private async reserveSeat(
     }
 
     emitBalancePaymentReviewed(updatedReservation);
+    return updatedReservation;
+  }
+
+  async recordInPersonBalancePayment(ownerId: string, reservationId: string) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const owner = await User.findOne({
+      _id: ownerId,
+      role: UserRole.INSTITUTE_OWNER,
+      status: UserStatus.ACTIVE,
+    });
+
+    if (!owner?.instituteId) {
+      throw new Error("Active institute owner required");
+    }
+
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      instituteId: owner.instituteId,
+    }).select("+balanceReceiptPublicId");
+
+    if (!reservation) {
+      throw new Error("Reservation not found");
+    }
+
+    const remainingAmount = reservation.totalAmount - reservation.amountPaid;
+    if (
+      reservation.status !== ReservationStatus.CONFIRMED ||
+      reservation.paymentStatus !== PaymentStatus.PARTIAL ||
+      remainingAmount <= 0 ||
+      reservation.balancePaymentStatus === BalancePaymentStatus.PENDING ||
+      reservation.balancePaymentStatus === BalancePaymentStatus.APPROVED
+    ) {
+      throw new Error("Balance payment is not available for this reservation");
+    }
+
+    const recordedAt = new Date();
+    const updatedReservation = await Reservation.findOneAndUpdate(
+      {
+        _id: reservationId,
+        instituteId: owner.instituteId,
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PARTIAL,
+        balancePaymentStatus: {
+          $nin: [
+            BalancePaymentStatus.PENDING,
+            BalancePaymentStatus.APPROVED,
+          ],
+        },
+        amountPaid: reservation.amountPaid,
+        totalAmount: reservation.totalAmount,
+      },
+      {
+        $set: {
+          amountPaid: reservation.totalAmount,
+          paymentStatus: PaymentStatus.PAID,
+          balancePaymentAmount: remainingAmount,
+          balancePaymentStatus: BalancePaymentStatus.APPROVED,
+          balancePaymentMethod: BalancePaymentMethod.IN_PERSON,
+          balancePaymentRecordedAt: recordedAt,
+          balancePaymentRecordedBy: owner._id,
+        },
+        $unset: {
+          balancePaymentRejectionReason: 1,
+          balanceReceiptPublicId: 1,
+          balanceReceiptFormat: 1,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedReservation) {
+      throw new Error("Balance payment status changed; please refresh");
+    }
+
+    if (reservation.balanceReceiptPublicId) {
+      try {
+        await receiptUploadService.deleteReceipt(
+          reservation.balanceReceiptPublicId,
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Failed to delete resolved balance receipt:",
+          cleanupError,
+        );
+      }
+    }
+
+    emitBalancePaymentReviewed(updatedReservation);
+    emitInPersonBalancePaymentRecorded(updatedReservation);
     return updatedReservation;
   }
 

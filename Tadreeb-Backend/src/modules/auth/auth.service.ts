@@ -8,6 +8,7 @@ import User, {
   UserRole,
   UserStatus,
 } from "../users/user.model";
+import { isValidE164Phone } from "../../shared/phone-number";
 
 // بيانات التسجيل المطلوبة للطالب.
 interface RegisterInput {
@@ -61,6 +62,12 @@ class AuthService {
   // تسجيل طالب جديد بالبريد وكلمة المرور.
   async registerStudent(input: RegisterInput) {
     const { name, email, password } = input;
+    const phone =
+      typeof input.phone === "string" ? input.phone.trim() : input.phone;
+
+    if (!isValidE164Phone(phone)) {
+      throw new Error("Phone number must be in E.164 format");
+    }
 
     // توحيد صيغة البريد الإلكتروني.
     const normalizedEmail = email.trim().toLowerCase();
@@ -81,7 +88,7 @@ class AuthService {
     const user = await User.create({
       name,
       email: normalizedEmail,
-      phone: input.phone, 
+      phone,
       password: hashedPassword,
       role: UserRole.STUDENT,
       status: UserStatus.ACTIVE,

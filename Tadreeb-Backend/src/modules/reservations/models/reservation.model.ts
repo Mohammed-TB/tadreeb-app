@@ -5,6 +5,7 @@ import {
   PaymentOption,
   PaymentStatus,
   BalancePaymentStatus,
+  BalancePaymentMethod,
   ReservationStatus,
   AttendanceStatus,
 } from "../types/reservation.types";
@@ -116,6 +117,19 @@ balancePaymentStatus: {
   type: String,
   enum: Object.values(BalancePaymentStatus),
   default: BalancePaymentStatus.NONE,
+},
+
+balancePaymentMethod: {
+  type: String,
+  enum: Object.values(BalancePaymentMethod),
+},
+
+balancePaymentRecordedAt: Date,
+
+balancePaymentRecordedBy: {
+  type: Schema.Types.ObjectId,
+  ref: "User",
+  select: false,
 },
 
 balanceReceiptPublicId: {

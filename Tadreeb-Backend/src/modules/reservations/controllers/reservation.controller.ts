@@ -67,18 +67,16 @@ class ReservationController {
         studentName,
         studentPhone,
         paymentOption,
-        amountPaid,
       } = req.body;
 
       if (
         typeof courseId !== "string" ||
         typeof studentName !== "string" ||
-        typeof studentPhone !== "string" ||
-        typeof amountPaid !== "number"
+        typeof studentPhone !== "string"
       ) {
         return res.status(400).json({
           success: false,
-          message: "Please provide valid student and payment details",
+          message: "Please provide valid student details",
         });
       }
 
@@ -90,7 +88,6 @@ class ReservationController {
             studentName,
             studentPhone,
             paymentOption,
-            amountPaid,
           },
         );
 
@@ -326,6 +323,30 @@ class ReservationController {
       return res.status(200).json({
         success: true,
         message: "Balance payment rejected",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  async recordInPersonBalancePayment(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+
+      const reservation = await reservationService.recordInPersonBalancePayment(
+        req.user!.userId,
+        reservationId,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Remaining balance recorded as received in person",
         data: reservation,
       });
     } catch (error) {

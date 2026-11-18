@@ -32,6 +32,11 @@ export enum BalancePaymentStatus {
   REJECTED = "rejected",
 }
 
+export enum BalancePaymentMethod {
+  BANK_TRANSFER = "bankTransfer",
+  IN_PERSON = "inPerson",
+}
+
 export enum AttendanceStatus {
   NOT_MARKED = "notMarked",
   ATTENDED = "attended",
@@ -63,6 +68,9 @@ export interface IReservation {
   receiptUrl?: string;
   balancePaymentAmount: number;
   balancePaymentStatus: BalancePaymentStatus;
+  balancePaymentMethod?: BalancePaymentMethod;
+  balancePaymentRecordedAt?: Date;
+  balancePaymentRecordedBy?: mongoose.Types.ObjectId;
   balanceReceiptPublicId?: string;
   balanceReceiptFormat?: string;
   balancePaymentRejectionReason?: string;

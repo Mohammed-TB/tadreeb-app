@@ -16,6 +16,7 @@ import {
   UpdateInstituteSettingsInput
 } from "../types/institute.types";
 import Institute, { InstituteStatus } from "../models/institute.model";
+import { isValidE164Phone } from "../../../shared/phone-number";
 
 
 // خدمة إدارة المعاهد وإنشاء حسابات أصحابها.
@@ -65,6 +66,15 @@ class InstituteService {
   // إنشاء معهد جديد وحساب صاحبه داخل Transaction واحدة.
   async createInstituteWithOwner(input: CreateInstituteWithOwnerInput) {
     const { institute, owner } = input;
+    const institutePhone = institute.phone.trim();
+    const ownerPhone = owner.phone?.trim();
+
+    if (!isValidE164Phone(institutePhone)) {
+      throw new Error("Institute phone must be in E.164 format");
+    }
+    if (ownerPhone && !isValidE164Phone(ownerPhone)) {
+      throw new Error("Owner phone must be in E.164 format");
+    }
 
     // توحيد صيغة البريد الإلكتروني لصاحب المعهد.
     const normalizedEmail = owner.email.trim().toLowerCase();
@@ -106,7 +116,7 @@ class InstituteService {
               _id: ownerId,
               name: owner.name.trim(),
               email: normalizedEmail,
-              phone: owner.phone?.trim(),
+              phone: ownerPhone || undefined,
               password: hashedPassword,
               role: UserRole.INSTITUTE_OWNER,
               status: UserStatus.ACTIVE,
@@ -126,7 +136,7 @@ class InstituteService {
               _id: instituteId,
               name: institute.name.trim(),
               description: institute.description?.trim(),
-              phone: institute.phone.trim(),
+              phone: institutePhone,
               email: institute.email?.trim().toLowerCase(),
               address: institute.address.trim(),
               logo: institute.logo,
@@ -227,7 +237,13 @@ async updateMyInstitute(userId: string, input: UpdateInstituteInput) {
 
   if (input.name !== undefined) updates.name = input.name.trim();
   if (input.description !== undefined) updates.description = input.description.trim();
-  if (input.phone !== undefined) updates.phone = input.phone.trim();
+  if (input.phone !== undefined) {
+    const phone = input.phone.trim();
+    if (!isValidE164Phone(phone)) {
+      throw new Error("Institute phone must be in E.164 format");
+    }
+    updates.phone = phone;
+  }
   if (input.email !== undefined) updates.email = input.email.trim().toLowerCase();
   if (input.address !== undefined) updates.address = input.address.trim();
   if (input.logo !== undefined) updates.logo = input.logo.trim();

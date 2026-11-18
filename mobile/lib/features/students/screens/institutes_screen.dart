@@ -79,27 +79,7 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
           ),
           child: _buildSearchField(),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.apartment_rounded,
-                size: 18,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                controller.isLoading && controller.institutes.isEmpty
-                    ? 'جاري تحميل المعاهد'
-                    : '${controller.total} معهد متاح',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
+
         const SizedBox(height: AppSpacing.xs),
         Expanded(
           child: RefreshIndicator(

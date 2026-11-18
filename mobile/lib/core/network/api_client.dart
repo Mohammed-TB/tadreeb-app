@@ -335,6 +335,14 @@ class ApiClient {
     }
 
     if (statusCode == 409) {
+      if (message.contains('Balance payment is not available')) {
+        return 'لا يمكن تسجيل المتبقي الآن؛ تحقق من حالة سند الدفع أو الحجز';
+      }
+
+      if (message.contains('Balance payment status changed')) {
+        return 'تغيرت حالة سداد المبلغ المتبقي. حدّث البيانات وحاول مجددًا';
+      }
+
       if (message.contains('already have a reservation')) {
         return 'لديك تسجيل مسبق في هذه الدورة';
       }
@@ -354,12 +362,35 @@ class ApiClient {
         return 'تعذر التحقق من حساب Google. حاول مجددًا';
       }
 
+      if (message == 'Only closed courses can be reopened') {
+        return 'لا يمكن إعادة فتح الدورة لأنها ليست مغلقة حاليًا';
+      }
+
+      if (message == 'Course has ended and cannot be reopened') {
+        return 'انتهت مدة الدورة، لذلك لا يمكن إعادة فتح التسجيل فيها';
+      }
+
+      if (message == 'Course is full and cannot be reopened') {
+        return 'لا يمكن إعادة فتح التسجيل لأن جميع المقاعد محجوزة';
+      }
+
+      if (message == 'Invalid course ID') {
+        return 'تعذر تحديد الدورة. حدّث قائمة الدورات وحاول مجددًا';
+      }
+
       if (message == 'This email is linked to another Google account') {
         return 'هذا البريد مرتبط بحساب Google آخر';
       }
 
       if (message == 'Course start date must be in the future') {
         return 'يجب أن يكون تاريخ بداية الدورة بعد اليوم';
+      }
+
+      if (message == 'Phone number must be in E.164 format' ||
+          message == 'Student phone must be in E.164 format' ||
+          message == 'Institute phone must be in E.164 format' ||
+          message == 'Owner phone must be in E.164 format') {
+        return 'أدخل رقم الهاتف بصيغته الدولية، مثل +967777123456';
       }
 
       return 'البيانات المدخلة غير صحيحة. تحقق منها';

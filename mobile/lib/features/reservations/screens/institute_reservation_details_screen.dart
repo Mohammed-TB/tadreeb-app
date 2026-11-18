@@ -229,6 +229,56 @@ class _InstituteReservationDetailsScreenState
                       label: 'المبلغ المدفوع',
                       value: _formatAmount(reservation.amountPaid),
                     ),
+                    if (reservation.remainingAmount > 0)
+                      _InfoRow(
+                        label: 'المتبقي للسداد',
+                        value: _formatAmount(reservation.remainingAmount),
+                      ),
+                    if (reservation.paymentStatus == 'paid' &&
+                        reservation.balancePaymentStatus == 'approved')
+                      _InfoRow(
+                        label: 'طريقة سداد المتبقي',
+                        value: reservation.balancePaymentMethod == 'inPerson'
+                            ? 'استلام حضوري'
+                            : 'تحويل بنكي',
+                      ),
+                    if (reservation.balancePaymentMethod == 'inPerson' &&
+                        reservation.balancePaymentRecordedAt != null)
+                      _InfoRow(
+                        label: 'تاريخ الاستلام',
+                        value: AppDateTimeFormatter.formatDateTime(
+                          reservation.balancePaymentRecordedAt!,
+                          dayFirst: true,
+                          use24HourClock: true,
+                          separator: ' - ',
+                        ),
+                      ),
+                    if (reservation.balancePaymentStatus == 'pending')
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: Text(
+                          'يوجد سند تحويل للمتبقي بانتظار المراجعة؛ لا يمكن تسجيل استلام حضوري حتى تتم مراجعته.',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ),
+                    if (reservation.canRecordInPersonBalancePayment) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: controller.isProcessing(reservation.id)
+                              ? null
+                              : () => _recordInPersonBalancePayment(
+                                  controller,
+                                  reservation,
+                                ),
+                          icon: const Icon(Icons.payments_outlined),
+                          label: const Text('تسجيل استلام المتبقي حضوريًا'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 if (reservation.rejectionReason?.isNotEmpty == true) ...[
@@ -279,6 +329,7 @@ class _InstituteReservationDetailsScreenState
                       ),
                     ],
                   ),
+                  SizedBox(height: AppSpacing.sm),
                 ],
               ],
             );
@@ -431,6 +482,65 @@ class _InstituteReservationDetailsScreenState
           success
               ? 'تم اعتماد الدفعة وتحديث رصيد الطالب'
               : 'تعذر اعتماد الدفعة: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _recordInPersonBalancePayment(
+    InstituteReservationController controller,
+    ReservationModel reservation,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد استلام المبلغ المتبقي'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'سيتم تسجيل الحجز مدفوعًا بالكامل. أكّد فقط بعد استلام المبلغ من الطالب.',
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _InfoRow(
+              label: 'إجمالي الرسوم',
+              value: _formatAmount(reservation.totalAmount),
+            ),
+            _InfoRow(
+              label: 'المبلغ المدفوع',
+              value: _formatAmount(reservation.amountPaid),
+            ),
+            _InfoRow(
+              label: 'المتبقي',
+              value: _formatAmount(reservation.remainingAmount),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('تأكيد الاستلام'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final success = await controller.recordInPersonBalancePayment(
+      reservation.id,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'تم تسجيل استلام المتبقي وإكمال سداد الحجز'
+              : 'تعذر تسجيل الاستلام: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
         ),
       ),
     );

@@ -25,6 +25,8 @@ class CourseImagePickerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageHeight = MediaQuery.sizeOf(context).height < 700 ? 128.0 : 160.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -37,13 +39,14 @@ class CourseImagePickerCard extends StatelessWidget {
           child: InkWell(
             onTap: isPickingImage ? null : onPickImage,
             child: Container(
-              height: 160,
+              height: imageHeight,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
               ),
-              child: imageBytes == null && (imageUrl == null || imageUrl!.isEmpty)
+              child:
+                  imageBytes == null && (imageUrl == null || imageUrl!.isEmpty)
                   ? _buildPlaceholder()
                   : _buildPreview(),
             ),

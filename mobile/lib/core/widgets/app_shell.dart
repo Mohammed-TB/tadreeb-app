@@ -5,7 +5,7 @@ import '../../app/theme/app_colors.dart';
 
 const _activeNavigationColor = AppColors.primary;
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
     required this.navigationShell,
@@ -20,11 +20,26 @@ class AppShell extends StatelessWidget {
   final bool showBottomNavigationBar;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: drawer,
-      body: navigationShell,
-      bottomNavigationBar: showBottomNavigationBar
+      key: _scaffoldKey,
+      drawer: widget.drawer,
+      body: AppShellDrawerScope(
+        openDrawer: _openDrawer,
+        child: widget.navigationShell,
+      ),
+      bottomNavigationBar: widget.showBottomNavigationBar
           ? SafeArea(
               top: false,
               child: Padding(
@@ -51,18 +66,20 @@ class AppShell extends StatelessWidget {
                       children: [
                         for (
                           var index = 0;
-                          index < navigationItems.length;
+                          index < widget.navigationItems.length;
                           index++
                         )
                           Expanded(
                             child: _NavigationDestination(
-                              item: navigationItems[index],
-                              selected: index == navigationShell.currentIndex,
+                              item: widget.navigationItems[index],
+                              selected:
+                                  index == widget.navigationShell.currentIndex,
                               onTap: () {
-                                navigationShell.goBranch(
+                                widget.navigationShell.goBranch(
                                   index,
                                   initialLocation:
-                                      index == navigationShell.currentIndex,
+                                      index ==
+                                      widget.navigationShell.currentIndex,
                                 );
                               },
                             ),
@@ -76,6 +93,23 @@ class AppShell extends StatelessWidget {
           : null,
     );
   }
+}
+
+class AppShellDrawerScope extends InheritedWidget {
+  const AppShellDrawerScope({
+    super.key,
+    required this.openDrawer,
+    required super.child,
+  });
+
+  final VoidCallback openDrawer;
+
+  static AppShellDrawerScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppShellDrawerScope>();
+
+  @override
+  bool updateShouldNotify(AppShellDrawerScope oldWidget) =>
+      openDrawer != oldWidget.openDrawer;
 }
 
 class _NavigationDestination extends StatelessWidget {

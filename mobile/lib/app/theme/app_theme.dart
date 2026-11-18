@@ -234,6 +234,18 @@ abstract final class AppTheme {
         color: AppColors.textSecondary,
         size: 22,
       ),
+
+      bottomSheetTheme: const BottomSheetThemeData(
+  backgroundColor: AppColors.surface,
+  surfaceTintColor: Colors.transparent,
+  modalBackgroundColor: AppColors.surface,
+  elevation: 8,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(
+      top: Radius.circular(24),
+    ),
+  ),
+),
     );
   }
 }

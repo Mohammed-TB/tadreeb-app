@@ -11,17 +11,16 @@ class AuthService {
     TokenStorageService? tokenStorage,
     GoogleSignIn? googleSignIn,
     String? googleServerClientId,
-  }) : 
-  // Constructor Redirection.
-  // ?? Null Coalescing Operator. Example : إذا مررت قيمة tokenStorage  استخدمها اذا لا انشئ TokenStorageService
-  this._(
+  }) : // Constructor Redirection.
+       // ?? Null Coalescing Operator. Example : إذا مررت قيمة tokenStorage  استخدمها اذا لا انشئ TokenStorageService
+       this._(
          apiClient,
          tokenStorage ?? TokenStorageService(),
          googleSignIn ?? GoogleSignIn.instance,
          googleServerClientId ??
              const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
        );
-  
+
   AuthService._(
     ApiClient? apiClient,
     TokenStorageService tokenStorage,
@@ -44,6 +43,7 @@ class AuthService {
   Future<UserModel> register({
     required String name,
     required String email,
+    required String phone,
     required String password,
   }) async {
     final response = await _apiClient.post(
@@ -51,6 +51,7 @@ class AuthService {
       body: {
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
+        'phone': phone,
         'password': password,
       },
     );

@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register({
     required String name,
     required String email,
+    required String phone,
     required String password,
     required String passwordConfirm,
   }) async {
@@ -33,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await authController.register(
       name: name,
       email: email,
+      phone: phone,
       password: password,
     );
 

@@ -121,6 +121,7 @@ class InstituteReservationController extends ChangeNotifier {
       'registrationRejected',
       'paymentSubmitted',
       'balancePaymentSubmitted',
+      'inPersonBalancePaymentRecorded',
       'seatHoldExpired',
     }.contains(event.name);
     if ((!isInstituteReconnect && !isRegistrationChange) ||
@@ -298,12 +299,17 @@ class InstituteReservationController extends ChangeNotifier {
         _reservationService.rejectBalancePayment(reservationId, reason: reason),
   );
 
+  Future<bool> recordInPersonBalancePayment(String reservationId) =>
+      _reviewBalancePayment(
+        reservationId,
+        () => _reservationService.recordInPersonBalancePayment(reservationId),
+      );
+
   Future<bool> createInPersonReservation({
     required String courseId,
     required String studentName,
     required String studentPhone,
     required String paymentOption,
-    required double amountPaid,
   }) async {
     const operationId = 'in-person-registration';
     if (_processingIds.contains(operationId)) return false;
@@ -318,7 +324,6 @@ class InstituteReservationController extends ChangeNotifier {
         studentName: studentName,
         studentPhone: studentPhone,
         paymentOption: paymentOption,
-        amountPaid: amountPaid,
       );
       await fetchReservations();
       _dataChangeBus?.notifyChanged(

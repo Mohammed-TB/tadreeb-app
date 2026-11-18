@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/widgets/app_shell.dart';
 
 class InstituteCoursesHeader extends StatelessWidget {
   const InstituteCoursesHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final openShellDrawer = AppShellDrawerScope.maybeOf(context)?.openDrawer;
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.primary,
@@ -23,13 +26,13 @@ class InstituteCoursesHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
-                            Builder(
-                builder: (headerContext) => IconButton(
-                  onPressed: () => Scaffold.of(headerContext).openDrawer(),
-                  tooltip: 'القائمة الرئيسية',
-                  color: AppColors.textOnPrimary,
-                  icon: const Icon(Icons.menu),
-                ),
+                            IconButton(
+                              onPressed:
+                                  openShellDrawer ??
+                                  () => Scaffold.of(context).openDrawer(),
+                              tooltip: 'القائمة الرئيسية',
+                              color: AppColors.textOnPrimary,
+                              icon: const Icon(Icons.menu),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(

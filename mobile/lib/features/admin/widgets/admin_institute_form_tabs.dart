@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_phone_field.dart';
 import 'admin_institute_form_section.dart';
 import 'admin_institute_logo_picker.dart';
 
@@ -12,13 +14,13 @@ class AdminInstituteFormData {
   final instituteFormKey = GlobalKey<FormState>();
   final ownerFormKey = GlobalKey<FormState>();
   final instituteName = TextEditingController();
-  final institutePhone = TextEditingController();
+  final institutePhone = AppPhoneField.createController();
   final instituteAddress = TextEditingController();
   final instituteDescription = TextEditingController();
   final instituteEmail = TextEditingController();
   final ownerName = TextEditingController();
   final ownerEmail = TextEditingController();
-  final ownerPhone = TextEditingController();
+  final ownerPhone = AppPhoneField.createController();
   final ownerPassword = TextEditingController();
 
   void dispose() {
@@ -108,12 +110,9 @@ class AdminInstituteFormTabs extends StatelessWidget {
               icon: Icons.business_outlined,
               validator: (value) => _requiredMinLengthValidator(value, 2),
             ),
-            _buildTextField(
+            _buildPhoneField(
               controller: formData.institutePhone,
               label: 'رقم التواصل',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: _requiredValidator,
             ),
             _buildTextField(
               controller: formData.instituteAddress,
@@ -170,11 +169,10 @@ class AdminInstituteFormTabs extends StatelessWidget {
               keyboardType: TextInputType.emailAddress,
               validator: _requiredEmailValidator,
             ),
-            _buildTextField(
+            _buildPhoneField(
               controller: formData.ownerPhone,
               label: 'رقم الهاتف (اختياري)',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
+              isRequired: false,
             ),
             _buildTextField(
               controller: formData.ownerPassword,
@@ -215,6 +213,21 @@ class AdminInstituteFormTabs extends StatelessWidget {
         maxLines: obscureText ? 1 : maxLines,
         obscureText: obscureText,
         decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      ),
+    );
+  }
+
+  Widget _buildPhoneField({
+    required PhoneController controller,
+    required String label,
+    bool isRequired = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppPhoneField(
+        controller: controller,
+        labelText: label,
+        isRequired: isRequired,
       ),
     );
   }

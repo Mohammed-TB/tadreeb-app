@@ -307,6 +307,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'institute-courses-add',
           onPressed: _openAddCourse,
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.textOnPrimary,

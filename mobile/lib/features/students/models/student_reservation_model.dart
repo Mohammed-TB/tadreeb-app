@@ -129,6 +129,7 @@ class StudentReservationModel {
       normalizedStatus == 'confirmed' &&
       paymentStatus.toLowerCase() == 'partial' &&
       balancePaymentStatus.toLowerCase() != 'pending' &&
+      balancePaymentStatus.toLowerCase() != 'approved' &&
       remainingAmount > 0;
 
   /// هل يستطيع الطالب رفع أو إعادة رفع سند الدفع؟

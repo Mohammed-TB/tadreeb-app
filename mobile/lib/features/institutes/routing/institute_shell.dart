@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,10 +5,7 @@ import '../../../core/widgets/app_drawer.dart';
 import '../../../core/widgets/app_shell.dart';
 
 class InstituteShell extends StatelessWidget {
-  const InstituteShell({
-    super.key,
-    required this.navigationShell,
-  });
+  const InstituteShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
@@ -40,7 +36,6 @@ class InstituteShell extends StatelessWidget {
           activeIcon: Icon(Icons.event_note),
           label: 'الحجوزات',
         ),
-
       ],
     );
   }

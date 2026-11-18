@@ -360,7 +360,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(82),
+          preferredSize: const Size.fromHeight(68),
           child: IgnorePointer(
             ignoring: _isSubmitting,
             child: CourseFormStepProgress(

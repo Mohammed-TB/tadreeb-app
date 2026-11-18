@@ -24,6 +24,85 @@ void main() {
     expect(reservation.receiptPublicId, isNull);
   });
 
+  test(
+    'uses the receipt flag and computes eligibility for partial payment',
+    () {
+      final reservation = ReservationModel.fromJson({
+        '_id': 'reservation-1',
+        'studentName': 'أحمد محمد',
+        'studentPhone': '0500000000',
+        'courseId': 'course-1',
+        'bookingType': 'online',
+        'paymentOption': 'deposit',
+        'totalAmount': 1000,
+        'amountToPay': 250,
+        'amountPaid': 250,
+        'paymentStatus': 'partial',
+        'balancePaymentStatus': 'rejected',
+        'hasBalanceReceipt': false,
+        'status': 'confirmed',
+      });
+
+      expect(reservation.hasBalanceReceipt, isFalse);
+      expect(reservation.remainingAmount, 750);
+      expect(reservation.canRecordInPersonBalancePayment, isTrue);
+    },
+  );
+
+  test('does not infer a receipt for in-person balance collection', () {
+    final reservation = ReservationModel.fromJson({
+      '_id': 'reservation-1',
+      'studentName': 'أحمد محمد',
+      'studentPhone': '0500000000',
+      'courseId': 'course-1',
+      'bookingType': 'online',
+      'paymentOption': 'deposit',
+      'totalAmount': 1000,
+      'amountToPay': 250,
+      'amountPaid': 1000,
+      'paymentStatus': 'paid',
+      'balancePaymentStatus': 'approved',
+      'balancePaymentMethod': 'inPerson',
+      'status': 'confirmed',
+    });
+
+    expect(reservation.hasBalanceReceipt, isFalse);
+  });
+
+  test('does not allow recording a pending or approved balance', () {
+    final reservation = ReservationModel.fromJson({
+      '_id': 'reservation-1',
+      'studentName': 'أحمد محمد',
+      'studentPhone': '0500000000',
+      'courseId': 'course-1',
+      'bookingType': 'online',
+      'paymentOption': 'deposit',
+      'totalAmount': 1000,
+      'amountToPay': 250,
+      'amountPaid': 250,
+      'paymentStatus': 'partial',
+      'balancePaymentStatus': 'pending',
+      'status': 'confirmed',
+    });
+    final approvedReservation = ReservationModel.fromJson({
+      '_id': 'reservation-2',
+      'studentName': 'أحمد محمد',
+      'studentPhone': '0500000000',
+      'courseId': 'course-1',
+      'bookingType': 'online',
+      'paymentOption': 'deposit',
+      'totalAmount': 1000,
+      'amountToPay': 250,
+      'amountPaid': 250,
+      'paymentStatus': 'partial',
+      'balancePaymentStatus': 'approved',
+      'status': 'confirmed',
+    });
+
+    expect(reservation.canRecordInPersonBalancePayment, isFalse);
+    expect(approvedReservation.canRecordInPersonBalancePayment, isFalse);
+  });
+
   testWidgets('shows a compact reservation card and opens its details', (
     tester,
   ) async {
@@ -93,5 +172,38 @@ void main() {
     );
 
     expect(find.text('دفعة متبقية بانتظار المراجعة'), findsOneWidget);
+  });
+
+  testWidgets('highlights remaining amount for in-person collection', (
+    tester,
+  ) async {
+    final reservation = ReservationModel(
+      id: 'reservation-1',
+      studentName: 'أحمد محمد',
+      studentPhone: '0500000000',
+      courseId: 'course-1',
+      bookingType: 'online',
+      paymentOption: 'deposit',
+      totalAmount: 1000,
+      amountToPay: 250,
+      amountPaid: 250,
+      paymentStatus: 'partial',
+      status: 'confirmed',
+      createdAt: DateTime(2026, 11, 17),
+      updatedAt: DateTime(2026, 11, 17),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReservationCard(reservation: reservation, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(
+      find.text('متبقي 750.00 ر.س · اضغط لتسجيل الاستلام'),
+      findsOneWidget,
+    );
   });
 }

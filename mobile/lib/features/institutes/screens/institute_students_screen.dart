@@ -3,7 +3,6 @@ import 'package:project_1/features/institutes/models/student_summary.dart';
 import 'package:project_1/features/institutes/widgets/state_panel.dart';
 import 'package:project_1/features/institutes/widgets/status_badge.dart';
 import 'package:project_1/features/institutes/widgets/student_icon_text.dart';
-import 'package:project_1/features/institutes/widgets/student_summary_card.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -52,65 +51,97 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
           final filteredStudents = _filterStudents(students);
           final hasFilters = _searchQuery.isNotEmpty || _statusFilter != null;
 
-          return RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: () => controller.fetchReservations(forceRefresh: true),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader()),
-                SliverPadding(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _buildSummary(
-                        studentCount: students.length,
-                        registrationCount: controller.reservations.length,
-                        confirmedCount: controller.reservations
-                            .where(
-                              (reservation) =>
-                                  _isStatus(reservation.status, 'confirmed'),
-                            )
-                            .length,
+          return Column(
+            children: [
+              _buildHeader(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenHorizontal,
+                  AppSpacing.xs,
+                  AppSpacing.screenHorizontal,
+                  AppSpacing.xxs,
+                ),
+                child: Column(
+                  children: [
+                    Search(
+                      controller: _searchController,
+                      hinText: 'ابحث باسم الطالب أو الهاتف أو الدورة...',
+                      isShowFilter: false,
+                      onChanged: (value) => setState(
+                        () => _searchQuery = value.trim().toLowerCase(),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      Search(
-                        controller: _searchController,
-                        hinText: 'ابحث باسم الطالب أو الهاتف أو الدورة...',
-                        isShowFilter: false,
-                        onChanged: (value) => setState(
-                          () => _searchQuery = value.trim().toLowerCase(),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    _buildFilters(students),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () =>
+                      controller.fetchReservations(forceRefresh: true),
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.screenHorizontal,
+                          AppSpacing.xs,
+                          AppSpacing.screenHorizontal,
+                          AppSpacing.xxxl,
+                        ),
+                        sliver: _buildStudentsContent(
+                          controller: controller,
+                          students: students,
+                          filteredStudents: filteredStudents,
+                          hasFilters: hasFilters,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildFilters(students),
-                      const SizedBox(height: AppSpacing.md),
-                      if (controller.isLoading && students.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppSpacing.xxxl,
-                          ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        )
-                      else if (controller.errorMessage != null &&
-                          students.isEmpty)
-                        _buildError(controller)
-                      else if (filteredStudents.isEmpty)
-                        _buildEmptyState(hasFilters)
-                      else
-                        ...filteredStudents.map(_buildStudentCard),
-                      const SizedBox(height: AppSpacing.xxxl),
-                    ]),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildStudentsContent({
+    required InstituteReservationController controller,
+    required List<InstituteStudentSummary> students,
+    required List<InstituteStudentSummary> filteredStudents,
+    required bool hasFilters,
+  }) {
+    if (controller.isLoading && students.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (controller.errorMessage != null && students.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: _buildError(controller)),
+      );
+    }
+
+    if (filteredStudents.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: _buildEmptyState(hasFilters)),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _buildStudentCard(filteredStudents[index]),
+        childCount: filteredStudents.length,
       ),
     );
   }
@@ -152,46 +183,6 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSummary({
-    required int studentCount,
-    required int registrationCount,
-    required int confirmedCount,
-  }) {
-    return Row(
-      children: [
-        Expanded(
-          child: SummaryCard(
-            label: 'الطلاب',
-            value: studentCount,
-            icon: Icons.people_alt_outlined,
-            color: AppColors.primary,
-            background: AppColors.primaryLight,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: SummaryCard(
-            label: 'التسجيلات',
-            value: registrationCount,
-            icon: Icons.assignment_outlined,
-            color: AppColors.accentDark,
-            background: AppColors.accentLight,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: SummaryCard(
-            label: 'تسجيل مؤكد',
-            value: confirmedCount,
-            icon: Icons.check_circle_outline_rounded,
-            color: AppColors.success,
-            background: AppColors.successLight,
-          ),
-        ),
-      ],
     );
   }
 

@@ -52,17 +52,16 @@ class _InstituteReservationsScreenState
       textDirection: TextDirection.rtl,
       child: Scaffold(
         drawer: const AppDrawer(),
-        
         backgroundColor: AppColors.background,
         floatingActionButton: Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: FloatingActionButton.extended(
+            heroTag: 'institute-reservations-in-person-registration',
             onPressed: _openInPersonRegistration,
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.textOnPrimary,
             icon: const Icon(Icons.person_add_alt_1_rounded),
             label: const Text('تسجيل حضوري'),
-            
           ),
         ),
         body: Consumer<InstituteReservationController>(
@@ -72,69 +71,53 @@ class _InstituteReservationsScreenState
                 (controller.statusFilter != null &&
                     controller.statusFilter != 'ALL');
 
-            return RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: () => controller.fetchReservations(),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // ترويسة متطابقة مع ترويسة شاشة حجوزاتي
-                  SliverToBoxAdapter(child: _buildHeader()),
-
-                  // المحتوى الداخلي
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenHorizontal,
-                      vertical: AppSpacing.md,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        // شريط البحث الموحد Search
-                        Search(
-                          controller: _searchController,
-                          hinText: 'ابحث باسم الطالب، هاتفه، أو الدورة...',
-                          isShowFilter: false,
-                          onChanged: (val) => controller.setSearchQuery(val),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-
-                        // شرائح الفلترة الذكية المتطابقة
-                        _buildFilterChips(controller),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // الحالات: تحميل / خطأ / فارغ / القائمة
-                        if (controller.isLoading &&
-                            controller.reservations.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppSpacing.xxxl,
-                            ),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          )
-                        else if (controller.errorMessage != null &&
-                            controller.reservations.isEmpty)
-                          _buildErrorState(controller)
-                        else if (controller.filteredReservations.isEmpty)
-                          _buildEmptyState(hasActiveFilters, controller)
-                        else
-                          ...controller.filteredReservations.map(
-                            (r) => ReservationCard(
-                              reservation: r,
-                              onTap: () =>
-                                  _openReservationDetails(controller, r),
-                            ),
+            return Column(
+              children: [
+                _buildHeader(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenHorizontal,
+                    AppSpacing.xs,
+                    AppSpacing.screenHorizontal,
+                    AppSpacing.xxs,
+                  ),
+                  child: Column(
+                    children: [
+                      Search(
+                        controller: _searchController,
+                        hinText: 'ابحث باسم الطالب، هاتفه، أو الدورة...',
+                        isShowFilter: false,
+                        onChanged: (value) => controller.setSearchQuery(value),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      _buildFilterChips(controller),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: () => controller.fetchReservations(),
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.screenHorizontal,
+                            AppSpacing.xs,
+                            AppSpacing.screenHorizontal,
+                            96,
                           ),
-
-                        const SizedBox(height: 96),
-                      ]),
+                          sliver: _buildReservationContent(
+                            controller,
+                            hasActiveFilters,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
@@ -142,11 +125,50 @@ class _InstituteReservationsScreenState
     );
   }
 
+  Widget _buildReservationContent(
+    InstituteReservationController controller,
+    bool hasActiveFilters,
+  ) {
+    if (controller.isLoading && controller.reservations.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (controller.errorMessage != null && controller.reservations.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: _buildErrorState(controller)),
+      );
+    }
+
+    final reservations = controller.filteredReservations;
+    if (reservations.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: _buildEmptyState(hasActiveFilters, controller)),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final reservation = reservations[index];
+        return ReservationCard(
+          reservation: reservation,
+          onTap: () => _openReservationDetails(controller, reservation),
+        );
+      }, childCount: reservations.length),
+    );
+  }
+
   void _openReservationDetails(
     InstituteReservationController controller,
     ReservationModel reservation,
   ) {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         builder: (_) => InstituteReservationDetailsScreen(
           reservation: reservation,
@@ -159,29 +181,57 @@ class _InstituteReservationsScreenState
 
   Future<void> _openInPersonRegistration() async {
     try {
-      final allCourses = await context.read<CourseService>().getMyCourses();
-      if (!mounted) return;
-      final courses = allCourses
-          .where(
-            (course) =>
-                course.id != null &&
-                course.status == CourseStatus.published &&
-                SaudiDate.isTodayOrLater(course.endDate),
-          )
-          .toList();
-
-      if (courses.isEmpty) {
-        _showMessage('لا توجد دورات منشورة متاحة للتسجيل الحضوري');
-        return;
-      }
+      final coursesFuture = context.read<CourseService>().getMyCourses();
+      final reservationController = context
+          .read<InstituteReservationController>();
 
       final created = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => InPersonRegistrationSheet(
-          courses: courses,
-          controller: context.read<InstituteReservationController>(),
+        builder: (sheetContext) => FutureBuilder<List<CourseModel>>(
+          future: coursesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const SafeArea(
+                child: SizedBox(
+                  height: 160,
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return _buildRegistrationSheetMessage(
+                sheetContext,
+                message: 'تعذر تحميل الدورات: ${snapshot.error}',
+                icon: Icons.error_outline,
+              );
+            }
+
+            final courses = (snapshot.data ?? const <CourseModel>[])
+                .where(
+                  (course) =>
+                      course.id != null &&
+                      course.status == CourseStatus.published &&
+                      SaudiDate.isTodayOrLater(course.endDate),
+                )
+                .toList();
+            if (courses.isEmpty) {
+              return _buildRegistrationSheetMessage(
+                sheetContext,
+                message: 'لا توجد دورات منشورة متاحة للتسجيل الحضوري',
+                icon: Icons.event_busy_outlined,
+              );
+            }
+
+            return InPersonRegistrationSheet(
+              courses: courses,
+              controller: reservationController,
+            );
+          },
         ),
       );
 
@@ -191,6 +241,31 @@ class _InstituteReservationsScreenState
     } catch (error) {
       if (mounted) _showMessage('تعذر فتح نموذج التسجيل: $error');
     }
+  }
+
+  Widget _buildRegistrationSheetMessage(
+    BuildContext context, {
+    required String message,
+    required IconData icon,
+  }) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: AppColors.textSecondary),
+            const SizedBox(height: AppSpacing.sm),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showMessage(String message) {
@@ -217,14 +292,12 @@ class _InstituteReservationsScreenState
           ),
           child: Row(
             children: [
-           Builder(
-            builder: (context) => IconButton(
-              tooltip: 'القائمة الرئيسية',
-              color: Colors.white,
-              icon: const Icon(Icons.menu),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-          ),
+              IconButton(
+                tooltip: 'القائمة الرئيسية',
+                color: Colors.white,
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -265,7 +338,7 @@ class _InstituteReservationsScreenState
         children: filters.map((f) {
           final isSelected = controller.statusFilter == f.$2;
           return Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.xxs),
             child: ChoiceChip(
               label: Text(f.$1),
               selected: isSelected,

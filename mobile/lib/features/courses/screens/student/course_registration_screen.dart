@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 import 'package:project_1/core/widgets/button.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +12,7 @@ import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
 import 'package:project_1/core/state/app_data_change_bus.dart';
+import 'package:project_1/core/widgets/app_phone_field.dart';
 import 'package:project_1/features/auth/controllers/auth_controller.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/reservation_service.dart';
@@ -32,9 +34,10 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     with SingleTickerProviderStateMixin {
   final _studentFormKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _imagePicker = ImagePicker();
 
+  late final PhoneController _phoneController;
+  String? _studentPhoneE164;
   late final TabController _tabController;
   late _PaymentOption _paymentOption;
   int _currentStep = 0;
@@ -54,7 +57,10 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     super.initState();
     final user = context.read<AuthController>().currentUser;
     _nameController.text = user?.name ?? '';
-    _phoneController.text = user?.phone ?? '';
+    _phoneController = AppPhoneField.createController(
+      initialValue: user?.phone,
+    );
+    _studentPhoneE164 = AppPhoneField.toE164(_phoneController.value);
     _paymentOption = course.depositAmount > 0
         ? _PaymentOption.deposit
         : _PaymentOption.full;
@@ -100,6 +106,14 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       });
       return;
     }
+    final studentPhone = _studentPhoneE164;
+    if (studentPhone == null) {
+      _tabController.animateTo(0);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _studentFormKey.currentState?.validate();
+      });
+      return;
+    }
 
     if (_receiptBytes == null ||
         _receiptName == null ||
@@ -122,7 +136,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
         _reservationId = await service.createOnlineReservation(
           courseId: courseId,
           studentName: _nameController.text.trim(),
-          studentPhone: _phoneController.text.trim(),
+          studentPhone: studentPhone,
           paymentOption: _paymentOption.name,
         );
         dataChangeBus.notifyChanged(
@@ -230,7 +244,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
 
   bool _isStudentDetailsValid() {
     return _validateStudentName(_nameController.text) == null &&
-        _validateStudentPhone(_phoneController.text) == null;
+        _studentPhoneE164 != null;
   }
 
   String? _validateStudentName(String? value) {
@@ -239,13 +253,6 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty);
     return nameParts.length < 4 ? 'أدخل الاسم الرباعي كاملًا' : null;
-  }
-
-  String? _validateStudentPhone(String? value) {
-    final phone = (value ?? '').replaceAll(RegExp(r'[\s()-]'), '');
-    return RegExp(r'^\+?[0-9]{8,15}$').hasMatch(phone)
-        ? null
-        : 'أدخل رقم جوال صحيحًا';
   }
 
   @override
@@ -311,15 +318,13 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             enabled: !_isSubmitting,
           ),
           const SizedBox(height: AppSpacing.md),
-          CourseRegistrationTextField(
+          AppPhoneField(
             controller: _phoneController,
-            label: 'رقم الجوال',
-            hint: '05xxxxxxxx',
-            icon: Icons.phone_android_outlined,
-            keyboardType: TextInputType.phone,
+            labelText: 'رقم الجوال',
+            hintText: 'أدخل رقم جوالك',
             textInputAction: TextInputAction.done,
-            validator: _validateStudentPhone,
             enabled: !_isSubmitting,
+            onChanged: (value) => _studentPhoneE164 = value,
           ),
           const SizedBox(height: AppSpacing.md),
           const CourseRegistrationInfoBanner(

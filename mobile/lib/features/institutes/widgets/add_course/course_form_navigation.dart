@@ -19,114 +19,64 @@ class CourseFormStepProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
-        AppSpacing.xs,
-        AppSpacing.md,
-        AppSpacing.sm,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (var index = 0; index < steps.length; index++)
-                Expanded(
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => onStepSelected(index),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeOutCubic,
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: index < currentStep
-                                ? AppColors.primary
-                                : index == currentStep
-                                ? AppColors.primaryLight
-                                : AppColors.field,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: index <= currentStep
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                              width: index == currentStep ? 2 : 1,
-                            ),
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 220),
-                            switchInCurve: Curves.easeOutBack,
-                            switchOutCurve: Curves.easeIn,
-                            transitionBuilder: (child, animation) =>
-                                ScaleTransition(scale: animation, child: child),
-                            child: index < currentStep
-                                ? Icon(
-                                    Icons.check_rounded,
-                                    key: ValueKey('completed-$index'),
-                                    size: 19,
-                                    color: AppColors.textOnPrimary,
-                                  )
-                                : Text(
-                                    '${index + 1}',
-                                    key: ValueKey('step-$index'),
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: index == currentStep
-                                          ? AppColors.primaryDark
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                      if (index < steps.length - 1)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xs,
-                            ),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 420),
-                              curve: Curves.easeInOutCubic,
-                              height: 3,
-                              decoration: BoxDecoration(
-                                color: index < currentStep
-                                    ? AppColors.primary
-                                    : AppColors.border,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+              Flexible(
+                child: Text(
+                  steps[currentStep],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.primaryDark,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'الخطوة ${currentStep + 1} من ${steps.length}',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xxs),
           Row(
             children: [
               for (var index = 0; index < steps.length; index++)
                 Expanded(
-                  child: InkWell(
-                    onTap: () => onStepSelected(index),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.xxs,
-                      ),
-                      child: Text(
-                        steps[index],
-                        textAlign: TextAlign.center,
-                        style:
-                            (index == currentStep
-                                    ? AppTypography.labelMedium
-                                    : AppTypography.labelSmall)
-                                .copyWith(
-                                  color: index == currentStep
-                                      ? AppColors.primaryDark
-                                      : AppColors.textSecondary,
-                                ),
+                  child: Semantics(
+                    button: true,
+                    selected: index == currentStep,
+                    label: 'الانتقال إلى خطوة ${steps[index]}',
+                    child: InkWell(
+                      key: ValueKey('course-form-step-$index'),
+                      onTap: () => onStepSelected(index),
+                      child: SizedBox(
+                        height: 28,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: index < currentStep
+                                  ? AppColors.primary
+                                  : index == currentStep
+                                  ? AppColors.accent
+                                  : AppColors.border,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

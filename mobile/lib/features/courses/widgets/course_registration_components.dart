@@ -15,11 +15,14 @@ class CourseRegistrationCourseSummary extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.md,
+        AppSpacing.xs,
         AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.sm,
+        AppSpacing.xxs,
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -28,13 +31,17 @@ class CourseRegistrationCourseSummary extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.school_outlined, color: AppColors.primary),
+            child: const Icon(
+              Icons.school_outlined,
+              color: AppColors.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -63,32 +70,17 @@ class CourseRegistrationCourseSummary extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'رسوم الدورة',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                Text(
-                  '${course.price.toStringAsFixed(0)} ريال',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            child: Text(
+              '${course.price.toStringAsFixed(0)} ر.س',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -112,76 +104,61 @@ class CourseRegistrationStepHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.xs,
+        AppSpacing.xxs,
         AppSpacing.md,
-        AppSpacing.md,
+        AppSpacing.xxs,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'التقدم في التسجيل',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                '${currentStep + 1} / ${steps.length}',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              for (var index = 0; index < steps.length; index++)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsetsDirectional.only(
-                      end: index == 0 ? 0 : AppSpacing.xxs,
-                      start: index == steps.length - 1 ? 0 : AppSpacing.xxs,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: index <= currentStep ? 1 : 0,
-                            minHeight: 4,
-                            backgroundColor: AppColors.border,
-                            valueColor: const AlwaysStoppedAnimation(
-                              AppColors.accent,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          steps[index],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: index == currentStep
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                            fontWeight: index == currentStep
-                                ? FontWeight.bold
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+      child: Semantics(
+        label:
+            'الخطوة ${currentStep + 1} من ${steps.length}: '
+            '${steps[currentStep]}',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'الخطوة ${currentStep + 1} من ${steps.length}',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-            ],
-          ),
-        ],
+                Text(
+                  steps[currentStep],
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                for (var index = 0; index < steps.length; index++)
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.only(
+                        end: index == 0 ? 0 : AppSpacing.xxs,
+                        start: index == steps.length - 1 ? 0 : AppSpacing.xxs,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: index <= currentStep
+                              ? AppColors.accent
+                              : AppColors.border,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

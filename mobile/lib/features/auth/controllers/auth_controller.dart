@@ -22,9 +22,15 @@ class AuthController extends ChangeNotifier {
   Future<bool> register({
     required String name,
     required String email,
+    required String phone,
     required String password,
   }) => _runAuthentication(
-    () => _authService.register(name: name, email: email, password: password),
+    () => _authService.register(
+      name: name,
+      email: email,
+      phone: phone,
+      password: password,
+    ),
   );
 
   Future<bool> login({required String email, required String password}) =>

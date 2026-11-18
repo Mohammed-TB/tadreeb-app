@@ -39,7 +39,7 @@ class ReservationCard extends StatelessWidget {
     };
 
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       color: AppColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -95,6 +95,15 @@ class ReservationCard extends StatelessWidget {
                         'دفعة متبقية بانتظار المراجعة',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.accentDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ] else if (reservation.canRecordInPersonBalancePayment) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'متبقي ${reservation.remainingAmount.toStringAsFixed(2)} ر.س · اضغط لتسجيل الاستلام',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.warning,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

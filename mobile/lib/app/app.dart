@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 import 'package:provider/provider.dart';
 import '../features/auth/controllers/auth_controller.dart';
 import '../features/auth/models/user_model.dart';
@@ -464,7 +465,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      localizationsDelegates: [
+        ...GlobalMaterialLocalizations.delegates,
+        ...PhoneFieldLocalization.delegates,
+      ],
+
 
       theme: AppTheme.light,
 

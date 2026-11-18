@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_phone_field.dart';
 import '../../courses/models/course_model.dart';
 import '../controllers/institute_reservation_controller.dart';
 
@@ -24,11 +25,17 @@ class InPersonRegistrationSheet extends StatefulWidget {
 class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _amountPaidController = TextEditingController(text: '0');
+  final _phoneController = AppPhoneField.createController();
   late String _courseId;
   String _paymentOption = 'full';
   bool _isSubmitting = false;
+
+  CourseModel get _selectedCourse =>
+      widget.courses.firstWhere((course) => course.id == _courseId);
+
+  double get _selectedAmount => _paymentOption == 'deposit'
+      ? _selectedCourse.depositAmount
+      : _selectedCourse.price;
 
   @override
   void initState() {
@@ -40,20 +47,28 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _amountPaidController.dispose();
     super.dispose();
+  }
+
+  String? _validateStudentName(String? value) {
+    final nameParts = (value ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty);
+    return nameParts.length < 4 ? 'أدخل الاسم الرباعي كاملًا' : null;
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final studentPhone = AppPhoneField.toE164(_phoneController.value);
+    if (studentPhone == null) return;
 
     setState(() => _isSubmitting = true);
     final success = await widget.controller.createInPersonReservation(
       courseId: _courseId,
       studentName: _nameController.text.trim(),
-      studentPhone: _phoneController.text.trim(),
+      studentPhone: studentPhone,
       paymentOption: _paymentOption,
-      amountPaid: double.parse(_amountPaidController.text.trim()),
     );
 
     if (!mounted) return;
@@ -79,13 +94,11 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: SafeArea(
-        
         child: Container(
-          
-          decoration:BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12)
-          ) ,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -126,38 +139,52 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                           ? null
                           : (value) {
                               if (value != null) {
-                                setState(() => _courseId = value);
+                                setState(() {
+                                  _courseId = value;
+                                  if (_paymentOption == 'deposit' &&
+                                      _selectedCourse.depositAmount <= 0) {
+                                    _paymentOption = 'full';
+                                  }
+                                });
                               }
                             },
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'اسم الطالب'),
+                      decoration: const InputDecoration(
+                        labelText: 'الاسم الرباعي',
+                        hintText: 'اكتب الاسم الأول واسم الأب والجد والعائلة',
+                      ),
                       textInputAction: TextInputAction.next,
-                      validator: (value) => value == null || value.trim().isEmpty
-                          ? 'أدخل اسم الطالب'
-                          : null,
+                      validator: _validateStudentName,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    TextFormField(
+                    AppPhoneField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'رقم الهاتف'),
-                      keyboardType: TextInputType.phone,
+                      labelText: 'رقم الهاتف',
                       textInputAction: TextInputAction.next,
-                      validator: (value) => value == null || value.trim().isEmpty
-                          ? 'أدخل رقم الهاتف'
-                          : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
                       initialValue: _paymentOption,
                       decoration: const InputDecoration(
-                        labelText: 'طريقة الدفع المسجلة',
+                        labelText: 'طريقة الدفع والمبلغ',
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'full', child: Text('كامل')),
-                        DropdownMenuItem(value: 'deposit', child: Text('عربون')),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'full',
+                          child: Text(
+                            'كامل · ${_selectedCourse.price.toStringAsFixed(0)} ريال',
+                          ),
+                        ),
+                        if (_selectedCourse.depositAmount > 0)
+                          DropdownMenuItem(
+                            value: 'deposit',
+                            child: Text(
+                              'عربون · ${_selectedCourse.depositAmount.toStringAsFixed(0)} ريال',
+                            ),
+                          ),
                       ],
                       onChanged: _isSubmitting
                           ? null
@@ -168,27 +195,31 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                             },
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    TextFormField(
-                      controller: _amountPaidController,
-                      decoration: const InputDecoration(
-                        labelText: 'المبلغ المدفوع',
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.field,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'المبلغ المسجل تلقائيًا',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            '${_selectedAmount.toStringAsFixed(0)} ريال',
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      validator: (value) {
-                        final amount = double.tryParse(value?.trim() ?? '');
-                        if (amount == null || !amount.isFinite || amount < 0) {
-                          return 'أدخل مبلغاً صحيحاً';
-                        }
-                        final selected = widget.courses.firstWhere(
-                          (course) => course.id == _courseId,
-                        );
-                        if (amount > selected.price) {
-                          return 'المبلغ لا يمكن أن يتجاوز سعر الدورة';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
                     FilledButton.icon(

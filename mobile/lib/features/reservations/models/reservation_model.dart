@@ -15,6 +15,8 @@ class ReservationModel {
   final String paymentStatus; // unpaid | partial | paid
   final double balancePaymentAmount;
   final String balancePaymentStatus; // none | pending | approved | rejected
+  final String? balancePaymentMethod; // bankTransfer | inPerson
+  final DateTime? balancePaymentRecordedAt;
   final bool hasBalanceReceipt;
   final String? balancePaymentRejectionReason;
   final String
@@ -46,6 +48,8 @@ class ReservationModel {
     required this.paymentStatus,
     this.balancePaymentAmount = 0,
     this.balancePaymentStatus = 'none',
+    this.balancePaymentMethod,
+    this.balancePaymentRecordedAt,
     this.hasBalanceReceipt = false,
     this.balancePaymentRejectionReason,
     required this.status,
@@ -68,6 +72,16 @@ class ReservationModel {
     final s = status.toLowerCase();
     return s == 'paymentsubmitted' || s == 'payment_submitted';
   }
+
+  double get remainingAmount =>
+      (totalAmount - amountPaid).clamp(0, double.infinity).toDouble();
+
+  bool get canRecordInPersonBalancePayment =>
+      status.toLowerCase() == 'confirmed' &&
+      paymentStatus.toLowerCase() == 'partial' &&
+      remainingAmount > 0 &&
+      balancePaymentStatus.toLowerCase() != 'pending' &&
+      balancePaymentStatus.toLowerCase() != 'approved';
 
   /// هل يوجد إيصال مرفوع للمعاينة؟
   bool get hasReceipt {
@@ -101,6 +115,20 @@ class ReservationModel {
       sEmail = rawStudent['email']?.toString();
     }
 
+    final balancePaymentMethod = json['balancePaymentMethod']?.toString();
+    final balancePaymentStatus = json['balancePaymentStatus']
+        ?.toString()
+        .toLowerCase();
+    final rawHasBalanceReceipt = json['hasBalanceReceipt'];
+    final hasBalanceReceipt = rawHasBalanceReceipt is bool
+        ? rawHasBalanceReceipt
+        : balancePaymentMethod != 'inPerson' &&
+              const {
+                'pending',
+                'approved',
+                'rejected',
+              }.contains(balancePaymentStatus);
+
     return ReservationModel(
       id: (json['_id'] ?? json['id'])?.toString() ?? '',
       studentName: json['studentName']?.toString() ?? '',
@@ -118,13 +146,9 @@ class ReservationModel {
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
       balancePaymentAmount: _toDouble(json['balancePaymentAmount']),
       balancePaymentStatus: json['balancePaymentStatus']?.toString() ?? 'none',
-      hasBalanceReceipt:
-          json['hasBalanceReceipt'] == true ||
-          const {
-            'pending',
-            'approved',
-            'rejected',
-          }.contains(json['balancePaymentStatus']?.toString().toLowerCase()),
+      balancePaymentMethod: balancePaymentMethod,
+      balancePaymentRecordedAt: _parseDate(json['balancePaymentRecordedAt']),
+      hasBalanceReceipt: hasBalanceReceipt,
       balancePaymentRejectionReason: json['balancePaymentRejectionReason']
           ?.toString(),
       status: json['status']?.toString() ?? 'pendingPayment',
@@ -157,6 +181,10 @@ class ReservationModel {
       'paymentStatus': paymentStatus,
       'balancePaymentAmount': balancePaymentAmount,
       'balancePaymentStatus': balancePaymentStatus,
+      if (balancePaymentMethod != null)
+        'balancePaymentMethod': balancePaymentMethod,
+      if (balancePaymentRecordedAt != null)
+        'balancePaymentRecordedAt': balancePaymentRecordedAt!.toIso8601String(),
       'hasBalanceReceipt': hasBalanceReceipt,
       if (balancePaymentRejectionReason != null)
         'balancePaymentRejectionReason': balancePaymentRejectionReason,

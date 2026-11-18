@@ -12,6 +12,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/state/app_data_change_bus.dart';
 import '../../../core/widgets/button.dart';
+import '../../../core/widgets/app_phone_field.dart';
 import '../services/admin_institute_service.dart';
 import '../widgets/admin_institute_form_tabs.dart';
 
@@ -155,13 +156,14 @@ class _AdminAddInstituteScreenState extends State<AdminAddInstituteScreen>
     try {
       await _service.createInstitute(
         instituteName: _formData.instituteName.text,
-        institutePhone: _formData.institutePhone.text,
+        institutePhone:
+            AppPhoneField.toE164(_formData.institutePhone.value) ?? '',
         instituteAddress: _formData.instituteAddress.text,
         instituteDescription: _formData.instituteDescription.text,
         instituteEmail: _formData.instituteEmail.text,
         ownerName: _formData.ownerName.text,
         ownerEmail: _formData.ownerEmail.text,
-        ownerPhone: _formData.ownerPhone.text,
+        ownerPhone: AppPhoneField.toE164(_formData.ownerPhone.value),
         ownerPassword: _formData.ownerPassword.text,
         logoBytes: _logoBytes,
         logoName: _logoName,

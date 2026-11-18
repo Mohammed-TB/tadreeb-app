@@ -96,6 +96,20 @@ class ReservationService {
     return ReservationModel.fromJson(data);
   }
 
+  Future<ReservationModel> recordInPersonBalancePayment(
+    String reservationId,
+  ) async {
+    final response = await _apiClient.patch(
+      '/api/institutes/me/reservations/$reservationId/balance-payment/in-person',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر تسجيل استلام المبلغ المتبقي');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
   Future<String?> getBalancePaymentReceiptUrl(String reservationId) async {
     final response = await _apiClient.get(
       '/api/institutes/me/reservations/$reservationId/balance-payment/receipt',
@@ -115,7 +129,6 @@ class ReservationService {
     required String studentName,
     required String studentPhone,
     required String paymentOption, // full | deposit
-    required double amountPaid,
   }) async {
     final response = await _apiClient.post(
       '/api/institutes/me/reservations/in-person',
@@ -125,7 +138,6 @@ class ReservationService {
         'studentName': studentName,
         'studentPhone': studentPhone,
         'paymentOption': paymentOption,
-        'amountPaid': amountPaid,
       },
     );
     final data = response['data'];

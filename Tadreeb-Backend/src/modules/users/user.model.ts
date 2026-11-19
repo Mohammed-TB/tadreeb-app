@@ -26,6 +26,10 @@ export interface IUser extends Document {
   name: string;
   email: string;
   phone?: string;
+  isPhoneVerified: boolean;
+  phoneOtpHash?: string;
+  phoneOtpExpiresAt?: Date;
+  phoneOtpAttempts?: number;
   password?: string;
   googleId?: string;
   role: UserRole;
@@ -61,6 +65,28 @@ const userSchema = new Schema<IUser>(
     phone: {
       type: String,
       trim: true,
+    },
+
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+
+    phoneOtpHash: {
+      type: String,
+      select: false,
+    },
+
+    phoneOtpExpiresAt: {
+      type: Date,
+      select: false,
+    },
+
+    phoneOtpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
     },
 
     // كلمة المرور اختيارية لأن حساب Google لا يحتاج كلمة مرور محلية.
@@ -111,6 +137,17 @@ const userSchema = new Schema<IUser>(
     // إضافة createdAt و updatedAt تلقائيًا.
     timestamps: true,
   }
+);
+
+userSchema.index(
+  { phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isPhoneVerified: true,
+      phone: { $type: "string" },
+    },
+  },
 );
 
 // إنشاء Model للتعامل مع مجموعة المستخدمين في MongoDB.

@@ -24,13 +24,11 @@ class AuthController extends ChangeNotifier {
   Future<bool> register({
     required String name,
     required String email,
-    required String phone,
     required String password,
   }) => _runAuthentication(
     () => _authService.register(
       name: name,
       email: email,
-      phone: phone,
       password: password,
     ),
   );
@@ -39,6 +37,55 @@ class AuthController extends ChangeNotifier {
       _runAuthentication(
         () => _authService.login(email: email, password: password),
       );
+
+  Future<bool> requestPhoneLink({required String phone}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.requestPhoneLink(phone: phone);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'تعذر إرسال رمز التحقق';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<int?> verifyPhoneLink({
+    required String phone,
+    required String code,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final data = await _authService.verifyPhoneLink(
+        phone: phone,
+        code: code,
+      );
+      final userJson = data['user'];
+      if (userJson is Map<String, dynamic>) {
+        _currentUser = UserModel.fromJson(userJson);
+      }
+      final linked = data['linkedReservations'];
+      return linked is num ? linked.toInt() : 0;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return null;
+    } catch (_) {
+      _errorMessage = 'تعذر التحقق من رقم الهاتف';
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> loginWithGoogle() =>
       _runAuthentication(_authService.loginWithGoogle);

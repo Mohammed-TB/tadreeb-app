@@ -26,6 +26,20 @@ router.post("/google", (req, res) =>
   authController.googleLogin(req, res)
 );
 
+router.post(
+  "/phone/request",
+  authenticate,
+  authorizeRoles(UserRole.STUDENT),
+  (req, res) => authController.requestPhoneLink(req, res),
+);
+
+router.post(
+  "/phone/verify",
+  authenticate,
+  authorizeRoles(UserRole.STUDENT),
+  (req, res) => authController.verifyPhoneLink(req, res),
+);
+
 // الحصول على بيانات المستخدم الحالي.
 // هذا المسار محمي ويتطلب إرسال JWT صالح.
 router.get("/me", authenticate, (req, res) => {
@@ -46,6 +60,7 @@ router.get("/me", authenticate, (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      isPhoneVerified: user.isPhoneVerified,
       role: user.role,
       status: user.status,
       authProvider: user.authProvider,

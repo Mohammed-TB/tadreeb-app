@@ -104,8 +104,12 @@ class AppDrawer extends StatelessWidget {
                 leading: Icon(item.icon),
                 title: Text(item.title),
                 onTap: () {
-                  _showComingSoon(context);
                   Navigator.pop(context);
+                  if (role == 'student' && item.title == 'الإعدادات') {
+                    context.push('/student_phone_settings');
+                  } else {
+                    _showComingSoon(context);
+                  }
                 },
               ),
             ),

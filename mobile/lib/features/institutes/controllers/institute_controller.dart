@@ -16,9 +16,7 @@ class InstituteController extends ChangeNotifier {
     AppDataChangeBus? dataChangeBus,
   }) {
     _realtimeSubscription = realtimeService?.events.listen(_onRealtimeEvent);
-    _dataChangeSubscription = dataChangeBus?.changes.listen(
-      _onLocalDataChange,
-    );
+    _dataChangeSubscription = dataChangeBus?.changes.listen(_onLocalDataChange);
   }
 
   List<InstituteModel> _institutes = [];
@@ -30,17 +28,39 @@ class InstituteController extends ChangeNotifier {
   int _total = 0;
   int _requestId = 0;
   String _searchQuery = '';
+  String _localSearchQuery = '';
   bool _hasLoaded = false;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _errorMessage;
 
   List<InstituteModel> get institutes => _institutes;
+  List<InstituteModel> get filteredInstitutes {
+    final query = _localSearchQuery.toLowerCase();
+    if (query.isEmpty) return _institutes;
+
+    return _institutes
+        .where(
+          (institute) =>
+              institute.name.toLowerCase().contains(query) ||
+              institute.address.toLowerCase().contains(query),
+        )
+        .toList(growable: false);
+  }
+
+  String get searchQuery => _localSearchQuery;
   int get total => _total;
   bool get hasMore => _currentPage < _totalPages;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   String? get errorMessage => _errorMessage;
+
+  void setSearchQuery(String value) {
+    final query = value.trim();
+    if (_localSearchQuery == query) return;
+    _localSearchQuery = query;
+    notifyListeners();
+  }
 
   Future<bool> loadCachedInstitutes({String? search}) async {
     final normalizedSearch = (search ?? _searchQuery).trim();
@@ -51,7 +71,8 @@ class InstituteController extends ChangeNotifier {
     );
     if (cached == null) return false;
 
-    final changed = !_sameInstitutes(_institutes, cached.institutes) ||
+    final changed =
+        !_sameInstitutes(_institutes, cached.institutes) ||
         _currentPage != cached.page ||
         _totalPages != cached.totalPages ||
         _total != cached.total;
@@ -123,8 +144,7 @@ class InstituteController extends ChangeNotifier {
     }
     final hadError = _errorMessage != null;
     _errorMessage = null;
-    final showLoadingState =
-        loadMore || !hadVisibleInstitutes || searchChanged;
+    final showLoadingState = loadMore || !hadVisibleInstitutes || searchChanged;
     if (showLoadingState || hadError) notifyListeners();
     var shouldNotify = hadError;
     var loadedCachedPage = false;
@@ -138,7 +158,8 @@ class InstituteController extends ChangeNotifier {
         );
         if (requestId != _requestId) return;
         if (cached != null) {
-          shouldNotify |= !_sameInstitutes(_institutes, cached.institutes) ||
+          shouldNotify |=
+              !_sameInstitutes(_institutes, cached.institutes) ||
               _currentPage != cached.page ||
               _totalPages != cached.totalPages ||
               _total != cached.total;
@@ -174,15 +195,15 @@ class InstituteController extends ChangeNotifier {
       );
       if (requestId != _requestId) return;
 
-      if (!loadMore &&
-          !_sameInstitutes(_institutes, result.data.institutes)) {
+      if (!loadMore && !_sameInstitutes(_institutes, result.data.institutes)) {
         _replacePage(requestedPage, result.data.institutes);
         shouldNotify = true;
       } else if (loadMore && (!loadedCachedPage || result.changed)) {
         _replacePage(requestedPage, result.data.institutes);
         shouldNotify = true;
       }
-      shouldNotify |= _currentPage != result.data.page ||
+      shouldNotify |=
+          _currentPage != result.data.page ||
           _totalPages != result.data.totalPages ||
           _total != result.data.total;
       _currentPage = result.data.page;

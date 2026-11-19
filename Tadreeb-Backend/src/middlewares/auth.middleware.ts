@@ -13,6 +13,7 @@ export interface AuthPayload {
   name: string;
   email: string;
   phone?: string;
+  isPhoneVerified: boolean;
   role: UserRole;
   status: UserStatus;
   authProvider: string;
@@ -75,7 +76,7 @@ const authenticate = async (
 
     // البحث عن المستخدم في MongoDB.
 const user = await User.findById(decoded.userId).select(
-  "_id name email phone role status authProvider instituteId"
+  "_id name email phone isPhoneVerified role status authProvider instituteId"
 );
 
     // رفض الطلب إذا لم يعد المستخدم موجودًا.
@@ -102,6 +103,7 @@ const user = await User.findById(decoded.userId).select(
       name: user.name,
       email: user.email,
       phone: user.phone,
+      isPhoneVerified: user.isPhoneVerified,
       role: user.role,
       status: user.status,
       authProvider: user.authProvider,

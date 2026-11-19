@@ -43,7 +43,6 @@ class AuthService {
   Future<UserModel> register({
     required String name,
     required String email,
-    required String phone,
     required String password,
   }) async {
     final response = await _apiClient.post(
@@ -51,7 +50,6 @@ class AuthService {
       body: {
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
-        'phone': phone,
         'password': password,
       },
     );
@@ -67,6 +65,30 @@ class AuthService {
       body: {'email': email.trim().toLowerCase(), 'password': password},
     );
     return _saveAuthenticatedResponse(response);
+  }
+
+  Future<void> requestPhoneLink({required String phone}) async {
+    await _apiClient.post(
+      '/api/auth/phone/request',
+      authenticated: true,
+      body: {'phone': phone},
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyPhoneLink({
+    required String phone,
+    required String code,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/auth/phone/verify',
+      authenticated: true,
+      body: {'phone': phone, 'code': code},
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('استجابة ربط الهاتف غير صالحة');
+    }
+    return data;
   }
 
   Future<UserModel> loginWithGoogle() async {

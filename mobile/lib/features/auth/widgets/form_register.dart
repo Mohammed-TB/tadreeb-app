@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
-import '../../../core/widgets/app_phone_field.dart';
 import '../../../core/widgets/text_filed_form.dart';
 import '../../../core/widgets/button.dart';
 
@@ -20,7 +19,6 @@ class FormRegister extends StatefulWidget {
   final Future<void> Function({
     required String name,
     required String email,
-    required String phone,
     required String password,
     required String passwordConfirm,
   })
@@ -36,7 +34,6 @@ class _FormRegisterState extends State<FormRegister> {
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = AppPhoneField.createController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
 
@@ -49,9 +46,6 @@ class _FormRegisterState extends State<FormRegister> {
     if (_isLoading) return;
 
     if (!_formKey.currentState!.validate()) return;
-    final phone = AppPhoneField.toE164(_phoneController.value);
-    if (phone == null) return;
-
     setState(() {
       _isLoading = true;
     });
@@ -60,7 +54,6 @@ class _FormRegisterState extends State<FormRegister> {
       await widget.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        phone: phone,
         password: _passwordController.text,
         passwordConfirm: _passwordConfirmController.text,
       );
@@ -131,7 +124,6 @@ class _FormRegisterState extends State<FormRegister> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
 
@@ -209,15 +201,6 @@ class _FormRegisterState extends State<FormRegister> {
 
                     return null;
                   },
-                ),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                AppPhoneField(
-                  controller: _phoneController,
-                  labelText: 'رقم الهاتف',
-                  hintText: 'أدخل رقم هاتفك',
-                  textInputAction: TextInputAction.next,
                 ),
 
                 const SizedBox(height: AppSpacing.sm),

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:project_1/core/mock_data/institutes_data.dart';
 import 'package:provider/provider.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
@@ -168,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final courseController = context.watch<CourseController>();
     final favoriteController = context.watch<FavoriteController>();
+    final instituteController = context.watch<InstituteController>();
     final isSearching = _searchController.text.trim().isNotEmpty;
 
     if (_isInitialLoading) {
@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen>
 
             // 2. إذا كان المستخدم يبحث في شريط البحث بالأعلى
             if (isSearching)
-              _buildInstantSearchResults(courseController, favoriteController)
+              _buildInstantSearchResults(courseController, favoriteController,instituteController)
             else
               FadeTransition(
                 opacity: _fadeAnimation,
@@ -299,11 +299,12 @@ class _HomeScreenState extends State<HomeScreen>
 
   // نتائج البحث الفورية في الصفحة الرئيسية
   Widget _buildInstantSearchResults(
-    CourseController controller,
+    CourseController courseController,
     FavoriteController favorites,
+    InstituteController instituteController
   ) {
     final query = _searchController.text.trim();
-    final results = controller.filteredCourses;
+    final results = courseController.filteredCourses;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -385,9 +386,10 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(height: AppSpacing.cardGap),
               itemBuilder: (context, index) {
                 final course = results[index];
+                final institutes = instituteController.institutes;
                 return CourseCard(
                   course: course,
-                  institutes: institutes,
+                  institutes:institutes ,
                   isHorizontal: true,
                   showDetailsCourse: () => _showDetailsCourse(course),
                   isFavorite: favorites.isCourseFavorite(course.id),

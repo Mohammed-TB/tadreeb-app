@@ -39,6 +39,7 @@ import '../features/admin/screens/admin_dashboard_screen.dart';
 
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/auth/screens/student_phone_settings_screen.dart';
 
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -93,6 +94,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         GoRoute(
           path: '/register',
           builder: (context, state) => const RegisterScreen(),
+        ),
+
+        GoRoute(
+          path: '/student_phone_settings',
+          builder: (context, state) =>
+              const StudentPhoneSettingsScreen(),
         ),
 
         GoRoute(
@@ -434,6 +441,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       '/institutes_screen' ||
       '/institute-details' ||
       '/my_reservations' ||
+      '/student_phone_settings' ||
       '/my_reservations/details' ||
       '/reservation-details' ||
       '/favorites' => UserRole.student,

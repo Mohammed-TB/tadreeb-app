@@ -5,6 +5,7 @@ class UserModel {
   final String name;
   final String email;
   final String? phone;
+  final bool isPhoneVerified;
   final UserRole role;
   final String? status;
   final String? authProvider;
@@ -14,6 +15,7 @@ class UserModel {
     required this.name,
     required this.email,
     this.phone,
+    this.isPhoneVerified = false,
     this.role = UserRole.student,
     this.status,
     this.authProvider,
@@ -41,6 +43,7 @@ class UserModel {
       name: name,
       email: email,
       phone: json['phone'] as String?,
+      isPhoneVerified: json['isPhoneVerified'] == true,
       role: role,
       status: json['status'] as String?,
       authProvider: json['authProvider'] as String?,
@@ -52,6 +55,7 @@ class UserModel {
     'name': name,
     'email': email,
     'phone': phone,
+    'isPhoneVerified': isPhoneVerified,
     'role': role.name,
     'status': status,
     'authProvider': authProvider,

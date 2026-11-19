@@ -7,6 +7,7 @@ enum AppDataAudience { student, instituteOwner, admin }
 enum AppDataChangeOrigin {
   courseManagement,
   courseRegistration,
+  phoneLink,
   studentReservations,
   instituteReservations,
   adminInstitutes,

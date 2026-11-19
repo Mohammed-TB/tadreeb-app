@@ -4,6 +4,52 @@ import authService from "./auth.service";
 
 // Controller مسؤول عن استقبال طلبات المصادقة وإرجاع الاستجابات.
 class AuthController {
+  async requestPhoneLink(req: Request, res: Response): Promise<void> {
+    try {
+      const phone =
+        typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+      const result = await authService.requestPhoneLink(
+        req.user!.userId,
+        phone,
+      );
+      res.status(200).json({
+        success: true,
+        message: "Verification code sent",
+        data: result,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send verification code";
+      const statusCode =
+        message.includes("already linked") ? 409 : 400;
+      res.status(statusCode).json({ success: false, message });
+    }
+  }
+
+  async verifyPhoneLink(req: Request, res: Response): Promise<void> {
+    try {
+      const phone =
+        typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+      const code =
+        typeof req.body?.code === "string" ? req.body.code.trim() : "";
+      const result = await authService.verifyPhoneLink(
+        req.user!.userId,
+        phone,
+        code,
+      );
+      res.status(200).json({
+        success: true,
+        message: "Phone number linked successfully",
+        data: result,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Phone verification failed";
+      const statusCode =
+        message.includes("already linked") ? 409 : 400;
+      res.status(statusCode).json({ success: false, message });
+    }
+  }
   // تسجيل طالب جديد.
   async register(req: Request, res: Response): Promise<void> {
     try {

@@ -1,6 +1,7 @@
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 
 import User, {
@@ -9,12 +10,14 @@ import User, {
   UserStatus,
 } from "../users/user.model";
 import { isValidE164Phone } from "../../shared/phone-number";
+import greenApiPhoneVerificationService from "./green-api-phone-verification.service";
+import Reservation from "../reservations/models/reservation.model";
+import { BookingType } from "../reservations/types/reservation.types";
 
 // بيانات التسجيل المطلوبة للطالب.
 interface RegisterInput {
   name: string;
   email: string;
-  phone: string;
   password: string;
 }
 
@@ -53,21 +56,136 @@ const getSafeUser = (user: any) => ({
   name: user.name,
   email: user.email,
   phone:user.phone,
+  isPhoneVerified: user.isPhoneVerified ?? false,
   role: user.role,
   status: user.status,
 });
 
 // خدمة المصادقة المسؤولة عن جميع طرق تسجيل الدخول.
 class AuthService {
-  // تسجيل طالب جديد بالبريد وكلمة المرور.
-  async registerStudent(input: RegisterInput) {
-    const { name, email, password } = input;
-    const phone =
-      typeof input.phone === "string" ? input.phone.trim() : input.phone;
+  private hashOtp(userId: string, code: string): string {
+    const secret = process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "";
+    return crypto
+      .createHmac("sha256", secret)
+      .update(`${userId}:${code}`)
+      .digest("hex");
+  }
 
+  async requestPhoneLink(userId: string, phone: string) {
     if (!isValidE164Phone(phone)) {
       throw new Error("Phone number must be in E.164 format");
     }
+
+    const owner = await User.findOne({
+      _id: { $ne: userId },
+      phone,
+      isPhoneVerified: true,
+    });
+
+    if (owner) {
+      throw new Error("This phone number is already linked to another account");
+    }
+
+    const user = await User.findById(userId).select(
+      "+phoneOtpHash +phoneOtpExpiresAt +phoneOtpAttempts",
+    );
+
+    if (!user || user.role !== UserRole.STUDENT || user.status !== UserStatus.ACTIVE) {
+      throw new Error("Active student account required");
+    }
+
+    const code = crypto.randomInt(100000, 1000000).toString();
+    user.phoneOtpHash = this.hashOtp(user.id, code);
+    user.phoneOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    user.phoneOtpAttempts = 0;
+    await user.save();
+
+    await greenApiPhoneVerificationService.sendOtp(phone, code);
+
+    return {
+      phone,
+      expiresInSeconds: 10 * 60,
+    };
+  }
+
+  async verifyPhoneLink(userId: string, phone: string, code: string) {
+    if (!isValidE164Phone(phone)) {
+      throw new Error("Phone number must be in E.164 format");
+    }
+    if (!/^\d{6}$/.test(code)) {
+      throw new Error("Verification code must contain 6 digits");
+    }
+
+    const owner = await User.findOne({
+      _id: { $ne: userId },
+      phone,
+      isPhoneVerified: true,
+    });
+
+    if (owner) {
+      throw new Error("This phone number is already linked to another account");
+    }
+
+    const user = await User.findById(userId).select(
+      "+phoneOtpHash +phoneOtpExpiresAt +phoneOtpAttempts",
+    );
+
+    if (!user || user.role !== UserRole.STUDENT || user.status !== UserStatus.ACTIVE) {
+      throw new Error("Active student account required");
+    }
+
+    if (
+      !user.phoneOtpHash ||
+      !user.phoneOtpExpiresAt ||
+      user.phoneOtpExpiresAt.getTime() < Date.now()
+    ) {
+      throw new Error("Verification code expired or not requested");
+    }
+
+    if ((user.phoneOtpAttempts ?? 0) >= 5) {
+      throw new Error("Too many verification attempts");
+    }
+
+    const submittedHash = this.hashOtp(user.id, code);
+    if (!crypto.timingSafeEqual(
+      Buffer.from(user.phoneOtpHash, "hex"),
+      Buffer.from(submittedHash, "hex"),
+    )) {
+      user.phoneOtpAttempts = (user.phoneOtpAttempts ?? 0) + 1;
+      await user.save();
+      throw new Error("Invalid verification code");
+    }
+
+    user.phone = phone;
+    user.isPhoneVerified = true;
+    user.phoneOtpHash = undefined;
+    user.phoneOtpExpiresAt = undefined;
+    user.phoneOtpAttempts = 0;
+    await user.save();
+
+    const result = await Reservation.updateMany(
+      {
+        studentPhone: phone,
+        bookingType: BookingType.IN_PERSON,
+        $or: [
+          { studentId: { $exists: false } },
+          { studentId: null },
+        ],
+      },
+      {
+        $set: { studentId: user._id },
+      },
+    );
+
+    return {
+      user: getSafeUser(user),
+      linkedReservations: result.modifiedCount,
+    };
+  }
+
+  // تسجيل طالب جديد بالبريد وكلمة المرور.
+  async registerStudent(input: RegisterInput) {
+    const { name, email, password } = input;
 
     // توحيد صيغة البريد الإلكتروني.
     const normalizedEmail = email.trim().toLowerCase();
@@ -88,11 +206,11 @@ class AuthService {
     const user = await User.create({
       name,
       email: normalizedEmail,
-      phone,
       password: hashedPassword,
       role: UserRole.STUDENT,
       status: UserStatus.ACTIVE,
       authProvider: AuthProvider.LOCAL,
+      isPhoneVerified: false,
     });
 
     // إصدار Token بعد نجاح التسجيل.

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,7 +21,6 @@ class InstitutesScreen extends StatefulWidget {
 class _InstitutesScreenState extends State<InstitutesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -41,23 +38,15 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
         _scrollController.position.extentAfter > 320) {
       return;
     }
-    context.read<InstituteController>().getInstitutes(
-      search: _searchController.text,
-      loadMore: true,
-    );
+    context.read<InstituteController>().getInstitutes(loadMore: true);
   }
 
   void _onSearchChanged(String value) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      if (!mounted) return;
-      context.read<InstituteController>().getInstitutes(search: value);
-    });
+    context.read<InstituteController>().setSearchQuery(value);
   }
 
   Future<void> _refresh() {
     return context.read<InstituteController>().getInstitutes(
-      search: _searchController.text,
       forceRefresh: true,
     );
   }
@@ -207,7 +196,9 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
       );
     }
 
-    if (controller.institutes.isEmpty) {
+    final institutes = controller.filteredInstitutes;
+
+    if (institutes.isEmpty) {
       final hasSearch = _searchController.text.trim().isNotEmpty;
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -217,8 +208,16 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
             icon: Icons.apartment_outlined,
             title: hasSearch ? 'لا توجد نتائج مطابقة' : 'لا توجد معاهد متاحة',
             message: hasSearch
-                ? 'جرّب البحث بكلمات مختلفة.'
+                ? controller.hasMore
+                      ? 'لم تظهر نتائج ضمن المعاهد المحملة بعد.'
+                      : 'جرّب البحث بكلمات مختلفة.'
                 : 'ستظهر هنا المعاهد النشطة عند توفرها.',
+            actionLabel: hasSearch && controller.hasMore
+                ? 'تحميل المزيد من المعاهد'
+                : null,
+            onAction: hasSearch && controller.hasMore
+                ? () => controller.getInstitutes(loadMore: true)
+                : null,
           ),
         ],
       );
@@ -234,12 +233,12 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
         AppSpacing.xl,
       ),
       itemCount:
-          controller.institutes.length +
+          institutes.length +
           (controller.hasMore || controller.errorMessage != null ? 1 : 0),
       separatorBuilder: (context, index) =>
           const SizedBox(height: AppSpacing.cardGap),
       itemBuilder: (context, index) {
-        if (index == controller.institutes.length) {
+        if (index == institutes.length) {
           if (controller.isLoadingMore) {
             return const Padding(
               padding: EdgeInsets.all(AppSpacing.md),
@@ -250,10 +249,7 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
           }
           if (controller.errorMessage != null) {
             return TextButton.icon(
-              onPressed: () => controller.getInstitutes(
-                search: _searchController.text,
-                loadMore: true,
-              ),
+              onPressed: () => controller.getInstitutes(loadMore: true),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('تعذر تحميل المزيد، حاول مجددًا'),
             );
@@ -261,7 +257,7 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
           return const SizedBox(height: AppSpacing.md);
         }
 
-        final institute = controller.institutes[index];
+        final institute = institutes[index];
         return InstituteCard(
           institute: institute,
           layout: InstituteCardLayout.horizontal,
@@ -328,7 +324,6 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _scrollController
       ..removeListener(_loadNextPage)
       ..dispose();

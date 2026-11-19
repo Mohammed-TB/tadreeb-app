@@ -9,13 +9,27 @@ import '../controllers/auth_controller.dart';
 import '../models/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.showLoginRequiredMessage = false});
+
+  final bool showLoginRequiredMessage;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showLoginRequiredMessage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showMessage('يرجى تسجيل الدخول للاستمرار', isSuccess: false);
+        }
+      });
+    }
+  }
+
   Future<void> _login({required String email, required String password}) async {
     final authController = context.read<AuthController>();
 
@@ -71,6 +85,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  void _continueAsGuest() {
+    context.read<AuthController>().continueAsGuest();
+    context.go('/home_screen');
+  }
+
   void _showMessage(String message, {bool isSuccess = true}) {
     Flushbar(
       message: message,
@@ -99,6 +118,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 subTitle: 'سجّل الدخول لمتابعة دوراتك وتسجيلاتك بسهولة.',
               ),
               FormLogin(login: _login, googleLogin: _googleLogin),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: TextButton.icon(
+                  onPressed: _continueAsGuest,
+                  icon: const Icon(Icons.person_outline),
+                  label: const Text('الدخول كزائر'),
+                ),
+              ),
             ],
           ),
         ),

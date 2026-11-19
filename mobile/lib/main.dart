@@ -124,7 +124,7 @@ Future<void> main() async {
             context.read<InstituteService>(),
             realtimeService: context.read<RealtimeService>(),
             dataChangeBus: context.read<AppDataChangeBus>(),
-          )..getInstitutes(),
+          ),
         ),
         Provider<InstituteDashboardService>(
           create: (context) =>

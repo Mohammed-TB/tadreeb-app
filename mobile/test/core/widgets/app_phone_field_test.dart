@@ -60,6 +60,25 @@ void main() {
     expect(AppPhoneField.toE164(controller.value), '+967777123456');
   });
 
+  testWidgets('keeps entered digits in left-to-right order in Arabic UI', (
+    tester,
+  ) async {
+    final controller = AppPhoneField.createController();
+    addTearDown(controller.dispose);
+    final formKey = GlobalKey<FormState>();
+
+    await tester.pumpWidget(
+      _buildPhoneField(formKey: formKey, controller: controller),
+    );
+    await tester.enterText(find.byType(TextField), '774899332');
+    await tester.pumpAndSettle();
+
+    final editableTextContext = tester.element(find.byType(EditableText));
+    expect(Directionality.of(editableTextContext), TextDirection.ltr);
+    expect(controller.value.nsn, '774899332');
+    expect(AppPhoneField.toE164(controller.value), '+967774899332');
+  });
+
   testWidgets('rejects invalid numbers with an Arabic error', (tester) async {
     final controller = AppPhoneField.createController();
     addTearDown(controller.dispose);

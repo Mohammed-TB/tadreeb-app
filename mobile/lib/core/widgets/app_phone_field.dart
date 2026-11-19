@@ -208,42 +208,45 @@ class _AppPhoneFieldState extends State<AppPhoneField> {
 
   @override
   Widget build(BuildContext context) {
-    return PhoneFormField(
-      key: ObjectKey(_controller),
-      controller: _controller,
-      enabled: widget.enabled,
-      readOnly: widget.readOnly,
-      isCountrySelectionEnabled: widget.enabled && !widget.readOnly,
-      countrySelectorNavigator: CountrySelectorNavigator.dialog(
-        height: MediaQuery.sizeOf(context).height * 0.8,
-        backgroundColor: AppColors.surface,
-        favorites: const [IsoCode.YE],
-        showDialCode: true,
-        noResultMessage: 'لا توجد دولة مطابقة للبحث',
-        searchBoxDecoration: const InputDecoration(
-          hintText: 'ابحث باسم أو رمز الدولة',
-          prefixIcon: Icon(Icons.search),
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: PhoneFormField(
+        key: ObjectKey(_controller),
+        controller: _controller,
+        enabled: widget.enabled,
+        readOnly: widget.readOnly,
+        isCountrySelectionEnabled: widget.enabled && !widget.readOnly,
+        countrySelectorNavigator: CountrySelectorNavigator.dialog(
+          height: MediaQuery.sizeOf(context).height * 0.8,
+          backgroundColor: AppColors.surface,
+          favorites: const [IsoCode.YE],
+          showDialCode: true,
+          noResultMessage: 'لا توجد دولة مطابقة للبحث',
+          searchBoxDecoration: const InputDecoration(
+            hintText: 'ابحث باسم أو رمز الدولة',
+            prefixIcon: Icon(Icons.search),
+          ),
         ),
+        countryButtonStyle: const CountryButtonStyle(
+          showFlag: true,
+          showDialCode: true,
+          showIsoCode: false,
+          flagSize: 20,
+        ),
+        textInputAction: widget.textInputAction,
+        style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+        cursorColor: AppColors.primary,
+        decoration: _buildDecoration(),
+        validator: _validate,
+        onChanged: (phoneNumber) {
+          if (_hasInvalidInitialValue) {
+            setState(() => _hasInvalidInitialValue = false);
+          }
+          widget.onChanged?.call(AppPhoneField.toE164(phoneNumber));
+        },
+        onSaved: (phoneNumber) =>
+            widget.onSaved?.call(AppPhoneField.toE164(phoneNumber)),
       ),
-      countryButtonStyle: const CountryButtonStyle(
-        showFlag: true,
-        showDialCode: true,
-        showIsoCode: false,
-        flagSize: 20,
-      ),
-      textInputAction: widget.textInputAction,
-      style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
-      cursorColor: AppColors.primary,
-      decoration: _buildDecoration(),
-      validator: _validate,
-      onChanged: (phoneNumber) {
-        if (_hasInvalidInitialValue) {
-          setState(() => _hasInvalidInitialValue = false);
-        }
-        widget.onChanged?.call(AppPhoneField.toE164(phoneNumber));
-      },
-      onSaved: (phoneNumber) =>
-          widget.onSaved?.call(AppPhoneField.toE164(phoneNumber)),
     );
   }
 }

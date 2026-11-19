@@ -10,28 +10,11 @@ import '../../institutes/models/institute_model.dart';
 import '../../favorites/controllers/favorite_controller.dart';
 import '../../students/widgets/institute_card.dart';
 
-class MostPopularInstitutes extends StatefulWidget {
+class MostPopularInstitutes extends StatelessWidget {
   const MostPopularInstitutes({super.key, this.onSeeAll, this.onInstituteTap});
 
   final VoidCallback? onSeeAll;
   final ValueChanged<InstituteModel>? onInstituteTap;
-
-  @override
-  State<MostPopularInstitutes> createState() => _MostPopularInstitutesState();
-}
-
-class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      context.read<InstituteController>().getInstitutes();
-      context.read<FavoriteController>().loadFavorites();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,18 +29,35 @@ class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
 
         const SizedBox(height: AppSpacing.sm),
 
-        if (controller.isLoading)
+        if (controller.isLoading && institutes.isEmpty)
           const SizedBox(
             height: 160,
             child: Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             ),
           )
+        else if (institutes.isEmpty && controller.errorMessage != null)
+          _buildError(context)
         else if (institutes.isEmpty)
           _buildEmptyMessage()
         else
-          _buildInstitutesList(institutes, favorites),
+          _buildInstitutesList(context, institutes, favorites),
       ],
+    );
+  }
+
+  Widget _buildError(BuildContext context) {
+    return SizedBox(
+      height: 140,
+      child: Center(
+        child: TextButton.icon(
+          onPressed: () => context.read<InstituteController>().getInstitutes(
+            forceRefresh: true,
+          ),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('تعذر تحميل المعاهد، أعد المحاولة'),
+        ),
+      ),
     );
   }
 
@@ -71,7 +71,7 @@ class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
           Text('معاهد مميزة', style: AppTypography.titleMedium),
 
           InkWell(
-            onTap: widget.onSeeAll,
+            onTap: onSeeAll,
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xxs),
@@ -103,6 +103,7 @@ class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
 
   // قائمة المعاهد
   Widget _buildInstitutesList(
+    BuildContext context,
     List<InstituteModel> institutes,
     FavoriteController favorites,
   ) {
@@ -127,13 +128,11 @@ class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
             institute: institute,
             width: 200,
             imageHeight: 110,
-            onTap: () {
-              widget.onInstituteTap?.call(institute);
-            },
+            onTap: () => onInstituteTap?.call(institute),
             isFavorite: favorites.isInstituteFavorite(institute.id),
             isFavoriteBusy: favorites.isInstituteSaving(institute.id),
             onFavoriteTap: favorites.canToggleFavorites
-                ? () => _toggleFavorite(institute)
+                ? () => _toggleFavorite(context, institute)
                 : null,
           );
         },
@@ -141,11 +140,14 @@ class _MostPopularInstitutesState extends State<MostPopularInstitutes> {
     );
   }
 
-  Future<void> _toggleFavorite(InstituteModel institute) async {
+  Future<void> _toggleFavorite(
+    BuildContext context,
+    InstituteModel institute,
+  ) async {
     try {
       await context.read<FavoriteController>().toggleInstitute(institute);
     } catch (error) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $error')));

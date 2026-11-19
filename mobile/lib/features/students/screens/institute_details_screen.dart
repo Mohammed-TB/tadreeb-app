@@ -451,7 +451,7 @@ class _InstituteDetailsScreenState extends State<InstituteDetailsScreen> {
                 width: 230,
                 height: 112,
                 showDetailsCourse: () =>
-                    context.push('/courses_screen/details', extra: course),
+                    context.push('/course-details', extra: course),
               );
             },
           ),

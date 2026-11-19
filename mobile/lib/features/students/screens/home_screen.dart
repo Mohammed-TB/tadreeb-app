@@ -131,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _onRefresh() async {
     await Future.wait([
       context.read<CourseController>().getCourses(forceRefresh: true),
+      context.read<CourseController>().loadCategories(forceRefresh: true),
       context.read<InstituteController>().getInstitutes(forceRefresh: true),
       context.read<ReservationController>().fetchMyReservations(
         forceRefresh: true,
@@ -140,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showDetailsCourse(CourseModel course) {
-    context.push('/courses_screen/details', extra: course);
+    context.push('/course-details', extra: course);
   }
 
   void _openDrawer() {
@@ -230,6 +231,25 @@ class _HomeScreenState extends State<HomeScreen>
                           onCategorySelected: courseController.selectCategory,
                         ),
                       ),
+                      if (courseController.categoriesErrorMessage != null)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: AppSpacing.md,
+                            top: AppSpacing.xxs,
+                          ),
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton.icon(
+                              onPressed: () => courseController.loadCategories(
+                                forceRefresh: true,
+                              ),
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: const Text(
+                                'تعذر تحميل التصنيفات، أعد المحاولة',
+                              ),
+                            ),
+                          ),
+                        ),
 
                       const SizedBox(height: AppSpacing.sectionGap),
 

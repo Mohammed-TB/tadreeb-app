@@ -4,6 +4,10 @@ import publicCourseController from "../controllers/public-course.controller";
 const router = Router();
 
 // هذه المسارات عامة ولا تحتاج إلى تسجيل دخول.
+router.get("/categories", (req, res) =>
+  publicCourseController.getCategories(req, res),
+);
+
 router.get("/", (req, res) =>
   publicCourseController.getCourses(req, res),
 );

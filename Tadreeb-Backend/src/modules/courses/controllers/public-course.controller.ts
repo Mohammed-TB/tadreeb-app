@@ -3,6 +3,23 @@ import mongoose from "mongoose";
 import publicCourseService from "../services/public-course.service";
 
 class PublicCourseController {
+  // GET /api/courses/categories
+  async getCategories(_req: Request, res: Response) {
+    try {
+      const categories = await publicCourseService.getPublishedCategories();
+      return res.status(200).json({
+        success: true,
+        message: "Course categories fetched successfully",
+        data: categories,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Server error",
+      });
+    }
+  }
+
   // GET /api/courses
   async getCourses(req: Request, res: Response) {
     try {

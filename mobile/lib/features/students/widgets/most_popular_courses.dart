@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,10 +15,7 @@ import '../../courses/widgets/course_card.dart';
 import '../../favorites/controllers/favorite_controller.dart';
 
 class MostPopularCourses extends StatefulWidget {
-  const MostPopularCourses({
-    super.key,
-    required this.showDetailsCourse,
-  });
+  const MostPopularCourses({super.key, required this.showDetailsCourse});
 
   final ValueChanged<CourseModel> showDetailsCourse;
 
@@ -38,9 +34,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     final courses = context.watch<CourseController>();
     final favorites = context.watch<FavoriteController>();
 
-    final institutes = context
-        .watch<InstituteController>()
-        .institutes;
+    final institutes = context.watch<InstituteController>().institutes;
 
     final featured = courses.featuredCourses;
 
@@ -51,12 +45,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
 
         const SizedBox(height: AppSpacing.sm),
 
-        _buildCoursesContent(
-          courses,
-          favorites,
-          featured,
-          institutes,
-        ),
+        _buildCoursesContent(courses, favorites, featured, institutes),
       ],
     );
   }
@@ -64,16 +53,11 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
   // عنوان القسم
   Widget _buildSectionHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'الدورات الأكثر رواجاً',
-            style: AppTypography.titleMedium,
-          ),
+          Text('الدورات الأكثر رواجاً', style: AppTypography.titleMedium),
           InkWell(
             onTap: _showCourses,
             borderRadius: BorderRadius.circular(8),
@@ -110,21 +94,24 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     List<CourseModel> courses,
     List<InstituteModel> institutes,
   ) {
-    if (controller.isLoading) {
+    if (controller.isLoading && courses.isEmpty) {
       return const SizedBox(
         height: 180,
         child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
-          ),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
 
-    if (controller.errorMessage != null) {
+    if (courses.isEmpty && controller.errorMessage != null) {
       return _buildMessage(
         'تعذر تحميل الدورات',
         icon: Icons.error_outline,
+        action: TextButton.icon(
+          onPressed: () => controller.getCourses(forceRefresh: true),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('إعادة المحاولة'),
+        ),
       );
     }
 
@@ -135,11 +122,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
       );
     }
 
-    return _buildCoursesList(
-      courses,
-      favorites,
-      institutes,
-    );
+    return _buildCoursesList(courses, favorites, institutes);
   }
 
   // قائمة الدورات الأفقية
@@ -152,9 +135,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
       height: 275,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         itemCount: courses.length,
         separatorBuilder: (context, index) {
           return const SizedBox(width: AppSpacing.xs);
@@ -183,19 +164,13 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
   // تحديث المفضلة
   Future<void> _toggleFavorite(CourseModel course) async {
     try {
-      await context
-          .read<FavoriteController>()
-          .toggleCourse(course);
+      await context.read<FavoriteController>().toggleCourse(course);
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('تعذر تحديث المفضلة: $error'),
-          ),
-        );
+        ..showSnackBar(SnackBar(content: Text('تعذر تحديث المفضلة: $error')));
     }
   }
 
@@ -203,6 +178,7 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
   Widget _buildMessage(
     String message, {
     required IconData icon,
+    Widget? action,
   }) {
     return SizedBox(
       height: 140,
@@ -210,16 +186,10 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 32,
-              color: AppColors.textHint,
-            ),
+            Icon(icon, size: 32, color: AppColors.textHint),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              message,
-              style: AppTypography.bodyMedium,
-            ),
+            Text(message, style: AppTypography.bodyMedium),
+            ?action,
           ],
         ),
       ),

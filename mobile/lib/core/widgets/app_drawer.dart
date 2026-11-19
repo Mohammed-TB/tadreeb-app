@@ -10,16 +10,20 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().currentUser;
+    final authController = context.watch<AuthController>();
+    final user = authController.currentUser;
+    final isGuest = authController.isGuest;
 
     final role = user?.role.name;
 
-    final roleLabel = switch (role) {
-      'student' => 'حساب الطالب',
-      'instituteOwner' => 'حساب صاحب المعهد',
-      'admin' => 'مدير المنصة',
-      _ => 'حساب المستخدم',
-    };
+    final roleLabel = isGuest
+        ? 'التصفح كزائر'
+        : switch (role) {
+            'student' => 'حساب الطالب',
+            'instituteOwner' => 'حساب صاحب المعهد',
+            'admin' => 'مدير المنصة',
+            _ => 'حساب المستخدم',
+          };
 
     final menuItems = switch (role) {
       'student' => [
@@ -73,7 +77,7 @@ class AppDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    user?.name ?? 'المستخدم',
+                    user?.name ?? (isGuest ? 'زائر' : 'المستخدم'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -113,8 +117,8 @@ class AppDrawer extends StatelessWidget {
             // Logout
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text(
-                'تسجيل الخروج',
+              title: Text(
+                isGuest ? 'إنهاء التصفح كزائر' : 'تسجيل الخروج',
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,

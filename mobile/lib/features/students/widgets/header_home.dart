@@ -28,11 +28,14 @@ class HeaderHome extends StatelessWidget {
   final VoidCallback? onClear;
   final TextEditingController? searchController;
   final bool hasActiveFilter;
-  
+
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().currentUser;
+    final authController = context.watch<AuthController>();
+    final user = authController.currentUser;
     final greeting = SaudiDate.currentHour() < 12 ? 'صباح الخير' : 'مساء الخير';
+    final userName =
+        user?.name ?? (authController.isGuest ? 'زائر' : 'طالبنا العزيز');
 
     return Container(
       width: double.infinity,
@@ -50,23 +53,22 @@ class HeaderHome extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          
           // Welcome and actions
           Row(
             children: [
               Expanded(
                 child: Row(
                   children: [
-                                      IconButton(
-                    onPressed: onMenuTap,
-                    tooltip: 'القائمة',
-                    icon: const Icon(Icons.menu, color: Colors.white),
-                  ),
+                    IconButton(
+                      onPressed: onMenuTap,
+                      tooltip: 'القائمة',
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                    ),
                     // _buildProfileIcon(),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        '$greeting، ${user?.name ?? 'طالبنا العزيز'}',
+                        '$greeting، $userName',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.titleMedium.copyWith(
@@ -92,8 +94,6 @@ class HeaderHome extends StatelessWidget {
                   ),
 
                   _buildNotificationButton(),
-
-
                 ],
               ),
             ],

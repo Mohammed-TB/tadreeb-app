@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -25,9 +26,134 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isBottomNavigationBarVisible = true;
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openDrawer();
+  }
+
+  @override
+  void didUpdateWidget(covariant AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showBottomNavigationBar && !oldWidget.showBottomNavigationBar) {
+      _isBottomNavigationBarVisible = true;
+    }
+  }
+
+  bool _handleUserScroll(UserScrollNotification notification) {
+    if (!widget.showBottomNavigationBar ||
+        notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+
+    final isScrollingUp = notification.direction == ScrollDirection.forward;
+    final shouldBeVisible = isScrollingUp;
+    if (notification.direction != ScrollDirection.idle &&
+        shouldBeVisible != _isBottomNavigationBarVisible) {
+      setState(() => _isBottomNavigationBarVisible = shouldBeVisible);
+    }
+    return false;
+  }
+
+  Widget _buildBottomNavigationBar() {
+    final isVisible =
+        widget.showBottomNavigationBar && _isBottomNavigationBarVisible;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeInOutCubic,
+      alignment: Alignment.topCenter,
+      clipBehavior: Clip.hardEdge,
+      child: IgnorePointer(
+        ignoring: !isVisible,
+        child: ExcludeSemantics(
+          excluding: !isVisible,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            reverseDuration: const Duration(milliseconds: 240),
+            transitionBuilder: (child, animation) {
+              final position =
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.45),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  );
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(position: position, child: child),
+              );
+            },
+            child: isVisible
+                ? SafeArea(
+                    key: const ValueKey('bottom-navigation-visible'),
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                      child: Container(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: AppColors.border.withValues(alpha: 0.75),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _activeNavigationColor.withValues(
+                                alpha: 0.10,
+                              ),
+                              blurRadius: 22,
+                              offset: const Offset(0, 7),
+                            ),
+                          ],
+                        ),
+                        child: SizedBox(
+                          height: 76,
+                          child: Row(
+                            children: [
+                              for (
+                                var index = 0;
+                                index < widget.navigationItems.length;
+                                index++
+                              )
+                                Expanded(
+                                  child: _NavigationDestination(
+                                    item: widget.navigationItems[index],
+                                    selected:
+                                        index ==
+                                        widget.navigationShell.currentIndex,
+                                    onTap: () {
+                                      setState(
+                                        () => _isBottomNavigationBarVisible =
+                                            true,
+                                      );
+                                      widget.navigationShell.goBranch(
+                                        index,
+                                        initialLocation:
+                                            index ==
+                                            widget.navigationShell.currentIndex,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(
+                    key: ValueKey('bottom-navigation-hidden'),
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -35,61 +161,15 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: widget.drawer,
-      body: AppShellDrawerScope(
-        openDrawer: _openDrawer,
-        child: widget.navigationShell,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: _handleUserScroll,
+        child: AppShellDrawerScope(
+          openDrawer: _openDrawer,
+          child: widget.navigationShell,
+        ),
       ),
       bottomNavigationBar: widget.showBottomNavigationBar
-          ? SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                child: Container(
-                  padding: EdgeInsets.only(bottom: 2),
-                  decoration: BoxDecoration( 
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: AppColors.border.withValues(alpha: 0.75),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _activeNavigationColor.withValues(alpha: 0.10),
-                        blurRadius: 22,
-                        offset: const Offset(0, 7),
-                      ),
-                    ],
-                  ),
-                  child: SizedBox(
-                    height: 76,
-                    child: Row(
-                      children: [
-                        for (
-                          var index = 0;
-                          index < widget.navigationItems.length;
-                          index++
-                        )
-                          Expanded(
-                            child: _NavigationDestination(
-                              item: widget.navigationItems[index],
-                              selected:
-                                  index == widget.navigationShell.currentIndex,
-                              onTap: () {
-                                widget.navigationShell.goBranch(
-                                  index,
-                                  initialLocation:
-                                      index ==
-                                      widget.navigationShell.currentIndex,
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            )
+          ? _buildBottomNavigationBar()
           : null,
     );
   }

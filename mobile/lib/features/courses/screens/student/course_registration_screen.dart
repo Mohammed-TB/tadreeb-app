@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_form_field/phone_form_field.dart';
@@ -49,6 +48,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
   bool _isSubmitting = false;
 
   static const _steps = ['البيانات', 'الدفع', 'السند'];
+  static const _depositAccountNumber = '254000321';
 
   CourseModel get course => widget.course;
 
@@ -216,6 +216,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
         icon: const Icon(
           Icons.check_circle_outline,
           color: AppColors.success,
@@ -240,6 +241,18 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _copyDepositAccountNumber() async {
+    try {
+      await Clipboard.setData(const ClipboardData(text: _depositAccountNumber));
+    } on PlatformException catch (error) {
+      debugPrint('Unable to copy deposit account number: $error');
+      if (mounted) _showMessage('تعذر نسخ رقم الحساب');
+      return;
+    }
+
+    if (mounted) _showMessage('تم نسخ رقم الحساب');
   }
 
   bool _isStudentDetailsValid() {
@@ -367,6 +380,87 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           onTap: () => setState(() => _paymentOption = _PaymentOption.full),
         ),
         const SizedBox(height: AppSpacing.md),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text('حسابات الايداع ', style: AppTypography.titleLarge),
+                ],
+              ),
+              SizedBox(height: AppSpacing.sm),
+              Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'شركة المشقاص للصرافة',
+                          style: AppTypography.labelMedium,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          _depositAccountNumber,
+                          style: AppTypography.titleSmall,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'نسخ رقم الحساب',
+                        onPressed: _copyDepositAccountNumber,
+                        icon: const Icon(
+                          Icons.copy_rounded,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                                    Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'شركة البسيري للصرافة',
+                          style: AppTypography.labelMedium,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          _depositAccountNumber,
+                          style: AppTypography.titleSmall,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'نسخ رقم الحساب',
+                        onPressed: _copyDepositAccountNumber,
+                        icon: const Icon(
+                          Icons.copy_rounded,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: AppSpacing.sm),
         const CourseRegistrationInfoBanner(
           icon: Icons.verified_user_outlined,
           message: 'لن يتم تأكيد التسجيل إلا بعد مراجعة سند الدفع من المعهد.',

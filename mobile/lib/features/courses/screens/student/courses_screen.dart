@@ -36,7 +36,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   void _showDetailsCourse(CourseModel course) {
-    context.push('/courses_screen/details', extra: course);
+    context.push('/course-details', extra: course);
   }
 
   @override
@@ -155,11 +155,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: ListCategory(
-                  categories: controller.availableCategories,
-                  selectedCategory: controller.selectedCategory ?? 'الكل',
-                  onCategorySelected: controller.selectCategory,
-                  height: 48,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListCategory(
+                      categories: controller.availableCategories,
+                      selectedCategory: controller.selectedCategory ?? 'الكل',
+                      onCategorySelected: controller.selectCategory,
+                      height: 48,
+                    ),
+                    if (controller.categoriesErrorMessage != null)
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: () =>
+                              controller.loadCategories(forceRefresh: true),
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text(
+                            'تعذر تحميل التصنيفات، أعد المحاولة',
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 

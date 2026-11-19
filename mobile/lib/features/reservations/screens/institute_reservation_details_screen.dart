@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_1/core/widgets/button.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -494,6 +495,7 @@ class _InstituteReservationDetailsScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
         title: const Text('تأكيد استلام المبلغ المتبقي'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -517,15 +519,28 @@ class _InstituteReservationDetailsScreenState
             ),
           ],
         ),
+        
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('إلغاء'),
+          Row(
+            children: [
+                        Expanded(
+            child: Button(
+              onTap: () => Navigator.pop(dialogContext, false),
+              text: 'إلغاء',
+              variant: AppButtonVariant.outline,
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('تأكيد الاستلام'),
+          SizedBox(width: 4,),
+          Expanded(
+            child: Button(
+              onTap: () => Navigator.pop(dialogContext, true),
+              text: 'تأكيد الاستلام',
+            ),
           ),
+
+            ],
+          )
+
         ],
       ),
     );

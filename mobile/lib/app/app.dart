@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../features/auth/controllers/auth_controller.dart';
 import '../features/auth/models/user_model.dart';
 import '../core/realtime/realtime_service.dart';
+import '../core/routing/guest_route_policy.dart';
 import '../features/courses/screens/student/courses_screen.dart';
 import '../features/courses/screens/student/course_registration_screen.dart';
 import '../features/favorites/screens/favorites_screen.dart';
@@ -83,7 +84,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // Authentication
         GoRoute(
           path: '/login',
-          builder: (context, state) => const LoginScreen(),
+          builder: (context, state) => LoginScreen(
+            showLoginRequiredMessage:
+                state.uri.queryParameters['reason'] == 'auth_required',
+          ),
         ),
 
         GoRoute(
@@ -104,6 +108,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               return const InstitutesScreen();
             }
             return InstituteDetailsScreen(institute: extra);
+          },
+        ),
+
+        GoRoute(
+          path: '/course-details',
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! CourseModel) {
+              return const CoursesScreen();
+            }
+            return CourseDetailsScreen(course: extra);
           },
         ),
 
@@ -259,7 +274,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return StudentShell(
               navigationShell: navigationShell,
               showBottomNavigationBar:
-                  state.uri.path != '/courses_screen/details' &&
                   state.uri.path != '/my_reservations/details',
             );
           },
@@ -280,18 +294,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 GoRoute(
                   path: '/courses_screen',
                   builder: (context, state) => const CoursesScreen(),
-                  routes: [
-                    GoRoute(
-                      path: 'details',
-                      builder: (context, state) {
-                        final extra = state.extra;
-                        if (extra is! CourseModel) {
-                          return const CoursesScreen();
-                        }
-                        return CourseDetailsScreen(course: extra);
-                      },
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -389,8 +391,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
     final user = _authController.currentUser;
 
-    if ((location == '/courses_screen/details' ||
-            location == '/course-registration') &&
+    if ((location == '/course-details' || location == '/course-registration') &&
         state.extra is! CourseModel) {
       return '/courses_screen';
     }
@@ -418,10 +419,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         location == '/onboarding' ||
         location == '/login' ||
         location == '/register';
+    if (_authController.isGuest) {
+      if (GuestRoutePolicy.canAccess(location)) {
+        return null;
+      }
+      return '/login?reason=auth_required';
+    }
+
     final requiredRole = switch (location) {
       '/home_screen' ||
       '/courses_screen' ||
-      '/courses_screen/details' ||
+      '/course-details' ||
       '/course-registration' ||
       '/institutes_screen' ||
       '/institute-details' ||
@@ -469,7 +477,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ...GlobalMaterialLocalizations.delegates,
         ...PhoneFieldLocalization.delegates,
       ],
-
 
       theme: AppTheme.light,
 

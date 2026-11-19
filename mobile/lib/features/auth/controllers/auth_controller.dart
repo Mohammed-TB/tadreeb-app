@@ -10,11 +10,13 @@ class AuthController extends ChangeNotifier {
   final AuthService _authService;
 
   UserModel? _currentUser;
+  bool _isGuest = false;
   bool _isLoading = false;
   bool _isInitializing = true;
   String? _errorMessage;
 
   UserModel? get currentUser => _currentUser;
+  bool get isGuest => _isGuest;
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing;
   String? get errorMessage => _errorMessage;
@@ -41,8 +43,17 @@ class AuthController extends ChangeNotifier {
   Future<bool> loginWithGoogle() =>
       _runAuthentication(_authService.loginWithGoogle);
 
+  void continueAsGuest() {
+    _currentUser = null;
+    _isGuest = true;
+    _isInitializing = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> restoreSession() async {
     _isInitializing = true;
+    _isGuest = false;
     _errorMessage = null;
     notifyListeners();
 
@@ -68,9 +79,13 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    final wasGuest = _isGuest;
     _currentUser = null;
+    _isGuest = false;
     _errorMessage = null;
     notifyListeners();
+
+    if (wasGuest) return;
 
     try {
       await _authService.logout();
@@ -90,6 +105,7 @@ class AuthController extends ChangeNotifier {
 
     try {
       _currentUser = await authenticate();
+      _isGuest = false;
       return true;
     } catch (error) {
       _errorMessage = error is ApiException

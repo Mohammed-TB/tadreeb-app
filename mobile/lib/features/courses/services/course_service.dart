@@ -15,7 +15,51 @@ class CourseService {
   final PublicApiCache? _publicCache;
 
   static const _courseListTtl = Duration(minutes: 5);
+  static const _courseCategoriesTtl = Duration(hours: 1);
   static const _courseDetailsTtl = Duration(minutes: 10);
+
+  Future<List<String>> getCourseCategories({bool forceRefresh = false}) async {
+    const path = '/api/courses/categories';
+    final cache = _publicCache;
+    if (cache == null) {
+      final response = await _apiClient.getPublic(path);
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('قائمة تصنيفات الدورات غير صالحة');
+      }
+      return _parseCategories(data);
+    }
+
+    final key = cache.keyFor(path, const {});
+    final result = await cache.fetchJson(
+      key: key,
+      ttl: _courseCategoriesTtl,
+      forceRefresh: forceRefresh,
+      fetch: (etag) async {
+        final response = await _apiClient.getPublic(path, ifNoneMatch: etag);
+        return PublicCacheFetch(
+          data: response.data,
+          etag: response.etag,
+          notModified: response.notModified,
+        );
+      },
+    );
+    return _parseCategories(result.data);
+  }
+
+  List<String> _parseCategories(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is! List || data.any((category) => category is! String)) {
+      throw const FormatException('قائمة تصنيفات الدورات غير صالحة');
+    }
+    return data
+        .cast<String>()
+        .map((category) => category.trim())
+        .where((category) => category.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
 
   Future<CoursesResponse> getCourses({
     String? search,

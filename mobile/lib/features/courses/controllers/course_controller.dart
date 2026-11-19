@@ -37,9 +37,7 @@ class CourseController extends ChangeNotifier {
     AppDataChangeBus? dataChangeBus,
   }) {
     _realtimeSubscription = realtimeService?.events.listen(_onRealtimeEvent);
-    _dataChangeSubscription = dataChangeBus?.changes.listen(
-      _onLocalDataChange,
-    );
+    _dataChangeSubscription = dataChangeBus?.changes.listen(_onLocalDataChange);
   }
 
   final CourseService _courseService;
@@ -50,16 +48,12 @@ class CourseController extends ChangeNotifier {
   // Courses
   List<CourseModel> _courses = [];
   List<CourseModel> get courses => _courses;
-  List<String> get availableCategories {
-    final available =
-        _courses
-            .map((course) => course.category.trim())
-            .where((category) => category.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    return ['الكل', ...available];
-  }
+  List<String> _categories = [];
+  List<String> get availableCategories => ['الكل', ..._categories];
+  bool _hasLoadedCategories = false;
+  Future<void>? _categoriesLoad;
+  String? _categoriesErrorMessage;
+  String? get categoriesErrorMessage => _categoriesErrorMessage;
 
   List<CourseModel> get filteredCourses {
     final query = _searchQuery.toLowerCase();
@@ -97,6 +91,37 @@ class CourseController extends ChangeNotifier {
   final int _limit = 10;
 
   bool get hasMore => _currentPage < _totalPages;
+
+  Future<void> loadCategories({bool forceRefresh = false}) {
+    if (_hasLoadedCategories && !forceRefresh) return Future<void>.value();
+    final inFlight = _categoriesLoad;
+    if (inFlight != null) return inFlight;
+
+    final request = _fetchCategories(forceRefresh: forceRefresh);
+    _categoriesLoad = request;
+    return request.whenComplete(() {
+      if (identical(_categoriesLoad, request)) _categoriesLoad = null;
+    });
+  }
+
+  Future<void> _fetchCategories({required bool forceRefresh}) async {
+    try {
+      final categories = await _courseService.getCourseCategories(
+        forceRefresh: forceRefresh,
+      );
+      final selectedCategory = _category;
+      _categories = categories;
+      if (selectedCategory != null && !categories.contains(selectedCategory)) {
+        _category = null;
+      }
+      _hasLoadedCategories = true;
+      _categoriesErrorMessage = null;
+    } catch (error) {
+      _categoriesErrorMessage = error.toString();
+    } finally {
+      notifyListeners();
+    }
+  }
 
   // Search, category and sort
   String _searchQuery = '';
@@ -186,6 +211,7 @@ class CourseController extends ChangeNotifier {
 
   // GET Courses
   Future<void> getCourses({bool forceRefresh = false}) async {
+    unawaited(loadCategories(forceRefresh: forceRefresh));
     if (_isLoading) {
       if (forceRefresh) _refreshRequested = true;
       return;

@@ -107,7 +107,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             width: double.infinity,
             height: 170,
             showDetailsCourse: () =>
-                context.push('/courses_screen/details', extra: course),
+                context.push('/course-details', extra: course),
             isFavorite: true,
             isFavoriteBusy: favorites.isCourseSaving(course.id),
             onFavoriteTap: () => _toggleCourse(course),

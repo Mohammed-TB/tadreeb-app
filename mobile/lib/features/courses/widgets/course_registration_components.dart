@@ -359,7 +359,7 @@ class CourseRegistrationInfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.field,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),

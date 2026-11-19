@@ -397,6 +397,10 @@ class ApiClient {
     }
 
     if (statusCode >= 500) {
+      if (message.contains('Failed to send WhatsApp verification code') ||
+          message.contains('configuration is missing')) {
+        return 'تعذر إرسال رسالة واتساب حاليًا. تحقق من إعدادات Green-API وحاول مجددًا';
+      }
       return 'حدث خطأ في الخادم. حاول مرة أخرى لاحقًا';
     }
 

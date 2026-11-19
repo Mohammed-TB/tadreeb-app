@@ -28,8 +28,11 @@ class GreenApiPhoneVerificationService {
       }),
     });
 
+    const responseText = await response.text();
     if (!response.ok) {
-      throw new Error("Failed to send WhatsApp verification code");
+      throw new Error(
+        `Failed to send WhatsApp verification code: ${response.status} ${responseText}`,
+      );
     }
   }
 }

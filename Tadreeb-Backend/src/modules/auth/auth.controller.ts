@@ -21,7 +21,12 @@ class AuthController {
       const message =
         error instanceof Error ? error.message : "Failed to send verification code";
       const statusCode =
-        message.includes("already linked") ? 409 : 400;
+        message.includes("already linked")
+          ? 409
+          : message.includes("Failed to send WhatsApp") ||
+              message.includes("configuration is missing")
+            ? 502
+            : 400;
       res.status(statusCode).json({ success: false, message });
     }
   }

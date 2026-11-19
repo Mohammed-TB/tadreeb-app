@@ -100,7 +100,15 @@ class AuthService {
     user.phoneOtpAttempts = 0;
     await user.save();
 
-    await greenApiPhoneVerificationService.sendOtp(phone, code);
+    try {
+      await greenApiPhoneVerificationService.sendOtp(phone, code);
+    } catch (error) {
+      user.phoneOtpHash = undefined;
+      user.phoneOtpExpiresAt = undefined;
+      user.phoneOtpAttempts = 0;
+      await user.save();
+      throw error;
+    }
 
     return {
       phone,

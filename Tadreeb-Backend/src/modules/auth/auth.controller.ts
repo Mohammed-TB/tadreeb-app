@@ -1,6 +1,7 @@
 
 import { Request, Response } from "express";
 import authService from "./auth.service";
+import { emitAdminDataChanged } from "../../realtime/realtime.events";
 
 // Controller مسؤول عن استقبال طلبات المصادقة وإرجاع الاستجابات.
 class AuthController {
@@ -59,6 +60,7 @@ class AuthController {
   async register(req: Request, res: Response): Promise<void> {
     try {
       const result = await authService.registerStudent(req.body);
+      emitAdminDataChanged("users");
       res.status(201).json({
         success: true,
         message: "Student registered successfully",
@@ -110,6 +112,7 @@ class AuthController {
 
       // تنفيذ التحقق من Google وإنشاء أو جلب حساب الطالب.
       const result = await authService.loginWithGoogle({ idToken });
+      emitAdminDataChanged("users");
 
       res.status(200).json({
         success: true,

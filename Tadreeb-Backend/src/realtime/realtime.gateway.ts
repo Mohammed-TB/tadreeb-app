@@ -52,6 +52,8 @@ export const initializeRealtimeGateway = (httpServer: HttpServer): Server => {
 
       if (user.role === UserRole.STUDENT) {
         rooms.push("students");
+      } else if (user.role === UserRole.ADMIN) {
+        rooms.push("admins");
       } else if (
         user.role === UserRole.INSTITUTE_OWNER &&
         user.instituteId
@@ -102,6 +104,13 @@ export const emitToStudents = (
   payload: Record<string, unknown>,
 ): void => {
   dispatch("students", event, payload);
+};
+
+export const emitToAdmins = (
+  event: string,
+  payload: Record<string, unknown>,
+): void => {
+  dispatch("admins", event, payload);
 };
 
 export const emitToUser = (

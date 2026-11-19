@@ -65,7 +65,10 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (context) {
-            final controller = AuthController(context.read<AuthService>());
+            final controller = AuthController(
+              context.read<AuthService>(),
+              dataChangeBus: context.read<AppDataChangeBus>(),
+            );
             unawaited(controller.restoreSession());
             return controller;
           },

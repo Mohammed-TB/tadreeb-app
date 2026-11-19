@@ -1,6 +1,6 @@
 import 'dart:async';
 
-enum AppDataDomain { courses, reservations, institutes }
+enum AppDataDomain { courses, reservations, institutes, users }
 
 enum AppDataAudience { student, instituteOwner, admin }
 
@@ -11,6 +11,8 @@ enum AppDataChangeOrigin {
   studentReservations,
   instituteReservations,
   adminInstitutes,
+  adminUsers,
+  userRegistration,
 }
 
 class AppDataChange {

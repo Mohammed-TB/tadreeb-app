@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../models/admin_dashboard_stats.dart';
 import '../services/admin_dashboard_service.dart';
@@ -25,11 +28,31 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late Future<AdminDashboardStats> _statsFuture;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
 
   @override
   void initState() {
     super.initState();
     _statsFuture = _fetchStats();
+    _dataChangeSubscription = context.read<AppDataChangeBus>().changes.listen((
+      change,
+    ) {
+      if (!mounted ||
+          change.audience != AppDataAudience.admin ||
+          (change.domain != AppDataDomain.institutes &&
+              change.domain != AppDataDomain.users &&
+              change.domain != AppDataDomain.reservations &&
+              change.domain != AppDataDomain.courses)) {
+        return;
+      }
+      unawaited(_refreshStats());
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 
   Future<AdminDashboardStats> _fetchStats() {

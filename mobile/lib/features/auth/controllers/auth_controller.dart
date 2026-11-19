@@ -1,13 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthController extends ChangeNotifier {
-  AuthController(this._authService);
+  AuthController(this._authService, {AppDataChangeBus? dataChangeBus})
+    : _dataChangeBus = dataChangeBus;
 
   final AuthService _authService;
+  final AppDataChangeBus? _dataChangeBus;
 
   UserModel? _currentUser;
   bool _isGuest = false;
@@ -25,13 +28,23 @@ class AuthController extends ChangeNotifier {
     required String name,
     required String email,
     required String password,
-  }) => _runAuthentication(
-    () => _authService.register(
-      name: name,
-      email: email,
-      password: password,
-    ),
-  );
+  }) async {
+    final success = await _runAuthentication(
+      () => _authService.register(
+        name: name,
+        email: email,
+        password: password,
+      ),
+    );
+    if (success) {
+      _dataChangeBus?.notifyChanged(
+        AppDataDomain.users,
+        AppDataChangeOrigin.userRegistration,
+        audience: AppDataAudience.admin,
+      );
+    }
+    return success;
+  }
 
   Future<bool> login({required String email, required String password}) =>
       _runAuthentication(
@@ -87,8 +100,17 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> loginWithGoogle() =>
-      _runAuthentication(_authService.loginWithGoogle);
+  Future<bool> loginWithGoogle() async {
+    final success = await _runAuthentication(_authService.loginWithGoogle);
+    if (success) {
+      _dataChangeBus?.notifyChanged(
+        AppDataDomain.users,
+        AppDataChangeOrigin.userRegistration,
+        audience: AppDataAudience.admin,
+      );
+    }
+    return success;
+  }
 
   void continueAsGuest() {
     _currentUser = null;

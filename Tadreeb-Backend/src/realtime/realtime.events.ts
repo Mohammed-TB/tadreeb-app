@@ -1,4 +1,5 @@
 import {
+  emitToAdmins,
   emitToInstitute,
   emitToStudents,
   emitToUser,
@@ -21,6 +22,10 @@ interface RegistrationEventSource {
   bookingType: string;
   status: string;
 }
+
+export const emitAdminDataChanged = (domain: "institutes" | "users"): void => {
+  emitToAdmins("adminDataChanged", { domain });
+};
 
 const idString = (value: unknown): string => String(value);
 

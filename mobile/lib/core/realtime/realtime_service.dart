@@ -26,8 +26,12 @@ class RealtimeService {
     'registrationConfirmed',
     'registrationRejected',
     'paymentSubmitted',
+    'balancePaymentSubmitted',
+    'balancePaymentReviewed',
+    'inPersonBalancePaymentRecorded',
     'seatAvailabilityUpdated',
     'seatHoldExpired',
+    'adminDataChanged',
   ];
 
   final TokenStorageService _tokenStorage;

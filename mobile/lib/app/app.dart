@@ -9,6 +9,7 @@ import '../features/auth/controllers/auth_controller.dart';
 import '../features/auth/models/user_model.dart';
 import '../core/realtime/realtime_service.dart';
 import '../core/routing/guest_route_policy.dart';
+import '../core/state/app_data_change_bus.dart';
 import '../features/courses/screens/student/courses_screen.dart';
 import '../features/courses/screens/student/course_registration_screen.dart';
 import '../features/favorites/screens/favorites_screen.dart';
@@ -357,6 +358,42 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _showRealtimeNotice(RealtimeEvent event) {
+    if (event.name == 'adminDataChanged') {
+      final data = event.data;
+      final domainName = data['domain'];
+      final domain = domainName == 'institutes'
+          ? AppDataDomain.institutes
+          : domainName == 'users'
+          ? AppDataDomain.users
+          : null;
+      if (domain != null) {
+        context.read<AppDataChangeBus>().notifyChanged(
+          domain,
+          AppDataChangeOrigin.userRegistration,
+          audience: AppDataAudience.admin,
+        );
+      }
+      return;
+    }
+
+    const instituteReservationEvents = {
+      'registrationCreated',
+      'registrationConfirmed',
+      'registrationRejected',
+      'paymentSubmitted',
+      'balancePaymentSubmitted',
+      'inPersonBalancePaymentRecorded',
+      'seatHoldExpired',
+    };
+    if (event.role == 'instituteOwner' &&
+        instituteReservationEvents.contains(event.name)) {
+      context.read<AppDataChangeBus>().notifyChanged(
+        AppDataDomain.reservations,
+        AppDataChangeOrigin.studentReservations,
+        audience: AppDataAudience.instituteOwner,
+      );
+    }
+
     final message = switch (event.name) {
       'coursePublished' => 'أصبحت دورة جديدة متاحة',
       'courseUpdated' => 'تم تحديث بيانات إحدى الدورات',

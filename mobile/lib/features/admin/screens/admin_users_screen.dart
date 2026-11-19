@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/app_data_change_bus.dart';
 import '../../../core/widgets/button.dart';
 import '../models/admin_user_model.dart';
 import '../services/admin_user_service.dart';
@@ -24,6 +26,7 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   late final AdminUserService _service;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
   final Set<String> _suspendingUserIds = {};
   List<AdminUserModel> _users = [];
   int _page = 1;
@@ -38,7 +41,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   void initState() {
     super.initState();
     _service = AdminUserService(apiClient: context.read<ApiClient>());
+    _dataChangeSubscription = context.read<AppDataChangeBus>().changes.listen((
+      change,
+    ) {
+      if (change.audience == AppDataAudience.admin &&
+          change.domain == AppDataDomain.users &&
+          mounted) {
+        unawaited(_loadFirstPage(refresh: true));
+      }
+    });
     _loadFirstPage();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 
   Future<void> _loadFirstPage({bool refresh = false}) async {

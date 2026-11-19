@@ -8,6 +8,7 @@ import { ReservationStatus, PaymentStatus } from "../reservations/types/reservat
 import { z } from "zod";
 import instituteService from "../institutes/services/institute.service";
 import instituteLogoService from "./institute-logo.service";
+import { emitAdminDataChanged } from "../../realtime/realtime.events";
 
 const createInstituteWithOwnerSchema = z.object({
   institute: z.object({
@@ -59,6 +60,8 @@ class AdminController {
         },
         owner: input.data.owner,
       });
+      emitAdminDataChanged("institutes");
+      emitAdminDataChanged("users");
 
       res.status(201).json({
         success: true,
@@ -168,6 +171,7 @@ class AdminController {
       ).select("_id status");
 
       if (user) {
+        emitAdminDataChanged("users");
         res.status(200).json({
           success: true,
           data: {
@@ -194,6 +198,7 @@ class AdminController {
       }
 
       if (existingUser.status === UserStatus.SUSPENDED) {
+        emitAdminDataChanged("users");
         res.status(200).json({
           success: true,
           data: {

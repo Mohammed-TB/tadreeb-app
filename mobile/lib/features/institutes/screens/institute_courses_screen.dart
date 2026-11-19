@@ -7,6 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/realtime/realtime_service.dart';
 import '../../../core/state/app_data_change_bus.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/services/course_service.dart';
@@ -31,6 +32,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   StreamSubscription<AppDataChange>? _dataChangeSubscription;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
 
   @override
   void initState() {
@@ -38,6 +40,18 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
     _dataChangeSubscription = context.read<AppDataChangeBus>().changes.listen(
       _onDataChange,
     );
+    _realtimeSubscription = context.read<RealtimeService>().events.listen(
+      _onRealtimeEvent,
+    );
+    _loadCourses();
+  }
+
+  void _onRealtimeEvent(RealtimeEvent event) {
+    if (!mounted ||
+        event.role != 'instituteOwner' ||
+        event.name != 'seatAvailabilityUpdated') {
+      return;
+    }
     _loadCourses();
   }
 
@@ -56,6 +70,7 @@ class _InstituteCoursesScreenState extends State<InstituteCoursesScreen> {
   @override
   void dispose() {
     unawaited(_dataChangeSubscription?.cancel());
+    unawaited(_realtimeSubscription?.cancel());
     _searchController.dispose();
     super.dispose();
   }

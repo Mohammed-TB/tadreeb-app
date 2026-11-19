@@ -383,6 +383,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       'paymentSubmitted',
       'balancePaymentSubmitted',
       'inPersonBalancePaymentRecorded',
+      'seatAvailabilityUpdated',
       'seatHoldExpired',
     };
     if (event.role == 'instituteOwner' &&

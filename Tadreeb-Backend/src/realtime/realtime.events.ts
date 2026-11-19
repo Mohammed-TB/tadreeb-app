@@ -50,8 +50,7 @@ export const emitSeatAvailabilityUpdated = (
 ): void => {
   const enrolledCount = course.enrolledCount ?? 0;
   const reservedCount = course.reservedCount ?? 0;
-
-  emitToStudents("seatAvailabilityUpdated", {
+  const payload = {
     ...courseEventPayload(course),
     capacity: course.capacity,
     enrolledCount,
@@ -60,7 +59,14 @@ export const emitSeatAvailabilityUpdated = (
       0,
       course.capacity - enrolledCount - reservedCount,
     ),
-  });
+  };
+
+  emitToStudents("seatAvailabilityUpdated", payload);
+  emitToInstitute(
+    idString(course.instituteId),
+    "seatAvailabilityUpdated",
+    payload,
+  );
 };
 
 const registrationEventPayload = (

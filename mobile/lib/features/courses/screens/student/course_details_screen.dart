@@ -9,6 +9,8 @@ import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
+import 'package:project_1/core/realtime/realtime_service.dart';
+import 'package:project_1/core/state/app_data_change_bus.dart';
 import 'package:project_1/core/utils/app_date_time_formatter.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/course_service.dart';
@@ -32,6 +34,9 @@ class CourseDetailsScreen extends StatefulWidget {
 
 class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
   late CourseModel _course;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<AppDataChange>? _dataChangeSubscription;
+  Timer? _refreshTimer;
   bool _isCheckingAvailability = false;
   bool _hasFreshCourse = false;
 
@@ -39,6 +44,12 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
   void initState() {
     super.initState();
     _course = widget.course;
+    _realtimeSubscription = context.read<RealtimeService>().events.listen(
+      _onRealtimeEvent,
+    );
+    _dataChangeSubscription = context.read<AppDataChangeBus>().changes.listen(
+      _onDataChange,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_refreshPublicCourseDetails());
@@ -48,6 +59,43 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
         ),
       );
     });
+  }
+
+  void _onRealtimeEvent(RealtimeEvent event) {
+    if (event.role != 'student' ||
+        event.name != 'seatAvailabilityUpdated') {
+      return;
+    }
+    final courseId = event.data['courseId'];
+    if (courseId != null && courseId.toString() != _course.id) return;
+
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(_refreshPublicCourseDetails()),
+    );
+  }
+
+  void _onDataChange(AppDataChange change) {
+    if (change.audience != AppDataAudience.student ||
+        (change.domain != AppDataDomain.courses &&
+            change.domain != AppDataDomain.reservations)) {
+      return;
+    }
+
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(
+      const Duration(milliseconds: 150),
+      () => unawaited(_refreshPublicCourseDetails()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
+    unawaited(_dataChangeSubscription?.cancel());
+    super.dispose();
   }
 
   Future<void> _refreshPublicCourseDetails() async {
@@ -62,7 +110,10 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
           cached.updatedAt != null &&
           (_course.updatedAt == null ||
               cached.updatedAt!.isAfter(_course.updatedAt!))) {
-        setState(() => _course = cached);
+        setState(() {
+          _course = cached;
+          _hasFreshCourse = true;
+        });
       }
 
       final result = await service.loadPublicCourseDetails(
@@ -72,7 +123,10 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       if (mounted &&
           result.changed &&
           !_samePublicCourse(_course, result.data)) {
-        setState(() => _course = result.data);
+        setState(() {
+          _course = result.data;
+          _hasFreshCourse = true;
+        });
       }
     } catch (error) {
       debugPrint('Unable to refresh public course details: $error');

@@ -125,6 +125,7 @@ class InstituteReservationController extends ChangeNotifier {
       'paymentSubmitted',
       'balancePaymentSubmitted',
       'inPersonBalancePaymentRecorded',
+      'seatAvailabilityUpdated',
       'seatHoldExpired',
     }.contains(event.name);
     if ((!isInstituteReconnect && !isRegistrationChange) ||

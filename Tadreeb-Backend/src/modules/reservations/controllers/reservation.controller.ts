@@ -12,6 +12,7 @@ class ReservationController {
       message.includes("not found") ? 404 :
       message.includes("not available") || message.includes("full") ? 409 :
       message.includes("already have") ? 409 :
+      message.includes("already registered") ? 409 :
       message.includes("status changed") || message.includes("exceeds") ? 409 :
       message.includes("required") ? 400 :
       400;

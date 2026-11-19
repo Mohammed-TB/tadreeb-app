@@ -350,6 +350,26 @@ private async reserveSeat(
           throw new Error("Course not found or unavailable");
         }
 
+        const existingReservation = await Reservation.findOne({
+          instituteId: owner.instituteId,
+          courseId: course._id,
+          studentName,
+          studentPhone: normalizedStudentPhone,
+          status: {
+            $in: [
+              ReservationStatus.PENDING_PAYMENT,
+              ReservationStatus.PAYMENT_SUBMITTED,
+              ReservationStatus.CONFIRMED,
+            ],
+          },
+        }).session(session);
+
+        if (existingReservation) {
+          throw new Error(
+            "Student already registered for this course with this phone and name",
+          );
+        }
+
         // تأكيد المقعد مباشرة للتسجيل الحضوري.
         const reservedCourse: any = await Course.findOneAndUpdate(
           {

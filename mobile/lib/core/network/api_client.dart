@@ -347,6 +347,10 @@ class ApiClient {
         return 'لديك تسجيل مسبق في هذه الدورة';
       }
 
+      if (message.contains('already registered')) {
+        return 'هذا الطالب مسجل مسبقًا في هذه الدورة بهذا الرقم والاسم';
+      }
+
       if (message.contains('unavailable') ||
           message.contains('full') ||
           message.contains('available seats')) {

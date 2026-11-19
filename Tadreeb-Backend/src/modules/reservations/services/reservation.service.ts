@@ -35,6 +35,15 @@ import {
 } from "../types/reservation.types";
 
 class ReservationService {
+  private activeReservationStatuses(): ReservationStatus[] {
+    return [
+      ReservationStatus.PENDING_PAYMENT,
+      ReservationStatus.PAYMENT_SUBMITTED,
+      ReservationStatus.CONFIRMED,
+      ReservationStatus.REJECTED,
+    ];
+  }
+
   // تحديد المبلغ المطلوب حسب طريقة الدفع.
   private getAmountToPay(
     paymentOption: PaymentOption,
@@ -194,6 +203,20 @@ private async reserveSeat(
           throw new Error("Active student account required");
         }
 
+        // فحص الحظر قبل حجز المقعد لتجنب أي عدّادات مؤقتة عند التكرار.
+        const existing = await Reservation.findOne({
+          courseId: new mongoose.Types.ObjectId(courseId),
+          status: { $in: this.activeReservationStatuses() },
+          $or: [
+            { studentId: student._id },
+            { studentPhone: normalizedStudentPhone },
+          ],
+        }).session(session);
+
+        if (existing) {
+          throw new Error("You already have a reservation for this course");
+        }
+
         // التحقق من وجود مقعد وحجزه مؤقتًا.
         const course: any = await this.reserveSeat(
           new mongoose.Types.ObjectId(courseId),
@@ -208,23 +231,6 @@ private async reserveSeat(
 
         if (!institute) {
           throw new Error("Institute is not active");
-        }
-
-        // منع تكرار الحجز النشط للطالب في الدورة نفسها.
-        const existing = await Reservation.findOne({
-          studentId: student._id,
-          courseId: course._id,
-          status: {
-            $in: [
-              ReservationStatus.PENDING_PAYMENT,
-              ReservationStatus.PAYMENT_SUBMITTED,
-              ReservationStatus.CONFIRMED,
-            ],
-          },
-        }).session(session);
-
-        if (existing) {
-          throw new Error("You already have a reservation for this course");
         }
 
         const amountToPay = this.getAmountToPay(
@@ -350,18 +356,19 @@ private async reserveSeat(
           throw new Error("Course not found or unavailable");
         }
 
+        const linkedStudent = await User.findOne({
+          role: UserRole.STUDENT,
+          phone: normalizedStudentPhone,
+        }).session(session);
+
         const existingReservation = await Reservation.findOne({
           instituteId: owner.instituteId,
           courseId: course._id,
-          studentName,
-          studentPhone: normalizedStudentPhone,
-          status: {
-            $in: [
-              ReservationStatus.PENDING_PAYMENT,
-              ReservationStatus.PAYMENT_SUBMITTED,
-              ReservationStatus.CONFIRMED,
-            ],
-          },
+          status: { $in: this.activeReservationStatuses() },
+          $or: [
+            { studentPhone: normalizedStudentPhone },
+            ...(linkedStudent ? [{ studentId: linkedStudent._id }] : []),
+          ],
         }).session(session);
 
         if (existingReservation) {
@@ -423,6 +430,7 @@ private async reserveSeat(
             {
               courseId: course._id,
               instituteId: owner.instituteId,
+              ...(linkedStudent ? { studentId: linkedStudent._id } : {}),
               studentName,
               studentPhone: normalizedStudentPhone,
               bookingType: BookingType.IN_PERSON,

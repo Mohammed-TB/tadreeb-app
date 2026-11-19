@@ -181,6 +181,22 @@ reservationSchema.index({ studentId: 1, createdAt: -1 });
 reservationSchema.index({ instituteId: 1, status: 1 });
 reservationSchema.index({ instituteId: 1, studentPhone: 1, createdAt: -1 });
 reservationSchema.index({ courseId: 1, status: 1 });
+reservationSchema.index(
+  { courseId: 1, studentPhone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: {
+        $in: [
+          ReservationStatus.PENDING_PAYMENT,
+          ReservationStatus.PAYMENT_SUBMITTED,
+          ReservationStatus.CONFIRMED,
+          ReservationStatus.REJECTED,
+        ],
+      },
+    },
+  },
+);
 
 const Reservation = mongoose.model<IReservation>(
   "Reservation",

@@ -8,11 +8,23 @@ class ReservationController {
     const message =
       error instanceof Error ? error.message : "Server error";
 
+    if (
+      message.includes("duplicate key") ||
+      message.includes("E11000") ||
+      message.includes("e11000")
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "هذا الطالب مسجل بالفعل في هذه الدورة",
+      });
+    }
+
     const status =
       message.includes("not found") ? 404 :
       message.includes("not available") || message.includes("full") ? 409 :
       message.includes("already have") ? 409 :
       message.includes("already registered") ? 409 :
+      message.includes("duplicate key") || message.includes("e11000") ? 409 :
       message.includes("status changed") || message.includes("exceeds") ? 409 :
       message.includes("required") ? 400 :
       400;

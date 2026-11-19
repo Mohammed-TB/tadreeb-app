@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -29,6 +31,12 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
   late String _courseId;
   String _paymentOption = 'full';
   bool _isSubmitting = false;
+  bool _isLookingUpStudent = false;
+  bool _lookupFailed = false;
+  String? _lookupMessage;
+  String? _autoFilledName;
+  Timer? _studentLookupDebounce;
+  int _studentLookupRequest = 0;
 
   CourseModel get _selectedCourse =>
       widget.courses.firstWhere((course) => course.id == _courseId);
@@ -45,9 +53,81 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
 
   @override
   void dispose() {
+    _studentLookupDebounce?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  void _onStudentPhoneChanged(String? phone) {
+    _studentLookupDebounce?.cancel();
+    final requestId = ++_studentLookupRequest;
+
+    if (_autoFilledName != null && _nameController.text == _autoFilledName) {
+      _nameController.clear();
+    }
+    _autoFilledName = null;
+
+    if (phone == null) {
+      setState(() {
+        _isLookingUpStudent = false;
+        _lookupMessage = null;
+        _lookupFailed = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLookingUpStudent = true;
+      _lookupMessage = 'جارٍ البحث عن تسجيل سابق...';
+      _lookupFailed = false;
+    });
+
+    _studentLookupDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _lookupStudent(phone, requestId),
+    );
+  }
+
+  Future<void> _lookupStudent(String phone, int requestId) async {
+    try {
+      final studentName = await widget.controller.findStudentNameByPhone(phone);
+      if (!mounted || requestId != _studentLookupRequest) return;
+
+      if (studentName == null) {
+        setState(() {
+          _isLookingUpStudent = false;
+          _lookupMessage = 'لا يوجد تسجيل سابق بهذا الرقم لدى هذا المعهد';
+          _lookupFailed = false;
+        });
+        return;
+      }
+
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = studentName;
+        _autoFilledName = studentName;
+      }
+      setState(() {
+        _isLookingUpStudent = false;
+        _lookupMessage = _autoFilledName == studentName
+            ? 'تم العثور على الطالب وتعبئة اسمه'
+            : 'تم العثور على الطالب، احتفظنا بالاسم الذي أدخلته';
+        _lookupFailed = false;
+      });
+    } on Exception {
+      if (!mounted || requestId != _studentLookupRequest) return;
+      setState(() {
+        _isLookingUpStudent = false;
+        _lookupMessage = 'تعذر البحث عن الطالب. تحقق من الاتصال وحاول مجددًا';
+        _lookupFailed = true;
+      });
+    }
+  }
+
+  void _onStudentNameChanged(String value) {
+    if (_autoFilledName != null && value != _autoFilledName) {
+      _autoFilledName = null;
+    }
   }
 
   String? _validateStudentName(String? value) {
@@ -158,13 +238,55 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                       ),
                       textInputAction: TextInputAction.next,
                       validator: _validateStudentName,
+                      onChanged: _onStudentNameChanged,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     AppPhoneField(
                       controller: _phoneController,
                       labelText: 'رقم الهاتف',
                       textInputAction: TextInputAction.next,
+                      onChanged: _onStudentPhoneChanged,
                     ),
+                    if (_lookupMessage != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          if (_isLookingUpStudent)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
+                            Icon(
+                              _lookupFailed
+                                  ? Icons.error_outline
+                                  : _autoFilledName != null
+                                  ? Icons.check_circle_outline
+                                  : Icons.info_outline,
+                              size: 16,
+                              color: _lookupFailed
+                                  ? AppColors.error
+                                  : _autoFilledName != null
+                                  ? AppColors.success
+                                  : AppColors.textSecondary,
+                            ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              _lookupMessage!,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: _lookupFailed
+                                    ? AppColors.error
+                                    : _autoFilledName != null
+                                    ? AppColors.success
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
                       initialValue: _paymentOption,

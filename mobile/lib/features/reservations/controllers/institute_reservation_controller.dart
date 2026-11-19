@@ -112,6 +112,9 @@ class InstituteReservationController extends ChangeNotifier {
     }
   }
 
+  Future<String?> findStudentNameByPhone(String phone) =>
+      _reservationService.findStudentNameByPhone(phone);
+
   void _onRealtimeEvent(RealtimeEvent event) {
     final isInstituteReconnect =
         event.name == 'syncRequired' && event.role == 'instituteOwner';

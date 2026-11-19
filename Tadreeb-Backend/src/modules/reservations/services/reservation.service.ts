@@ -649,6 +649,32 @@ private async reserveSeat(
     });
   }
 
+  async findStudentNameByPhone(ownerId: string, phone: string) {
+    if (!isValidE164Phone(phone)) {
+      throw new Error("Student phone must be in E.164 format");
+    }
+
+    const owner = await User.findById(ownerId);
+    if (
+      !owner ||
+      owner.role !== UserRole.INSTITUTE_OWNER ||
+      owner.status !== UserStatus.ACTIVE ||
+      !owner.instituteId
+    ) {
+      throw new Error("Active institute owner required");
+    }
+
+    const reservation = await Reservation.findOne({
+      instituteId: owner.instituteId,
+      studentPhone: phone,
+    })
+      .select("studentName")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return reservation?.studentName ?? null;
+  }
+
   // رفع سند التحويل بواسطة الطالب صاحب الحجز.
 
   // رفع سند التحويل مع إعادة التحقق من صلاحية الحجز عند الحفظ.

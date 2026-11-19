@@ -179,6 +179,7 @@ balancePaymentRejectionReason: {
 // فهارس تسهّل عرض حجوزات الطالب والمعهد.
 reservationSchema.index({ studentId: 1, createdAt: -1 });
 reservationSchema.index({ instituteId: 1, status: 1 });
+reservationSchema.index({ instituteId: 1, studentPhone: 1, createdAt: -1 });
 reservationSchema.index({ courseId: 1, status: 1 });
 
 const Reservation = mongoose.model<IReservation>(

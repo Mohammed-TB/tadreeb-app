@@ -198,6 +198,24 @@ class ReservationController {
     }
   }
 
+  async lookupStudentByPhone(req: Request, res: Response) {
+    try {
+      const phone =
+        typeof req.query.phone === "string" ? req.query.phone.trim() : "";
+      const studentName = await reservationService.findStudentNameByPhone(
+        req.user!.userId,
+        phone,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: { studentName },
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
   
 
   // POST: رفع سند التحويل الإلكتروني.

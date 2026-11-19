@@ -21,6 +21,25 @@ class ReservationService {
         .toList();
   }
 
+  Future<String?> findStudentNameByPhone(String phone) async {
+    final response = await _apiClient.get(
+      '/api/institutes/me/reservations/student-lookup',
+      queryParameters: {'phone': phone},
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('بيانات البحث عن الطالب غير صالحة');
+    }
+
+    final studentName = data['studentName'];
+    if (studentName == null) return null;
+    if (studentName is! String || studentName.trim().isEmpty) {
+      throw const FormatException('اسم الطالب المسترجع غير صالح');
+    }
+    return studentName.trim();
+  }
+
   /// الموافقة على سند الحجز: PATCH /api/institutes/me/reservations/:id/approve
   Future<ReservationModel> approveReservation(String reservationId) async {
     final response = await _apiClient.patch(

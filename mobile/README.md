@@ -9,6 +9,8 @@ flutter pub get
 flutter run
 ```
 
+
+
 Authentication uses the Tadreeb backend. Course, institute, and booking data
 remain demo data in memory; booking and payment actions are not submitted to
 the server.

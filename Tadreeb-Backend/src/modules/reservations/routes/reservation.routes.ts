@@ -72,6 +72,13 @@ instituteReservationRouter.post(
   (req, res) => reservationController.createInPerson(req, res),
 );
 
+instituteReservationRouter.post(
+  "/:reservationId/receipt/resubmit",
+  upload.single("receipt"),
+  validateReceiptImage,
+  (req, res) => reservationController.resubmitInPersonReceipt(req, res),
+);
+
 // عرض حجوزات المعهد.
 instituteReservationRouter.get("/", (req, res) =>
   reservationController.getInstituteReservations(req, res),

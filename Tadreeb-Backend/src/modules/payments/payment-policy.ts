@@ -1,5 +1,22 @@
 import { BalancePaymentPolicy } from "../institutes/types/institute.types";
 
+export interface AppliedPaymentBalance {
+  amountPaid: number;
+  isPaid: boolean;
+}
+
+export function applyApprovedPayment(
+  totalAmount: number,
+  currentAmountPaid: number,
+  paymentAmount: number,
+): AppliedPaymentBalance {
+  const amountPaid = Math.min(totalAmount, currentAmountPaid + paymentAmount);
+  return {
+    amountPaid,
+    isPaid: amountPaid >= totalAmount,
+  };
+}
+
 export function validateInitialPaymentAmount(
   amount: number,
   totalAmount: number,

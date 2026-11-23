@@ -314,6 +314,27 @@ class _InstituteReservationDetailsScreenState
                     ],
                   ),
                 ],
+                if (reservation.bookingType == 'inPerson' &&
+                    reservation.status.toLowerCase() == 'rejected' &&
+                    reservation.receiptResubmissionDeadline?.isAfter(
+                          DateTime.now(),
+                        ) ==
+                        true) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: controller.isProcessing(reservation.id)
+                          ? null
+                          : () => _resubmitInPersonReceipt(
+                              controller,
+                              reservation,
+                            ),
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: const Text('إعادة رفع سند التحويل'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.sm),
                 _buildReceiptSection(reservation),
                 if (reservation.hasBalanceReceipt) ...[
@@ -324,18 +345,16 @@ class _InstituteReservationDetailsScreenState
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
-                      if (reservation.bookingType != 'inPerson')
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: controller.isProcessing(reservation.id)
-                                ? null
-                                : widget.onReject,
-                            icon: const Icon(Icons.close_rounded),
-                            label: const Text('رفض الحجز'),
-                          ),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: controller.isProcessing(reservation.id)
+                              ? null
+                              : widget.onReject,
+                          icon: const Icon(Icons.close_rounded),
+                          label: const Text('رفض الحجز'),
                         ),
-                      if (reservation.bookingType != 'inPerson')
-                        const SizedBox(width: AppSpacing.sm),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: controller.isProcessing(reservation.id)
@@ -791,7 +810,9 @@ class _InstituteReservationDetailsScreenState
       SnackBar(
         content: Text(
           success
-              ? 'تم تسجيل الدفعة بنجاح'
+              ? method == 'cash'
+                    ? 'تم تسجيل الدفعة النقدية واعتمادها'
+                    : 'تم إرسال سند التحويل وبانتظار مراجعة المعهد'
               : 'تعذر تسجيل الدفعة: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
         ),
       ),
@@ -819,6 +840,71 @@ class _InstituteReservationDetailsScreenState
       return 'المبلغ أقل من الحد الأدنى للقسط';
     }
     return null;
+  }
+
+  Future<void> _resubmitInPersonReceipt(
+    InstituteReservationController controller,
+    ReservationModel reservation,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (image == null || !mounted) return;
+
+      final extension = image.name.split('.').last.toLowerCase();
+      const contentTypes = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+      };
+      final contentType = contentTypes[extension];
+      if (contentType == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('اختر صورة بصيغة JPG أو PNG أو WEBP')),
+        );
+        return;
+      }
+
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
+      if (bytes.length > 5 * 1024 * 1024) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('حجم الصورة يجب ألا يتجاوز 5 ميجابايت')),
+        );
+        return;
+      }
+
+      final success = await controller.resubmitInPersonReceipt(
+        reservationId: reservation.id,
+        fileBytes: bytes,
+        fileName: image.name,
+        contentType: contentType,
+      );
+      if (!mounted) return;
+      if (success) {
+        setState(() => _receiptUrl = null);
+        await _loadReceipt();
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'تم إرسال السند الجديد وبانتظار مراجعته'
+                : 'تعذر إعادة إرسال السند: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+          ),
+        ),
+      );
+    } on Exception catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('تعذر اختيار السند: $error')),
+      );
+    }
   }
 
   String _paymentRecordStatus(String status) => switch (status) {

@@ -154,6 +154,28 @@ class ReservationService {
     return ReservationModel.fromJson(data);
   }
 
+  Future<ReservationModel> resubmitInPersonReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final response = await _apiClient.postMultipart(
+      '/api/institutes/me/reservations/$reservationId/receipt/resubmit',
+      authenticated: true,
+      fields: {},
+      fileBytes: fileBytes,
+      fileField: 'receipt',
+      fileName: fileName,
+      contentType: contentType,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر إعادة إرسال سند التحويل');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
   Future<String?> getPaymentReceiptUrl(String paymentId) async {
     final response = await _apiClient.get(
       '/api/institutes/me/reservations/payments/$paymentId/receipt',

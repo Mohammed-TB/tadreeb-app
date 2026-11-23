@@ -257,7 +257,7 @@ class InstituteReservationController extends ChangeNotifier {
     }
   }
 
-  Future<bool> _reviewBalancePayment(
+  Future<bool> _reviewReservationChange(
     String reservationId,
     Future<ReservationModel> Function() review,
   ) async {
@@ -289,7 +289,7 @@ class InstituteReservationController extends ChangeNotifier {
   }
 
   Future<bool> approveBalancePayment(String reservationId) =>
-      _reviewBalancePayment(
+      _reviewReservationChange(
         reservationId,
         () => _reservationService.approveBalancePayment(reservationId),
       );
@@ -297,7 +297,7 @@ class InstituteReservationController extends ChangeNotifier {
   Future<bool> rejectBalancePayment(
     String reservationId, {
     required String reason,
-  }) => _reviewBalancePayment(
+  }) => _reviewReservationChange(
     reservationId,
     () =>
         _reservationService.rejectBalancePayment(reservationId, reason: reason),
@@ -306,7 +306,7 @@ class InstituteReservationController extends ChangeNotifier {
   Future<bool> recordInPersonBalancePayment(
     String reservationId, {
     required double amount,
-  }) => _reviewBalancePayment(
+  }) => _reviewReservationChange(
     reservationId,
     () => _reservationService.recordInPersonBalancePayment(
       reservationId,
@@ -320,11 +320,26 @@ class InstituteReservationController extends ChangeNotifier {
     required List<int> fileBytes,
     required String fileName,
     required String contentType,
-  }) => _reviewBalancePayment(
+  }) => _reviewReservationChange(
     reservationId,
     () => _reservationService.recordInPersonTransferPayment(
       reservationId: reservationId,
       amount: amount,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      contentType: contentType,
+    ),
+  );
+
+  Future<bool> resubmitInPersonReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) => _reviewReservationChange(
+    reservationId,
+    () => _reservationService.resubmitInPersonReceipt(
+      reservationId: reservationId,
       fileBytes: fileBytes,
       fileName: fileName,
       contentType: contentType,

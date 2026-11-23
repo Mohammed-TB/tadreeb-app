@@ -236,7 +236,7 @@ class _InstituteReservationsScreenState
       );
 
       if (created == true && mounted) {
-        _showMessage('تم تسجيل الطالب حضورياً بنجاح');
+        _showMessage('تم حفظ التسجيل الحضوري بنجاح');
       }
     } catch (error) {
       if (mounted) _showMessage('تعذر فتح نموذج التسجيل: $error');

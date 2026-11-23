@@ -77,7 +77,7 @@ class ReservationModel {
   /// هل الحجز مؤهل للقبول أو الرفض من قبل المعهد؟
   /// في الـ Backend:
   /// الـ approve يتطلب: status == 'paymentSubmitted'
-  /// الـ reject يتطلب: status == 'paymentSubmitted' و bookingType == 'online'
+  /// والرفض متاح للحجوزات الإلكترونية والحضورية المعلقة.
   bool get canApproveOrReject {
     final s = status.toLowerCase();
     return s == 'paymentsubmitted' || s == 'payment_submitted';

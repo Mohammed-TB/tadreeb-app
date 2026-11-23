@@ -133,6 +133,37 @@ class ReservationController {
     }
   }
 
+  async resubmitInPersonReceipt(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a receipt image",
+        });
+      }
+
+      const reservation = await reservationService.resubmitInPersonReceipt(
+        req.user!.userId,
+        reservationId,
+        req.file.buffer,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Transfer receipt resubmitted and awaiting review",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
   
   // PATCH: الموافقة على سند التحويل.
   async approveReservation(req: Request, res: Response) {
@@ -451,7 +482,7 @@ class ReservationController {
           );
         return res.status(200).json({
           success: true,
-          message: "Transfer receipt recorded and payment approved",
+          message: "Transfer receipt submitted and awaiting institute review",
           data: reservation,
         });
       } catch (error) {

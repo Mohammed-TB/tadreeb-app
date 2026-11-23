@@ -55,7 +55,7 @@ const courseSchema = new Schema<ICourse>(
     capacity: {
       type: Number,
       required: true,
-      min: 1,
+      min: 1
     },
 
     // عدد المقاعد المؤكدة، لا يستقبله العميل.
@@ -106,8 +106,8 @@ const courseSchema = new Schema<ICourse>(
     // حالة نشر الدورة.
     status: {
       type: String,
-      enum: Object.values(CourseStatus),
-      default: CourseStatus.DRAFT,
+      enum: Object.values(CourseStatus), // لازم القيمة تكون من CourseStatus
+      default: CourseStatus.DRAFT, // مسودة
     },
 
     // المعهد المالك للدورة.
@@ -123,7 +123,7 @@ const courseSchema = new Schema<ICourse>(
   },
 );
 
-// منع تجاوز عدد المقاعد للسعة.
+
 courseSchema.index({ instituteId: 1, status: 1 });
 
 const Course = mongoose.model<ICourse>("Course", courseSchema);

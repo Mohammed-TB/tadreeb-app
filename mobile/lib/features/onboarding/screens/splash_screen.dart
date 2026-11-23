@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -18,6 +19,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const _splashDuration = Duration(seconds: 5);
+  static const _onboardingSeenKey = 'tadreeb_onboarding_seen';
 
   late final AnimationController _progressController;
   late final Animation<double> _progress;
@@ -46,11 +48,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    final destination = switch (authController.currentUser?.role) {
+    var onboardingSeen = false;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      onboardingSeen = preferences.getBool(_onboardingSeenKey) ?? false;
+    } catch (_) {
+      onboardingSeen = false;
+    }
+    if (!mounted) return;
+
+    final user = authController.currentUser;
+
+    final destination = switch (user?.role) {
       UserRole.student => '/home_screen',
       UserRole.instituteOwner => '/institute_dashboard',
       UserRole.admin => '/admin_dashboard',
-      null => '/login',
+      null => onboardingSeen ? '/login' : '/onboarding',
     };
     context.go(destination);
   }

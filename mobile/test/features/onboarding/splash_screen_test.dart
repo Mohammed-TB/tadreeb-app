@@ -6,6 +6,7 @@ import 'package:project_1/features/auth/models/user_model.dart';
 import 'package:project_1/features/auth/services/auth_service.dart';
 import 'package:project_1/features/onboarding/screens/splash_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _TestAuthController extends AuthController {
   _TestAuthController() : super(AuthService());
@@ -28,6 +29,9 @@ void main() {
   testWidgets('animates progress from 1 to 100 over five seconds', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({
+      'tadreeb_onboarding_seen': true,
+    });
     final authController = _TestAuthController();
     final router = GoRouter(
       initialLocation: '/splash',

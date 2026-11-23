@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -16,6 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const _onboardingSeenKey = 'tadreeb_onboarding_seen';
   late final PageController _controller;
 
   int currentIndex = 0;
@@ -26,7 +28,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _controller = PageController();
   }
 
-  void _goToLogin() {
+  Future<void> _goToLogin() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_onboardingSeenKey, true);
+    } catch (_) {
+      // Proceed to login even if local preference storage is temporarily unavailable.
+    }
+    if (!mounted) return;
     context.go('/login');
   }
 

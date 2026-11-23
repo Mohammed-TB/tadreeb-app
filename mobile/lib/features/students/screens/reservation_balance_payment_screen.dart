@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/button.dart';
 import '../../courses/controllers/reservation_controller.dart';
 import '../models/student_reservation_model.dart';
@@ -214,11 +215,11 @@ class _ReservationBalancePaymentScreenState
                   ),
                   decoration: InputDecoration(
                     labelText: 'مبلغ هذه الدفعة',
-                    suffixText: 'ريال',
+                    suffixText: AppCurrency.current.symbol,
                     helperText:
                         widget.reservation.balancePaymentPolicy ==
                             'installments'
-                        ? 'الحد الأدنى ${widget.reservation.minimumInstallmentAmount} ريال، ويسمح بأقل من ذلك لإكمال المتبقي.'
+                        ? 'الحد الأدنى ${CurrencyFormatter.format(widget.reservation.minimumInstallmentAmount)}، ويسمح بأقل من ذلك لإكمال المتبقي.'
                         : 'يجب دفع كامل المبلغ المتبقي.',
                   ),
                 ),
@@ -292,7 +293,10 @@ class _AmountRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: style),
-          Text('${amount.toStringAsFixed(2)} ريال', style: style),
+          Text(
+            CurrencyFormatter.format(amount, decimalDigits: 2),
+            style: style,
+          ),
         ],
       ),
     );

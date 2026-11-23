@@ -106,6 +106,7 @@ class CourseFormTextField extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.validator,
+    this.suffixText,
   });
 
   final TextEditingController controller;
@@ -116,6 +117,7 @@ class CourseFormTextField extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
   final String? Function(String?)? validator;
+  final String? suffixText;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +131,7 @@ class CourseFormTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        suffixText: suffixText,
         prefixIcon: Icon(icon, color: AppColors.textHint, size: 20),
         filled: true,
         fillColor: AppColors.surface,

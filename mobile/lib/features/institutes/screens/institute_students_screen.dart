@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/search.dart';
 import '../../reservations/controllers/institute_reservation_controller.dart';
 import '../../reservations/models/reservation_model.dart';
@@ -354,8 +355,8 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   '${reservation.bookingType == 'inPerson' ? 'حضوري' : 'إلكتروني'}'
-                  ' · المدفوع ${_formatAmount(reservation.amountPaid)}'
-                  ' من ${_formatAmount(reservation.totalAmount)} ر.س',
+                  ' · المدفوع ${CurrencyFormatter.format(reservation.amountPaid)}'
+                  ' من ${CurrencyFormatter.format(reservation.totalAmount)}',
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -469,8 +470,4 @@ class _InstituteStudentsScreenState extends State<InstituteStudentsScreen> {
   static bool _isStatus(String value, String expected) =>
       value.replaceAll('_', '').toLowerCase() ==
       expected.replaceAll('_', '').toLowerCase();
-
-  static String _formatAmount(double value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toString();
 }

@@ -14,6 +14,7 @@ import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/network/api_exception.dart';
 import 'package:project_1/core/state/app_data_change_bus.dart';
 import 'package:project_1/core/widgets/app_phone_field.dart';
+import 'package:project_1/core/utils/currency_formatter.dart';
 import 'package:project_1/features/auth/controllers/auth_controller.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/reservation_service.dart';
@@ -471,8 +472,8 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           decoration: InputDecoration(
             labelText: 'المبلغ المراد دفعه',
             helperText:
-                'الحد الأدنى ${course.depositAmount} ريال، والحد الأعلى ${course.price} ريال',
-            suffixText: 'ريال',
+                'الحد الأدنى ${CurrencyFormatter.format(course.depositAmount)}، والحد الأعلى ${CurrencyFormatter.format(course.price)}',
+            suffixText: AppCurrency.current.symbol,
           ),
           validator: (_) => _validatePaymentAmount(),
           onChanged: _onPaymentAmountChanged,
@@ -620,7 +621,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             children: [
               Text('المبلغ المطلوب', style: AppTypography.labelMedium),
               Text(
-                '${_selectedAmount.toStringAsFixed(2)} ريال',
+                CurrencyFormatter.format(_selectedAmount, decimalDigits: 2),
                 style: AppTypography.labelLarge.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,

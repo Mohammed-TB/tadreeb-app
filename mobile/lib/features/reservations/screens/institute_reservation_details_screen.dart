@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/app_date_time_formatter.dart';
 import '../../../../core/widgets/app_drawer.dart';
 import '../controllers/institute_reservation_controller.dart';
@@ -629,7 +630,7 @@ class _InstituteReservationDetailsScreenState
                     ),
                     decoration: InputDecoration(
                       labelText: 'مبلغ الدفعة',
-                      suffixText: 'ريال',
+                      suffixText: AppCurrency.current.symbol,
                       helperText:
                           'المتبقي ${_formatAmount(reservation.remainingAmount)}'
                           '${reservation.balancePaymentPolicy == 'installments' ? '، الحد الأدنى ${_formatAmount(reservation.minimumInstallmentAmount)}' : ''}',
@@ -918,7 +919,8 @@ class _InstituteReservationDetailsScreenState
     };
   }
 
-  String _formatAmount(double value) => '${value.toStringAsFixed(2)} ر.س';
+  String _formatAmount(double value) =>
+      CurrencyFormatter.format(value, decimalDigits: 2);
 }
 
 class _SectionCard extends StatelessWidget {

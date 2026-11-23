@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../models/institute_dashboard_model.dart';
 
 class InstituteDashboardAnalytics extends StatelessWidget {
@@ -47,10 +48,9 @@ class InstituteDashboardAnalytics extends StatelessWidget {
         tint: AppColors.primaryLight,
       ),
       _DashboardMetric(
-        title: 'التسجيلات هذا الشهر',
-        value: numberFormat.format(summary.reservationsThisMonth),
-        subtitle:
-            'إجمالي التسجيلات: ${numberFormat.format(summary.totalReservations)}',
+        title: 'التسجيلات المؤكدة هذا الشهر',
+        value: numberFormat.format(summary.confirmedThisMonth),
+        subtitle: 'عدد الحجوزات المعتمدة ',
         icon: Icons.people_outline_rounded,
         color: AppColors.success,
         tint: AppColors.successLight,
@@ -65,8 +65,8 @@ class InstituteDashboardAnalytics extends StatelessWidget {
       ),
       _DashboardMetric(
         title: 'الإيرادات المحصلة',
-        value: numberFormat.format(summary.totalRevenue),
-        subtitle: 'ريال يمني',
+        value: CurrencyFormatter.format(summary.totalRevenue),
+        subtitle: AppCurrency.current.symbol,
         icon: Icons.account_balance_wallet_outlined,
         color: AppColors.primaryDark,
         tint: AppColors.primaryLight,
@@ -104,7 +104,7 @@ class InstituteDashboardAnalytics extends StatelessWidget {
           Text('إجمالي الإيرادات', style: AppTypography.bodyMedium),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            '${NumberFormat.decimalPattern('ar').format(data.summary.totalRevenue)} ر.ي',
+            CurrencyFormatter.format(data.summary.totalRevenue),
             style: AppTypography.headlineSmall,
           ),
           const SizedBox(height: AppSpacing.md),

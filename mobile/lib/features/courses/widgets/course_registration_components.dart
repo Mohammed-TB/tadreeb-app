@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
+import 'package:project_1/core/utils/currency_formatter.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 
 class CourseRegistrationCourseSummary extends StatelessWidget {
@@ -76,7 +77,7 @@ class CourseRegistrationCourseSummary extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              '${course.price.toStringAsFixed(0)} ر.س',
+              CurrencyFormatter.format(course.price, decimalDigits: 0),
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,
@@ -330,7 +331,7 @@ class CourseRegistrationPaymentOptionCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                '${amount.toStringAsFixed(0)} ريال',
+                CurrencyFormatter.format(amount, decimalDigits: 0),
                 style: AppTypography.labelMedium.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,

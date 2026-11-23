@@ -2,11 +2,11 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../models/admin_dashboard_stats.dart';
 
 class AdminRevenueChart extends StatelessWidget {
@@ -37,8 +37,6 @@ class AdminRevenueChart extends StatelessWidget {
       (maximum, item) => math.max(maximum, item.revenue),
     );
     final maxY = maxValue == 0 ? 1.0 : maxValue * 1.2;
-    final amountFormat = NumberFormat.decimalPattern('ar');
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: _cardDecoration(),
@@ -48,7 +46,7 @@ class AdminRevenueChart extends StatelessWidget {
           Text('إجمالي الإيرادات المحصلة', style: AppTypography.bodyMedium),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            '${amountFormat.format(revenue.total)} ر.ي',
+            CurrencyFormatter.format(revenue.total),
             style: AppTypography.headlineSmall,
           ),
           const SizedBox(height: AppSpacing.md),

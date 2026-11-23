@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_phone_field.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../courses/models/course_model.dart';
 import '../controllers/institute_reservation_controller.dart';
 
@@ -386,7 +387,7 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                       decoration: InputDecoration(
                         labelText: 'المبلغ المستلم/المحوّل',
                         helperText:
-                            'من ${_selectedCourse.depositAmount} إلى ${_selectedCourse.price} ريال',
+                            'من ${CurrencyFormatter.format(_selectedCourse.depositAmount)} إلى ${CurrencyFormatter.format(_selectedCourse.price)}',
                       ),
                       validator: _validateAmount,
                       onChanged: (_) {
@@ -440,14 +441,14 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                         DropdownMenuItem(
                           value: 'full',
                           child: Text(
-                            'كامل الرسوم · ${_selectedCourse.price.toStringAsFixed(0)} ريال',
+                            'كامل الرسوم · ${CurrencyFormatter.format(_selectedCourse.price, decimalDigits: 0)}',
                           ),
                         ),
                         if (_selectedCourse.depositAmount > 0)
                           DropdownMenuItem(
                             value: 'deposit',
                             child: Text(
-                              'عربون · ${_selectedCourse.depositAmount.toStringAsFixed(0)} ريال',
+                              'عربون · ${CurrencyFormatter.format(_selectedCourse.depositAmount, decimalDigits: 0)}',
                             ),
                           ),
                         const DropdownMenuItem(
@@ -498,7 +499,10 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                             ),
                           ),
                           Text(
-                            '${_selectedAmount.toStringAsFixed(0)} ريال',
+                            CurrencyFormatter.format(
+                              _selectedAmount,
+                              decimalDigits: 0,
+                            ),
                             style: AppTypography.labelLarge.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,

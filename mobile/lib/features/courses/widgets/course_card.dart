@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
+import 'package:project_1/core/utils/currency_formatter.dart';
 import 'package:project_1/core/widgets/button.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/institutes/models/institute_model.dart';
@@ -24,7 +25,7 @@ class CourseCard extends StatelessWidget {
     this.buttonText = 'عرض التفاصيل',
     this.isFavorite = false,
     this.onFavoriteTap,
-    this.isFavoriteBusy = false, 
+    this.isFavoriteBusy = false,
     required this.institutes,
   });
 
@@ -44,24 +45,23 @@ class CourseCard extends StatelessWidget {
   final VoidCallback? onFavoriteTap;
   final bool isFavoriteBusy;
 
-String _instituteName(List<InstituteModel> institutes) {
-  for (final institute in institutes) {
-    if (institute.id == course.instituteId) {
-      return institute.name;
+  String _instituteName(List<InstituteModel> institutes) {
+    for (final institute in institutes) {
+      if (institute.id == course.instituteId) {
+        return institute.name;
+      }
     }
-  }
 
-  return 'معهد غير معروف';
-}
+    return 'معهد غير معروف';
+  }
 
   @override
   Widget build(BuildContext context) {
-   
     final radius = BorderRadius.circular(12);
     final instituteLabel = _instituteName(institutes);
     return InkWell(
       onTap: showDetailsCourse,
-      borderRadius:radius,
+      borderRadius: radius,
       child: Container(
         width: width ?? (isHorizontal ? 320 : 200),
         margin: EdgeInsets.only(
@@ -120,8 +120,7 @@ String _instituteName(List<InstituteModel> institutes) {
             color: AppColors.primary,
           ),
         ),
-        errorWidget: (context, url, error) =>
-            errorWidget(context, error, null),
+        errorWidget: (context, url, error) => errorWidget(context, error, null),
       );
     }
 
@@ -299,7 +298,7 @@ String _instituteName(List<InstituteModel> institutes) {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${course.price} ريال',
+                CurrencyFormatter.format(course.price),
                 style: AppTypography.titleSmall.copyWith(
                   color: AppColors.accent,
                   fontWeight: FontWeight.w700,

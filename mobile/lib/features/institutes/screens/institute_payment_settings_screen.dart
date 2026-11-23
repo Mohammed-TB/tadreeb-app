@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../services/institute_payment_settings_service.dart';
 
 class InstitutePaymentSettingsScreen extends StatefulWidget {
@@ -117,9 +118,7 @@ class _InstitutePaymentSettingsScreenState
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: _policy,
-                  decoration: const InputDecoration(
-                    labelText: 'طريقة سداد المتبقي',
-                  ),
+                  decoration: InputDecoration(labelText: 'طريقة سداد المتبقي'),
                   items: const [
                     DropdownMenuItem(
                       value: 'fullRemainder',
@@ -144,9 +143,9 @@ class _InstitutePaymentSettingsScreenState
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'الحد الأدنى لكل قسط',
-                      suffixText: 'ريال',
+                      suffixText: AppCurrency.current.symbol,
                       helperText:
                           'يُسمح بدفع المتبقي النهائي إذا كان أقل من هذا الحد.',
                     ),

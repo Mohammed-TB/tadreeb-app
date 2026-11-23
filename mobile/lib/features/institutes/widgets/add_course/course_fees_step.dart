@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import 'course_form_components.dart';
 
 /// الخطوة الثالثة: الرسوم والدفع (سعر الدورة، مبلغ العربون، وملاحظات المراجعة)
@@ -48,6 +49,7 @@ class CourseFeesStep extends StatelessWidget {
                   decimal: true,
                 ),
                 validator: validateAmount,
+                suffixText: AppCurrency.current.symbol,
               ),
               const SizedBox(height: AppSpacing.md),
               CourseFormTextField(
@@ -59,6 +61,7 @@ class CourseFeesStep extends StatelessWidget {
                   decimal: true,
                 ),
                 validator: validateAmount,
+                suffixText: AppCurrency.current.symbol,
               ),
               const SizedBox(height: AppSpacing.sm),
               const CourseFormInfoBanner(

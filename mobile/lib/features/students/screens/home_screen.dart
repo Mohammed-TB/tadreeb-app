@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
 import 'package:project_1/core/widgets/button.dart';
+import 'package:project_1/core/widgets/app_skeletons.dart';
 import 'package:project_1/features/students/widgets/header_home.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
 import 'package:project_1/features/students/widgets/most_popular_courses.dart';
@@ -171,9 +173,7 @@ class _HomeScreenState extends State<HomeScreen>
     final isSearching = _searchController.text.trim().isNotEmpty;
 
     if (_isInitialLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return const _HomeInitialSkeleton();
     }
 
     return RefreshIndicator(
@@ -203,7 +203,11 @@ class _HomeScreenState extends State<HomeScreen>
 
             // 2. إذا كان المستخدم يبحث في شريط البحث بالأعلى
             if (isSearching)
-              _buildInstantSearchResults(courseController, favoriteController,instituteController)
+              _buildInstantSearchResults(
+                courseController,
+                favoriteController,
+                instituteController,
+              )
             else
               FadeTransition(
                 opacity: _fadeAnimation,
@@ -301,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildInstantSearchResults(
     CourseController courseController,
     FavoriteController favorites,
-    InstituteController instituteController
+    InstituteController instituteController,
   ) {
     final query = _searchController.text.trim();
     final results = courseController.filteredCourses;
@@ -389,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen>
                 final institutes = instituteController.institutes;
                 return CourseCard(
                   course: course,
-                  institutes:institutes ,
+                  institutes: institutes,
                   isHorizontal: true,
                   showDetailsCourse: () => _showDetailsCourse(course),
                   isFavorite: favorites.isCourseFavorite(course.id),
@@ -411,6 +415,84 @@ class _HomeScreenState extends State<HomeScreen>
               },
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeInitialSkeleton extends StatelessWidget {
+  const _HomeInitialSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonizer(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Bone.text(words: 4),
+                  SizedBox(height: AppSpacing.sm),
+                  Bone(
+                    height: 48,
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sectionGap),
+            const Bone.text(words: 3),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: const [
+                Expanded(child: _HomeCourseCardSkeleton()),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(child: _HomeCourseCardSkeleton()),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sectionGap),
+            const Bone.text(words: 3),
+            const SizedBox(height: AppSpacing.sm),
+            const AppSkeletonList(itemCount: 2, leadingSize: 96, textLines: 2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCourseCardSkeleton extends StatelessWidget {
+  const _HomeCourseCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: const Border.fromBorderSide(
+          BorderSide(color: AppColors.border),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Bone(height: 86, borderRadius: BorderRadius.all(Radius.circular(10))),
+          SizedBox(height: AppSpacing.xs),
+          Bone.text(words: 2),
+          SizedBox(height: AppSpacing.xxs),
+          Bone.text(words: 1),
         ],
       ),
     );

@@ -10,6 +10,7 @@ import '../../../../app/theme/app_typography.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/app_date_time_formatter.dart';
 import '../../../../core/widgets/app_drawer.dart';
+import '../../../../core/widgets/app_skeletons.dart';
 import '../controllers/institute_reservation_controller.dart';
 import '../models/reservation_model.dart';
 
@@ -478,10 +479,7 @@ class _InstituteReservationDetailsScreenState
         if (!reservation.hasReceipt)
           Text('لا يوجد سند مرفوع لهذا الحجز.', style: AppTypography.bodyMedium)
         else if (_isLoadingReceipt)
-          const Padding(
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Center(child: CircularProgressIndicator()),
-          )
+          const AppSkeletonImage(height: 220)
         else if (_receiptUrl != null && _receiptUrl!.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -545,10 +543,7 @@ class _InstituteReservationDetailsScreenState
             value: reservation.balancePaymentRejectionReason!,
           ),
         if (_isLoadingBalanceReceipt)
-          const Padding(
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Center(child: CircularProgressIndicator()),
-          )
+          const AppSkeletonImage(height: 220)
         else if (_balanceReceiptUrl != null && _balanceReceiptUrl!.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),

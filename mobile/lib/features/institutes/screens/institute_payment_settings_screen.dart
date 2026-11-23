@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../services/institute_payment_settings_service.dart';
 
 class InstitutePaymentSettingsScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _InstitutePaymentSettingsScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('إعدادات الحجز والدفع')),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppSkeletonForm(fieldCount: 2)
           : !_hasLoaded
           ? Center(
               child: Padding(

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/services/course_service.dart';
 import '../../courses/widgets/course_card.dart';
@@ -382,12 +383,7 @@ class _InstituteDetailsScreenState extends State<InstituteDetailsScreen> {
         children: [
           title,
           const SizedBox(height: AppSpacing.sm),
-          const SizedBox(
-            height: 210,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-          ),
+          const AppSkeletonList(itemCount: 2, leadingSize: 112, textLines: 2),
         ],
       );
     }
@@ -402,10 +398,8 @@ class _InstituteDetailsScreenState extends State<InstituteDetailsScreen> {
             icon: Icons.cloud_off_rounded,
             message: 'تعذر تحميل دورات المعهد.',
             action: TextButton.icon(
-              onPressed: () => _loadCourses(
-                forceRefresh: true,
-                showRefreshError: true,
-              ),
+              onPressed: () =>
+                  _loadCourses(forceRefresh: true, showRefreshError: true),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('إعادة المحاولة'),
             ),
@@ -447,7 +441,7 @@ class _InstituteDetailsScreenState extends State<InstituteDetailsScreen> {
               final course = courses[index];
               return CourseCard(
                 course: course,
-                institutes:institutes,
+                institutes: institutes,
                 width: 230,
                 height: 112,
                 showDetailsCourse: () =>

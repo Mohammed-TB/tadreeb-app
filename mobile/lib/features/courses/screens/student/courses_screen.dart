@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/core/widgets/search.dart';
+import 'package:project_1/core/widgets/app_skeletons.dart';
 import 'package:project_1/features/courses/controllers/course_controller.dart';
 import 'package:project_1/features/favorites/controllers/favorite_controller.dart';
 import 'package:project_1/features/students/widgets/list_category.dart';
@@ -182,11 +183,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
               Expanded(
                 child: controller.isLoading && controller.courses.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
+                    ? const AppSkeletonList(
+                        itemCount: 3,
+                        padding: EdgeInsets.all(16),
+                        leadingSize: 112,
+                        textLines: 2,
                       )
                     : courses.isEmpty
                     ? Center(

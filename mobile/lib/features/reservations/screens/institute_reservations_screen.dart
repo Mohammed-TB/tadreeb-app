@@ -9,6 +9,7 @@ import '../../../../core/widgets/button.dart';
 import '../../../../core/widgets/app_drawer.dart';
 import '../../../../core/widgets/search.dart';
 import '../../../../core/widgets/text_filed_form.dart';
+import '../../../../core/widgets/app_skeletons.dart';
 import '../controllers/institute_reservation_controller.dart';
 import '../models/reservation_model.dart';
 import '../../courses/models/course_model.dart';
@@ -130,10 +131,12 @@ class _InstituteReservationsScreenState
     bool hasActiveFilters,
   ) {
     if (controller.isLoading && controller.reservations.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+      return const SliverToBoxAdapter(
+        child: AppSkeletonList(
+          itemCount: 4,
+          leadingSize: 52,
+          circularLeading: true,
+          textLines: 2,
         ),
       );
     }
@@ -194,11 +197,11 @@ class _InstituteReservationsScreenState
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const SafeArea(
-                child: SizedBox(
-                  height: 160,
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
+                child: AppSkeletonList(
+                  itemCount: 1,
+                  padding: EdgeInsets.all(AppSpacing.md),
+                  leadingSize: 48,
+                  textLines: 1,
                 ),
               );
             }

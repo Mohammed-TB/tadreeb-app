@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 
 import '../../institutes/controllers/institute_controller.dart';
 import '../../institutes/models/institute_model.dart';
@@ -30,11 +31,12 @@ class MostPopularInstitutes extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
 
         if (controller.isLoading && institutes.isEmpty)
-          const SizedBox(
-            height: 160,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
+          const AppSkeletonList(
+            itemCount: 1,
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            leadingSize: 72,
+            circularLeading: true,
+            textLines: 2,
           )
         else if (institutes.isEmpty && controller.errorMessage != null)
           _buildError(context)

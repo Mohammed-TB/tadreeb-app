@@ -7,6 +7,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/button.dart';
 import '../../../core/widgets/search.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../courses/controllers/reservation_controller.dart';
 import '../widgets/student_reservation_card.dart';
 
@@ -83,15 +84,10 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                         // الحالات: تحميل / خطأ / فارغ / القائمة
                         if (controller.isLoadingReservations &&
                             controller.myReservations.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppSpacing.xxxl,
-                            ),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                              ),
-                            ),
+                          const AppSkeletonList(
+                            itemCount: 3,
+                            leadingSize: 72,
+                            textLines: 2,
                           )
                         else if (controller.errorMessage != null &&
                             controller.myReservations.isEmpty)

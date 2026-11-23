@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../models/student_profile_model.dart';
 import '../services/student_profile_service.dart';
@@ -87,7 +88,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('الملف الشخصي')),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppSkeletonForm(fieldCount: 2)
           : Form(
               key: _formKey,
               child: ListView(
@@ -114,7 +115,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),

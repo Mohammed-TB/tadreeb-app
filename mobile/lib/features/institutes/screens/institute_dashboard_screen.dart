@@ -5,6 +5,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/institute_dashboard_controller.dart';
 import '../widgets/institute_dashboard_activity.dart';
@@ -63,11 +64,9 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
               ),
             )
           else if (controller.data == null)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
+            const SliverPadding(
+              padding: EdgeInsets.all(AppSpacing.screenHorizontal),
+              sliver: SliverToBoxAdapter(child: AppSkeletonDashboard()),
             )
           else
             SliverPadding(
@@ -164,7 +163,6 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
                   ],
                 ),
               ),
-
             ],
           ),
         ),

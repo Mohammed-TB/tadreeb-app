@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/app_skeletons.dart';
 import '../../../../core/widgets/button.dart';
 import '../../../courses/models/course_model.dart';
 import '../state_panel.dart';
@@ -40,12 +40,7 @@ class InstituteCoursesListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && courses.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
-        child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
+      return const AppSkeletonList(itemCount: 3, leadingSize: 76, textLines: 2);
     }
 
     if (errorMessage != null && courses.isEmpty) {

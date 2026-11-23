@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/widgets/course_card.dart';
 import '../../institutes/models/institute_model.dart';
@@ -72,8 +73,30 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
         ),
         body: favorites.isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+            ? TabBarView(
+                children: [
+                  ListView(
+                    children: const [
+                      AppSkeletonList(
+                        itemCount: 3,
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        leadingSize: 116,
+                        textLines: 2,
+                      ),
+                    ],
+                  ),
+                  ListView(
+                    children: const [
+                      AppSkeletonList(
+                        itemCount: 3,
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        leadingSize: 72,
+                        circularLeading: true,
+                        textLines: 2,
+                      ),
+                    ],
+                  ),
+                ],
               )
             : favorites.errorMessage != null
             ? _buildError(favorites)

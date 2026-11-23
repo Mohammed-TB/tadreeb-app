@@ -27,6 +27,8 @@ mobile_Backup_20261106/
 # Node.js
 **/node_modules/
 **/dist/
+**/out/
+**/release/
 **/npm-debug.log*
 
 # IDE

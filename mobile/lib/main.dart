@@ -13,6 +13,7 @@ import 'core/realtime/realtime_service.dart';
 import 'core/state/app_data_change_bus.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/students/services/student_profile_service.dart';
 
 import 'features/courses/controllers/course_controller.dart';
 import 'features/courses/services/course_service.dart';
@@ -26,6 +27,7 @@ import 'features/institutes/controllers/institute_controller.dart';
 import 'features/institutes/controllers/institute_dashboard_controller.dart';
 import 'features/institutes/services/institute_dashboard_service.dart';
 import 'features/institutes/services/institute_service.dart';
+import 'features/institutes/services/institute_payment_settings_service.dart';
 
 import 'features/reservations/controllers/institute_reservation_controller.dart';
 import 'features/reservations/services/reservation_service.dart'
@@ -62,6 +64,10 @@ Future<void> main() async {
             apiClient: context.read<ApiClient>(),
             tokenStorage: context.read<TokenStorageService>(),
           ),
+        ),
+        Provider<StudentProfileService>(
+          create: (context) =>
+              StudentProfileService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider(
           create: (context) {
@@ -122,6 +128,11 @@ Future<void> main() async {
             publicCache: context.read<PublicApiCache>(),
           ),
         ),
+        Provider<InstitutePaymentSettingsService>(
+          create: (context) => InstitutePaymentSettingsService(
+            apiClient: context.read<ApiClient>(),
+          ),
+        ),
         ChangeNotifierProvider<InstituteController>(
           create: (context) => InstituteController(
             context.read<InstituteService>(),
@@ -146,11 +157,10 @@ Future<void> main() async {
               AdminInstituteService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider<AdminInstituteController>(
-          create: (context) =>
-              AdminInstituteController(
-                context.read<AdminInstituteService>(),
-                dataChangeBus: context.read<AppDataChangeBus>(),
-              ),
+          create: (context) => AdminInstituteController(
+            context.read<AdminInstituteService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
         ),
 
         // Institute Owner Reservations

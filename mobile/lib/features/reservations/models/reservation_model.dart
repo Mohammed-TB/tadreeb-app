@@ -1,7 +1,10 @@
+import 'reservation_payment_model.dart';
+
 class ReservationModel {
   final String id;
   final String studentName;
   final String studentPhone;
+  final String? studentEnglishName;
   final String? studentEmail;
   final String courseId;
   final String? courseTitle;
@@ -15,6 +18,9 @@ class ReservationModel {
   final String paymentStatus; // unpaid | partial | paid
   final double balancePaymentAmount;
   final String balancePaymentStatus; // none | pending | approved | rejected
+  final String balancePaymentPolicy;
+  final double minimumInstallmentAmount;
+  final List<ReservationPaymentModel> payments;
   final String? balancePaymentMethod; // bankTransfer | inPerson
   final DateTime? balancePaymentRecordedAt;
   final bool hasBalanceReceipt;
@@ -35,6 +41,7 @@ class ReservationModel {
     required this.id,
     required this.studentName,
     required this.studentPhone,
+    this.studentEnglishName,
     this.studentEmail,
     required this.courseId,
     this.courseTitle,
@@ -48,6 +55,9 @@ class ReservationModel {
     required this.paymentStatus,
     this.balancePaymentAmount = 0,
     this.balancePaymentStatus = 'none',
+    this.balancePaymentPolicy = 'fullRemainder',
+    this.minimumInstallmentAmount = 1,
+    this.payments = const [],
     this.balancePaymentMethod,
     this.balancePaymentRecordedAt,
     this.hasBalanceReceipt = false,
@@ -80,8 +90,7 @@ class ReservationModel {
       status.toLowerCase() == 'confirmed' &&
       paymentStatus.toLowerCase() == 'partial' &&
       remainingAmount > 0 &&
-      balancePaymentStatus.toLowerCase() != 'pending' &&
-      balancePaymentStatus.toLowerCase() != 'approved';
+      balancePaymentStatus.toLowerCase() != 'pending';
 
   /// هل يوجد إيصال مرفوع للمعاينة؟
   bool get hasReceipt {
@@ -133,6 +142,7 @@ class ReservationModel {
       id: (json['_id'] ?? json['id'])?.toString() ?? '',
       studentName: json['studentName']?.toString() ?? '',
       studentPhone: json['studentPhone']?.toString() ?? '',
+      studentEnglishName: json['studentEnglishName']?.toString(),
       studentEmail: sEmail ?? json['studentEmail']?.toString(),
       courseId: courseIdStr,
       courseTitle: courseTitleStr,
@@ -146,6 +156,17 @@ class ReservationModel {
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
       balancePaymentAmount: _toDouble(json['balancePaymentAmount']),
       balancePaymentStatus: json['balancePaymentStatus']?.toString() ?? 'none',
+      balancePaymentPolicy:
+          json['balancePaymentPolicy']?.toString() ?? 'fullRemainder',
+      minimumInstallmentAmount: _toDouble(
+        json['minimumInstallmentAmount'] ?? 1,
+      ),
+      payments: json['payments'] is List
+          ? (json['payments'] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(ReservationPaymentModel.fromJson)
+                .toList()
+          : const [],
       balancePaymentMethod: balancePaymentMethod,
       balancePaymentRecordedAt: _parseDate(json['balancePaymentRecordedAt']),
       hasBalanceReceipt: hasBalanceReceipt,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,7 @@ import 'package:project_1/core/widgets/app_phone_field.dart';
 import 'package:project_1/features/auth/controllers/auth_controller.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 import 'package:project_1/features/courses/services/reservation_service.dart';
+import 'package:project_1/features/students/services/student_profile_service.dart';
 import 'package:project_1/features/courses/widgets/course_registration_components.dart';
 
 enum _PaymentOption { deposit, full }
@@ -33,12 +36,14 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
     with SingleTickerProviderStateMixin {
   final _studentFormKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _englishNameController = TextEditingController();
+  final _amountController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   late final PhoneController _phoneController;
   String? _studentPhoneE164;
   late final TabController _tabController;
-  late _PaymentOption _paymentOption;
+  _PaymentOption? _quickPaymentOption;
   int _currentStep = 0;
   Uint8List? _receiptBytes;
   String? _receiptName;
@@ -46,6 +51,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
   String? _reservationId;
   bool _isPickingReceipt = false;
   bool _isSubmitting = false;
+  String? _profileLoadError;
 
   static const _steps = ['البيانات', 'الدفع', 'السند'];
   static const _depositAccountNumber = '254000321';
@@ -61,9 +67,13 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       initialValue: user?.phone,
     );
     _studentPhoneE164 = AppPhoneField.toE164(_phoneController.value);
-    _paymentOption = course.depositAmount > 0
+    _quickPaymentOption = course.depositAmount > 0
         ? _PaymentOption.deposit
         : _PaymentOption.full;
+    _amountController.text =
+        (course.depositAmount > 0 ? course.depositAmount : course.price)
+            .toStringAsFixed(2);
+    unawaited(_loadStudentProfile());
     _tabController = TabController(length: _steps.length, vsync: this)
       ..addListener(_onTabChanged);
   }
@@ -74,8 +84,23 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       ..removeListener(_onTabChanged)
       ..dispose();
     _nameController.dispose();
+    _englishNameController.dispose();
+    _amountController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadStudentProfile() async {
+    try {
+      final profile = await context.read<StudentProfileService>().getProfile();
+      if (!mounted) return;
+      setState(() {
+        _nameController.text = profile.name;
+        _englishNameController.text = profile.englishName ?? '';
+      });
+    } on Exception catch (error) {
+      if (mounted) setState(() => _profileLoadError = error.toString());
+    }
   }
 
   void _onTabChanged() {
@@ -99,7 +124,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
   }
 
   Future<void> _submitRegistration() async {
-    if (!_isStudentDetailsValid()) {
+    if (!_isStudentDetailsValid() || _validatePaymentAmount() != null) {
       _tabController.animateTo(0);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _studentFormKey.currentState?.validate();
@@ -137,7 +162,10 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           courseId: courseId,
           studentName: _nameController.text.trim(),
           studentPhone: studentPhone,
-          paymentOption: _paymentOption.name,
+          paymentAmount: _selectedAmount,
+          studentEnglishName: _englishNameController.text.trim().isEmpty
+              ? null
+              : _englishNameController.text.trim(),
         );
         dataChangeBus.notifyChanged(
           AppDataDomain.reservations,
@@ -257,7 +285,43 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
 
   bool _isStudentDetailsValid() {
     return _validateStudentName(_nameController.text) == null &&
+        (!course.requiresEnglishName ||
+            _englishNameController.text.trim().isNotEmpty) &&
         _studentPhoneE164 != null;
+  }
+
+  double get _selectedAmount =>
+      double.tryParse(_amountController.text.trim()) ?? 0;
+
+  String? _validatePaymentAmount() {
+    final amount = _selectedAmount;
+    final minimum = course.depositAmount > 0 ? course.depositAmount : 0.01;
+    if (!amount.isFinite || amount < minimum || amount > course.price) {
+      return 'يجب أن يكون المبلغ بين العربون والسعر الكامل';
+    }
+    return null;
+  }
+
+  void _selectQuickPayment(_PaymentOption option) {
+    setState(() {
+      _quickPaymentOption = option;
+      _amountController.text =
+          (option == _PaymentOption.deposit
+                  ? course.depositAmount
+                  : course.price)
+              .toStringAsFixed(2);
+    });
+  }
+
+  void _onPaymentAmountChanged(String value) {
+    final amount = double.tryParse(value);
+    setState(() {
+      _quickPaymentOption = amount == course.depositAmount
+          ? _PaymentOption.deposit
+          : amount == course.price
+          ? _PaymentOption.full
+          : null;
+    });
   }
 
   String? _validateStudentName(String? value) {
@@ -330,7 +394,28 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             validator: _validateStudentName,
             enabled: !_isSubmitting,
           ),
+          if (course.requiresEnglishName) ...[
+            const SizedBox(height: AppSpacing.md),
+            CourseRegistrationTextField(
+              controller: _englishNameController,
+              label: 'الاسم باللغة الإنجليزية',
+              hint: 'اكتب الاسم باللغة الإنجليزية كما في الوثيقة',
+              icon: Icons.translate_rounded,
+              textInputAction: TextInputAction.next,
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'الاسم الإنجليزي مطلوب لهذه الدورة'
+                  : null,
+              enabled: !_isSubmitting,
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
+          if (_profileLoadError != null) ...[
+            Text(
+              'تعذر تحميل بيانات الملف الشخصي: $_profileLoadError',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           AppPhoneField(
             controller: _phoneController,
             labelText: 'رقم الجوال',
@@ -355,7 +440,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       children: [
         const CourseRegistrationStepIntro(
           title: 'اختر طريقة الدفع',
-          description: 'يمكنك دفع العربون لحجز مقعدك أو دفع الرسوم كاملة.',
+          description: 'ادفع العربون على الأقل، أو اختر مبلغًا أكبر.',
           icon: Icons.payments_outlined,
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -365,9 +450,8 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             description: 'ادفع العربون الآن وأكمل المبلغ لاحقًا.',
             amount: course.depositAmount,
             icon: Icons.account_balance_wallet_outlined,
-            isSelected: _paymentOption == _PaymentOption.deposit,
-            onTap: () =>
-                setState(() => _paymentOption = _PaymentOption.deposit),
+            isSelected: _quickPaymentOption == _PaymentOption.deposit,
+            onTap: () => _selectQuickPayment(_PaymentOption.deposit),
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
@@ -376,8 +460,22 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
           description: 'سدد رسوم الدورة كاملة من الآن.',
           amount: course.price,
           icon: Icons.payments_outlined,
-          isSelected: _paymentOption == _PaymentOption.full,
-          onTap: () => setState(() => _paymentOption = _PaymentOption.full),
+          isSelected: _quickPaymentOption == _PaymentOption.full,
+          onTap: () => _selectQuickPayment(_PaymentOption.full),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          enabled: !_isSubmitting,
+          decoration: InputDecoration(
+            labelText: 'المبلغ المراد دفعه',
+            helperText:
+                'الحد الأدنى ${course.depositAmount} ريال، والحد الأعلى ${course.price} ريال',
+            suffixText: 'ريال',
+          ),
+          validator: (_) => _validatePaymentAmount(),
+          onChanged: _onPaymentAmountChanged,
         ),
         const SizedBox(height: AppSpacing.md),
         Container(
@@ -427,7 +525,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
                       ),
                     ],
                   ),
-                                    Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                     children: [
@@ -522,7 +620,7 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
             children: [
               Text('المبلغ المطلوب', style: AppTypography.labelMedium),
               Text(
-                '${_selectedAmount.toStringAsFixed(0)} ريال',
+                '${_selectedAmount.toStringAsFixed(2)} ريال',
                 style: AppTypography.labelLarge.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
@@ -620,10 +718,6 @@ class _CourseRegistrationScreenState extends State<CourseRegistrationScreen>
       ],
     );
   }
-
-  double get _selectedAmount => _paymentOption == _PaymentOption.deposit
-      ? course.depositAmount
-      : course.price;
 
   Widget _buildActions() {
     final isLastStep = _currentStep == _steps.length - 1;

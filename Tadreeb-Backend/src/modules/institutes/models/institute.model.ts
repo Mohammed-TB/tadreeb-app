@@ -1,5 +1,9 @@
 
 import mongoose, { Document, Schema } from "mongoose";
+import {
+  BalancePaymentPolicy,
+  InstituteSettings,
+} from "../types/institute.types";
 
 // حالات المعهد داخل المنصة.
 export enum InstituteStatus {
@@ -18,17 +22,7 @@ export interface IInstitute extends Document {
   logo?: string;
   ownerId: mongoose.Types.ObjectId;
   status: InstituteStatus;
-  // إعدادات المعهد.
-settings: {
-  // المهلة الافتراضية لإعادة رفع سند الدفع: ساعة واحدة.
-  receiptResubmissionHours: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 72,
-    required: true,
-  },
-},
+  settings: InstituteSettings;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,17 +89,27 @@ const instituteSchema = new Schema<IInstitute>(
       required: true,
     },
 
-    // إعدادات المعهد.
-settings: {
-  // المهلة الافتراضية لإعادة رفع سند الدفع: ساعة واحدة.
-  receiptResubmissionHours: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 72,
-    required: true,
-  },
-},
+    settings: {
+      receiptResubmissionHours: {
+        type: Number,
+        default: 1,
+        min: 1,
+        max: 72,
+        required: true,
+      },
+      balancePaymentPolicy: {
+        type: String,
+        enum: Object.values(BalancePaymentPolicy),
+        default: BalancePaymentPolicy.FULL_REMAINDER,
+        required: true,
+      },
+      minimumInstallmentAmount: {
+        type: Number,
+        default: 1,
+        min: 0,
+        required: true,
+      },
+    },
   },
   {
     // إضافة createdAt و updatedAt تلقائيًا.

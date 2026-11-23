@@ -11,12 +11,16 @@ class CourseFeesStep extends StatelessWidget {
     required this.priceController,
     required this.depositController,
     required this.validateAmount,
+    required this.requiresEnglishName,
+    required this.onRequiresEnglishNameChanged,
   });
 
   final GlobalKey<FormState> formKey;
   final TextEditingController priceController;
   final TextEditingController depositController;
   final String? Function(String?) validateAmount;
+  final bool requiresEnglishName;
+  final ValueChanged<bool> onRequiresEnglishNameChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +64,13 @@ class CourseFeesStep extends StatelessWidget {
               const CourseFormInfoBanner(
                 icon: Icons.info_outline,
                 message: 'يجب ألا يتجاوز العربون السعر الكامل للدورة.',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('الاسم الإنجليزي مطلوب للتسجيل'),
+                value: requiresEnglishName,
+                onChanged: onRequiresEnglishNameChanged,
               ),
             ],
           ),

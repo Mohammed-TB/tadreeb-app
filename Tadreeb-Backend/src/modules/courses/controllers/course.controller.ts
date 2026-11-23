@@ -24,6 +24,9 @@ class CourseController {
         ...(req.body.capacity !== undefined && {
           capacity: Number(req.body.capacity),
         }),
+        ...(req.body.requiresEnglishName !== undefined && {
+          requiresEnglishName: this.parseBoolean(req.body.requiresEnglishName),
+        }),
         ...(req.body.whatWillLearn !== undefined && {
           whatWillLearn: this.parseStringArray(req.body.whatWillLearn),
         }),
@@ -88,6 +91,12 @@ class CourseController {
     throw new Error("Course list must be an array or string");
   }
 
+  private parseBoolean(value: unknown): boolean {
+    if (value === true || value === "true") return true;
+    if (value === false || value === "false") return false;
+    throw new Error("Course English-name requirement must be a boolean");
+  }
+
   // استخراج معرف الدورة والتأكد من أنه نص.
   private getCourseId(req: Request): string {
     const courseId = req.params.courseId;
@@ -150,6 +159,9 @@ class CourseController {
         }),
         ...(req.body.capacity !== undefined && {
           capacity: Number(req.body.capacity),
+        }),
+        ...(req.body.requiresEnglishName !== undefined && {
+          requiresEnglishName: this.parseBoolean(req.body.requiresEnglishName),
         }),
         ...(req.body.whatWillLearn !== undefined && {
           whatWillLearn: this.parseStringArray(req.body.whatWillLearn),

@@ -69,39 +69,42 @@ void main() {
     expect(reservation.hasBalanceReceipt, isFalse);
   });
 
-  test('does not allow recording a pending or approved balance', () {
-    final reservation = ReservationModel.fromJson({
-      '_id': 'reservation-1',
-      'studentName': 'أحمد محمد',
-      'studentPhone': '0500000000',
-      'courseId': 'course-1',
-      'bookingType': 'online',
-      'paymentOption': 'deposit',
-      'totalAmount': 1000,
-      'amountToPay': 250,
-      'amountPaid': 250,
-      'paymentStatus': 'partial',
-      'balancePaymentStatus': 'pending',
-      'status': 'confirmed',
-    });
-    final approvedReservation = ReservationModel.fromJson({
-      '_id': 'reservation-2',
-      'studentName': 'أحمد محمد',
-      'studentPhone': '0500000000',
-      'courseId': 'course-1',
-      'bookingType': 'online',
-      'paymentOption': 'deposit',
-      'totalAmount': 1000,
-      'amountToPay': 250,
-      'amountPaid': 250,
-      'paymentStatus': 'partial',
-      'balancePaymentStatus': 'approved',
-      'status': 'confirmed',
-    });
+  test(
+    'allows new installments after approval but blocks pending payments',
+    () {
+      final reservation = ReservationModel.fromJson({
+        '_id': 'reservation-1',
+        'studentName': 'أحمد محمد',
+        'studentPhone': '0500000000',
+        'courseId': 'course-1',
+        'bookingType': 'online',
+        'paymentOption': 'deposit',
+        'totalAmount': 1000,
+        'amountToPay': 250,
+        'amountPaid': 250,
+        'paymentStatus': 'partial',
+        'balancePaymentStatus': 'pending',
+        'status': 'confirmed',
+      });
+      final approvedReservation = ReservationModel.fromJson({
+        '_id': 'reservation-2',
+        'studentName': 'أحمد محمد',
+        'studentPhone': '0500000000',
+        'courseId': 'course-1',
+        'bookingType': 'online',
+        'paymentOption': 'deposit',
+        'totalAmount': 1000,
+        'amountToPay': 250,
+        'amountPaid': 250,
+        'paymentStatus': 'partial',
+        'balancePaymentStatus': 'approved',
+        'status': 'confirmed',
+      });
 
-    expect(reservation.canRecordInPersonBalancePayment, isFalse);
-    expect(approvedReservation.canRecordInPersonBalancePayment, isFalse);
-  });
+      expect(reservation.canRecordInPersonBalancePayment, isFalse);
+      expect(approvedReservation.canRecordInPersonBalancePayment, isTrue);
+    },
+  );
 
   testWidgets('shows a compact reservation card and opens its details', (
     tester,

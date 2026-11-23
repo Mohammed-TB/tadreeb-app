@@ -26,6 +26,7 @@ import '../features/students/screens/reservation_balance_payment_screen.dart';
 import '../features/students/models/student_reservation_model.dart';
 import '../features/institutes/routing/institute_shell.dart';
 import '../features/institutes/screens/add_institute_course_screen.dart';
+import '../features/institutes/screens/institute_payment_settings_screen.dart';
 import '../features/institutes/screens/institute_courses_screen.dart';
 import '../features/institutes/screens/institute_students_screen.dart';
 import '../features/institutes/screens/institute_dashboard_screen.dart';
@@ -41,6 +42,7 @@ import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/student_phone_settings_screen.dart';
+import '../features/students/screens/student_profile_screen.dart';
 
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -99,8 +101,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         GoRoute(
           path: '/student_phone_settings',
-          builder: (context, state) =>
-              const StudentPhoneSettingsScreen(),
+          builder: (context, state) => const StudentPhoneSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/student_profile',
+          builder: (context, state) => const StudentProfileScreen(),
+        ),
+        GoRoute(
+          path: '/institute_payment_settings',
+          builder: (context, state) => const InstitutePaymentSettingsScreen(),
         ),
 
         GoRoute(
@@ -488,7 +497,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       '/institute_courses' ||
       '/institute_students' ||
       '/institute_reservations' ||
-      '/institute_courses/add' => UserRole.instituteOwner,
+      '/institute_courses/add' ||
+      '/institute_payment_settings' => UserRole.instituteOwner,
 
       '/admin_dashboard' ||
       '/admin_institutes' ||

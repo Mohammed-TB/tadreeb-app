@@ -136,6 +136,7 @@ private async getOwnerInstitute(userId: string) {
       category: input.category.trim(),
       price: input.price,
       depositAmount: input.depositAmount,
+      requiresEnglishName: input.requiresEnglishName ?? false,
       capacity: input.capacity,
       startDate,
       endDate,
@@ -234,6 +235,9 @@ private async getOwnerInstitute(userId: string) {
     if (input.price !== undefined) course.price = input.price;
     if (input.depositAmount !== undefined) {
       course.depositAmount = input.depositAmount;
+    }
+    if (input.requiresEnglishName !== undefined) {
+      course.requiresEnglishName = input.requiresEnglishName;
     }
 
     if (input.capacity !== undefined) {

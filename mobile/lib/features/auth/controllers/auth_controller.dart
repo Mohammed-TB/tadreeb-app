@@ -24,6 +24,22 @@ class AuthController extends ChangeNotifier {
   bool get isInitializing => _isInitializing;
   String? get errorMessage => _errorMessage;
 
+  void updateCurrentUserName(String name) {
+    final user = _currentUser;
+    if (user == null || user.name == name) return;
+    _currentUser = UserModel(
+      id: user.id,
+      name: name,
+      email: user.email,
+      phone: user.phone,
+      isPhoneVerified: user.isPhoneVerified,
+      role: user.role,
+      status: user.status,
+      authProvider: user.authProvider,
+    );
+    notifyListeners();
+  }
+
   Future<bool> register({
     required String name,
     required String email,

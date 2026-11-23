@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -27,9 +29,16 @@ class InPersonRegistrationSheet extends StatefulWidget {
 class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _englishNameController = TextEditingController();
+  final _amountController = TextEditingController();
   final _phoneController = AppPhoneField.createController();
+  final _imagePicker = ImagePicker();
   late String _courseId;
-  String _paymentOption = 'full';
+  String _paymentMethod = 'cash';
+  String _initialPaymentOption = 'full';
+  Uint8List? _receiptBytes;
+  String? _receiptName;
+  String? _receiptContentType;
   bool _isSubmitting = false;
   bool _isLookingUpStudent = false;
   bool _lookupFailed = false;
@@ -41,20 +50,23 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
   CourseModel get _selectedCourse =>
       widget.courses.firstWhere((course) => course.id == _courseId);
 
-  double get _selectedAmount => _paymentOption == 'deposit'
-      ? _selectedCourse.depositAmount
-      : _selectedCourse.price;
+  double get _selectedAmount =>
+      double.tryParse(_amountController.text.trim()) ?? 0;
 
   @override
   void initState() {
     super.initState();
     _courseId = widget.courses.first.id!;
+    final course = _selectedCourse;
+    _amountController.text = course.price.toStringAsFixed(2);
   }
 
   @override
   void dispose() {
     _studentLookupDebounce?.cancel();
     _nameController.dispose();
+    _englishNameController.dispose();
+    _amountController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -144,11 +156,23 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
     if (studentPhone == null) return;
 
     setState(() => _isSubmitting = true);
+    if (_paymentMethod == 'bankTransfer' && _receiptBytes == null) {
+      setState(() => _isSubmitting = false);
+      _showMessage('أرفق سند التحويل قبل تسجيل الطالب');
+      return;
+    }
     final success = await widget.controller.createInPersonReservation(
       courseId: _courseId,
       studentName: _nameController.text.trim(),
       studentPhone: studentPhone,
-      paymentOption: _paymentOption,
+      paymentAmount: _selectedAmount,
+      paymentMethod: _paymentMethod,
+      studentEnglishName: _englishNameController.text.trim().isEmpty
+          ? null
+          : _englishNameController.text.trim(),
+      receiptBytes: _receiptBytes,
+      receiptName: _receiptName,
+      receiptContentType: _receiptContentType,
     );
 
     if (!mounted) return;
@@ -158,13 +182,64 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          widget.controller.errorMessage ?? 'تعذر إنشاء التسجيل الحضوري',
-        ),
-      ),
+    _showMessage(
+      widget.controller.errorMessage ?? 'تعذر إنشاء التسجيل الحضوري',
     );
+  }
+
+  Future<void> _pickReceipt() async {
+    try {
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1800,
+      );
+      if (image == null || !mounted) return;
+      final extension = image.name.split('.').last.toLowerCase();
+      const contentTypes = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+      };
+      final contentType = contentTypes[extension];
+      if (contentType == null) {
+        _showMessage('اختر صورة بصيغة JPG أو PNG أو WEBP');
+        return;
+      }
+      final bytes = await image.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) {
+        _showMessage('حجم الصورة يجب ألا يتجاوز 5 ميجابايت');
+        return;
+      }
+      setState(() {
+        _receiptBytes = bytes;
+        _receiptName = image.name;
+        _receiptContentType = contentType;
+      });
+    } on Exception catch (error) {
+      if (mounted) _showMessage('تعذر اختيار السند: $error');
+    }
+  }
+
+  String? _validateAmount(String? value) {
+    final amount = double.tryParse(value?.trim() ?? '');
+    final minimum = _selectedCourse.depositAmount > 0
+        ? _selectedCourse.depositAmount
+        : 0.01;
+    if (amount == null ||
+        !amount.isFinite ||
+        amount < minimum ||
+        amount > _selectedCourse.price) {
+      return 'أدخل مبلغًا بين العربون والسعر الكامل';
+    }
+    return null;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -221,10 +296,11 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                               if (value != null) {
                                 setState(() {
                                   _courseId = value;
-                                  if (_paymentOption == 'deposit' &&
-                                      _selectedCourse.depositAmount <= 0) {
-                                    _paymentOption = 'full';
-                                  }
+                                  _amountController.text =
+                                      (_selectedCourse.depositAmount > 0
+                                              ? _selectedCourse.depositAmount
+                                              : _selectedCourse.price)
+                                          .toStringAsFixed(2);
                                 });
                               }
                             },
@@ -240,6 +316,19 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                       validator: _validateStudentName,
                       onChanged: _onStudentNameChanged,
                     ),
+                    if (_selectedCourse.requiresEnglishName) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      TextFormField(
+                        controller: _englishNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'الاسم باللغة الإنجليزية',
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'الاسم الإنجليزي مطلوب لهذه الدورة'
+                            : null,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     AppPhoneField(
                       controller: _phoneController,
@@ -288,16 +377,70 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                       ),
                     ],
                     const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _amountController,
+                      enabled: !_isSubmitting,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'المبلغ المستلم/المحوّل',
+                        helperText:
+                            'من ${_selectedCourse.depositAmount} إلى ${_selectedCourse.price} ريال',
+                      ),
+                      validator: _validateAmount,
+                      onChanged: (_) {
+                        final amount = double.tryParse(
+                          _amountController.text.trim(),
+                        );
+                        setState(() {
+                          _initialPaymentOption =
+                              amount == _selectedCourse.price
+                              ? 'full'
+                              : amount == _selectedCourse.depositAmount &&
+                                    _selectedCourse.depositAmount > 0
+                              ? 'deposit'
+                              : 'custom';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<String>(
-                      initialValue: _paymentOption,
+                      initialValue: _paymentMethod,
                       decoration: const InputDecoration(
-                        labelText: 'طريقة الدفع والمبلغ',
+                        labelText: 'طريقة الدفع',
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'cash', child: Text('نقدًا')),
+                        DropdownMenuItem(
+                          value: 'bankTransfer',
+                          child: Text('تحويل بنكي'),
+                        ),
+                      ],
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) => setState(() {
+                              if (value != null) {
+                                _paymentMethod = value;
+                                if (value == 'cash') {
+                                  _receiptBytes = null;
+                                  _receiptName = null;
+                                  _receiptContentType = null;
+                                }
+                              }
+                            }),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<String>(
+                      initialValue: _initialPaymentOption,
+                      decoration: const InputDecoration(
+                        labelText: 'اختيار مبلغ الدفعة',
                       ),
                       items: [
                         DropdownMenuItem(
                           value: 'full',
                           child: Text(
-                            'كامل · ${_selectedCourse.price.toStringAsFixed(0)} ريال',
+                            'كامل الرسوم · ${_selectedCourse.price.toStringAsFixed(0)} ريال',
                           ),
                         ),
                         if (_selectedCourse.depositAmount > 0)
@@ -307,15 +450,36 @@ class _InPersonRegistrationSheetState extends State<InPersonRegistrationSheet> {
                               'عربون · ${_selectedCourse.depositAmount.toStringAsFixed(0)} ريال',
                             ),
                           ),
+                        const DropdownMenuItem(
+                          value: 'custom',
+                          child: Text('مبلغ آخر'),
+                        ),
                       ],
                       onChanged: _isSubmitting
                           ? null
                           : (value) {
-                              if (value != null) {
-                                setState(() => _paymentOption = value);
-                              }
+                              if (value == null) return;
+                              setState(() {
+                                _initialPaymentOption = value;
+                                if (value == 'full') {
+                                  _amountController.text = _selectedCourse.price
+                                      .toStringAsFixed(2);
+                                } else if (value == 'deposit') {
+                                  _amountController.text = _selectedCourse
+                                      .depositAmount
+                                      .toStringAsFixed(2);
+                                }
+                              });
                             },
                     ),
+                    if (_paymentMethod == 'bankTransfer') ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _pickReceipt,
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: Text(_receiptName ?? 'رفع سند التحويل'),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.sm),

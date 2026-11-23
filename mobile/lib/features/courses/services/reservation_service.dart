@@ -11,7 +11,8 @@ class ReservationService {
     required String courseId,
     required String studentName,
     required String studentPhone,
-    required String paymentOption,
+    required double paymentAmount,
+    String? studentEnglishName,
   }) async {
     final response = await _apiClient.post(
       '/api/reservations',
@@ -20,7 +21,9 @@ class ReservationService {
         'courseId': courseId,
         'studentName': studentName,
         'studentPhone': studentPhone,
-        'paymentOption': paymentOption,
+        'paymentAmount': paymentAmount,
+        if (studentEnglishName != null)
+          'studentEnglishName': studentEnglishName,
       },
     );
 
@@ -75,6 +78,7 @@ class ReservationService {
   /// رفع سند سداد المتبقي: POST /api/reservations/:id/balance-payment
   Future<void> uploadBalancePaymentReceipt({
     required String reservationId,
+    required double amount,
     required List<int> fileBytes,
     required String fileName,
     required String contentType,
@@ -82,7 +86,7 @@ class ReservationService {
     await _apiClient.postMultipart(
       '/api/reservations/$reservationId/balance-payment',
       authenticated: true,
-      fields: const {},
+      fields: {'amount': amount.toString()},
       fileBytes: fileBytes,
       fileField: 'receipt',
       fileName: fileName,

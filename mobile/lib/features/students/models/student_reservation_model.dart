@@ -1,4 +1,5 @@
 import '../../../core/utils/saudi_date.dart';
+import '../../reservations/models/reservation_payment_model.dart';
 
 /// نموذج حجز الطالب المسترجع من الـ API (GET /api/reservations/my)
 class StudentReservationModel {
@@ -19,6 +20,7 @@ class StudentReservationModel {
 
   final String studentName;
   final String studentPhone;
+  final String? studentEnglishName;
   final String bookingType; // online | inPerson
   final String paymentOption; // full | deposit
   final double totalAmount;
@@ -27,6 +29,9 @@ class StudentReservationModel {
   final String paymentStatus; // unpaid | partial | paid
   final double balancePaymentAmount;
   final String balancePaymentStatus; // none | pending | approved | rejected
+  final String balancePaymentPolicy;
+  final double minimumInstallmentAmount;
+  final List<ReservationPaymentModel> payments;
   final bool hasBalanceReceipt;
   final String? balancePaymentRejectionReason;
   final String
@@ -57,6 +62,7 @@ class StudentReservationModel {
     this.instituteAddress,
     required this.studentName,
     required this.studentPhone,
+    this.studentEnglishName,
     required this.bookingType,
     required this.paymentOption,
     required this.totalAmount,
@@ -65,6 +71,9 @@ class StudentReservationModel {
     required this.paymentStatus,
     this.balancePaymentAmount = 0,
     this.balancePaymentStatus = 'none',
+    this.balancePaymentPolicy = 'fullRemainder',
+    this.minimumInstallmentAmount = 1,
+    this.payments = const [],
     this.hasBalanceReceipt = false,
     this.balancePaymentRejectionReason,
     required this.status,
@@ -129,7 +138,6 @@ class StudentReservationModel {
       normalizedStatus == 'confirmed' &&
       paymentStatus.toLowerCase() == 'partial' &&
       balancePaymentStatus.toLowerCase() != 'pending' &&
-      balancePaymentStatus.toLowerCase() != 'approved' &&
       remainingAmount > 0;
 
   /// هل يستطيع الطالب رفع أو إعادة رفع سند الدفع؟
@@ -225,6 +233,7 @@ class StudentReservationModel {
       instituteAddress: instAddress,
       studentName: json['studentName']?.toString() ?? '',
       studentPhone: json['studentPhone']?.toString() ?? '',
+      studentEnglishName: json['studentEnglishName']?.toString(),
       bookingType: json['bookingType']?.toString() ?? 'online',
       paymentOption: json['paymentOption']?.toString() ?? 'full',
       totalAmount: _toDouble(json['totalAmount']),
@@ -233,6 +242,17 @@ class StudentReservationModel {
       paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
       balancePaymentAmount: _toDouble(json['balancePaymentAmount']),
       balancePaymentStatus: json['balancePaymentStatus']?.toString() ?? 'none',
+      balancePaymentPolicy:
+          json['balancePaymentPolicy']?.toString() ?? 'fullRemainder',
+      minimumInstallmentAmount: _toDouble(
+        json['minimumInstallmentAmount'] ?? 1,
+      ),
+      payments: json['payments'] is List
+          ? (json['payments'] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(ReservationPaymentModel.fromJson)
+                .toList()
+          : const [],
       hasBalanceReceipt: json['hasBalanceReceipt'] == true,
       balancePaymentRejectionReason: json['balancePaymentRejectionReason']
           ?.toString(),

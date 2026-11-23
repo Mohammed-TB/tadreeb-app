@@ -1,5 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:project_1/core/widgets/button.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -34,6 +36,7 @@ class _InstituteReservationDetailsScreenState
   String? _receiptError;
   String? _balanceReceiptUrl;
   bool _isLoadingBalanceReceipt = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -123,6 +126,11 @@ class _InstituteReservationDetailsScreenState
                   icon: Icons.person_outline_rounded,
                   children: [
                     _InfoRow(label: 'الاسم', value: reservation.studentName),
+                    if (reservation.studentEnglishName?.isNotEmpty == true)
+                      _InfoRow(
+                        label: 'الاسم بالإنجليزية',
+                        value: reservation.studentEnglishName!,
+                      ),
                     _InfoRow(
                       label: 'رقم الهاتف',
                       value: reservation.studentPhone,
@@ -235,6 +243,12 @@ class _InstituteReservationDetailsScreenState
                         label: 'المتبقي للسداد',
                         value: _formatAmount(reservation.remainingAmount),
                       ),
+                    _InfoRow(
+                      label: 'سياسة سداد المتبقي',
+                      value: reservation.balancePaymentPolicy == 'installments'
+                          ? 'أقساط، بحد أدنى ${_formatAmount(reservation.minimumInstallmentAmount)}'
+                          : 'دفعة واحدة لكامل المتبقي',
+                    ),
                     if (reservation.paymentStatus == 'paid' &&
                         reservation.balancePaymentStatus == 'approved')
                       _InfoRow(
@@ -276,12 +290,14 @@ class _InstituteReservationDetailsScreenState
                                   reservation,
                                 ),
                           icon: const Icon(Icons.payments_outlined),
-                          label: const Text('تسجيل استلام المتبقي حضوريًا'),
+                          label: const Text('تسجيل دفعة حضورية'),
                         ),
                       ),
                     ],
                   ],
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildPaymentHistory(reservation, controller),
                 if (reservation.rejectionReason?.isNotEmpty == true) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _SectionCard(
@@ -335,6 +351,100 @@ class _InstituteReservationDetailsScreenState
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentHistory(
+    ReservationModel reservation,
+    InstituteReservationController controller,
+  ) {
+    return _SectionCard(
+      title: 'سجل جميع الدفعات',
+      icon: Icons.receipt_long_outlined,
+      children: reservation.payments.isEmpty
+          ? [const Text('لا توجد دفعات مسجلة لهذا الحجز.')]
+          : reservation.payments
+                .map(
+                  (payment) => Card(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _InfoRow(
+                            label: 'المبلغ',
+                            value: _formatAmount(payment.amount),
+                          ),
+                          _InfoRow(
+                            label: 'الطريقة',
+                            value: payment.method == 'cash'
+                                ? 'نقدًا'
+                                : 'تحويل بنكي',
+                          ),
+                          _InfoRow(
+                            label: 'الحالة',
+                            value: _paymentRecordStatus(payment.status),
+                          ),
+                          _InfoRow(
+                            label: 'تاريخ التسجيل',
+                            value: AppDateTimeFormatter.formatDateTime(
+                              payment.createdAt,
+                              dayFirst: true,
+                              use24HourClock: true,
+                              separator: ' - ',
+                            ),
+                          ),
+                          if (payment.rejectionReason?.isNotEmpty == true)
+                            _InfoRow(
+                              label: 'سبب الرفض',
+                              value: payment.rejectionReason!,
+                            ),
+                          if (payment.hasReceipt)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _showPaymentReceipt(payment.id, controller),
+                              icon: const Icon(Icons.image_outlined),
+                              label: const Text('عرض سند هذه الدفعة'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+    );
+  }
+
+  Future<void> _showPaymentReceipt(
+    String paymentId,
+    InstituteReservationController controller,
+  ) async {
+    final url = await controller.getPaymentReceiptUrl(paymentId);
+    if (!mounted) return;
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'تعذر تحميل سند الدفعة: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+          ),
+        ),
+      );
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        child: InteractiveViewer(
+          child: Image.network(
+            url,
+            errorBuilder: (context, error, stackTrace) => const Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Text('تعذر عرض صورة السند'),
+            ),
+          ),
         ),
       ),
     );
@@ -492,74 +602,230 @@ class _InstituteReservationDetailsScreenState
     InstituteReservationController controller,
     ReservationModel reservation,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final amountController = TextEditingController(
+      text: reservation.remainingAmount.toStringAsFixed(2),
+    );
+    final result = await showDialog<Map<String, Object?>>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('تأكيد استلام المبلغ المتبقي'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'سيتم تسجيل الحجز مدفوعًا بالكامل. أكّد فقط بعد استلام المبلغ من الطالب.',
+      builder: (dialogContext) {
+        var method = 'cash';
+        Uint8List? receiptBytes;
+        String? receiptName;
+        String? receiptContentType;
+        String? validationMessage;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: const Text('تسجيل دفعة من المعهد'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'مبلغ الدفعة',
+                      suffixText: 'ريال',
+                      helperText:
+                          'المتبقي ${_formatAmount(reservation.remainingAmount)}'
+                          '${reservation.balancePaymentPolicy == 'installments' ? '، الحد الأدنى ${_formatAmount(reservation.minimumInstallmentAmount)}' : ''}',
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    decoration: const InputDecoration(labelText: 'طريقة الدفع'),
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('نقدًا')),
+                      DropdownMenuItem(
+                        value: 'bankTransfer',
+                        child: Text('تحويل بنكي مع سند'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          method = value;
+                          validationMessage = null;
+                        });
+                      }
+                    },
+                  ),
+                  if (method == 'bankTransfer') ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final image = await _imagePicker.pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 85,
+                          );
+                          if (image == null || !dialogContext.mounted) return;
+                          final extension = image.name
+                              .split('.')
+                              .last
+                              .toLowerCase();
+                          const contentTypes = {
+                            'jpg': 'image/jpeg',
+                            'jpeg': 'image/jpeg',
+                            'png': 'image/png',
+                            'webp': 'image/webp',
+                          };
+                          final contentType = contentTypes[extension];
+                          if (contentType == null) {
+                            setDialogState(
+                              () => validationMessage =
+                                  'اختر صورة بصيغة JPG أو PNG أو WEBP',
+                            );
+                            return;
+                          }
+                          setDialogState(() {
+                            receiptBytes = null;
+                            validationMessage = 'جارٍ قراءة السند...';
+                          });
+                          final bytes = await image.readAsBytes();
+                          if (bytes.length > 5 * 1024 * 1024) {
+                            setDialogState(
+                              () => validationMessage =
+                                  'حجم الصورة يجب ألا يتجاوز 5 ميجابايت',
+                            );
+                            return;
+                          }
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() {
+                            receiptBytes = bytes;
+                            receiptName = image.name;
+                            receiptContentType = contentType;
+                            validationMessage = null;
+                          });
+                        } on Exception catch (error) {
+                          if (dialogContext.mounted) {
+                            setDialogState(
+                              () => validationMessage =
+                                  'تعذر اختيار السند: $error',
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.upload_file),
+                      label: Text(
+                        receiptName ?? 'اختيار صورة السند',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                  if (validationMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        validationMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            _InfoRow(
-              label: 'إجمالي الرسوم',
-              value: _formatAmount(reservation.totalAmount),
-            ),
-            _InfoRow(
-              label: 'المبلغ المدفوع',
-              value: _formatAmount(reservation.amountPaid),
-            ),
-            _InfoRow(
-              label: 'المتبقي',
-              value: _formatAmount(reservation.remainingAmount),
-            ),
-          ],
-        ),
-        
-        actions: [
-          Row(
-            children: [
-                        Expanded(
-            child: Button(
-              onTap: () => Navigator.pop(dialogContext, false),
-              text: 'إلغاء',
-              variant: AppButtonVariant.outline,
-            ),
-          ),
-          SizedBox(width: 4,),
-          Expanded(
-            child: Button(
-              onTap: () => Navigator.pop(dialogContext, true),
-              text: 'تأكيد الاستلام',
-            ),
-          ),
-
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final amount = double.tryParse(amountController.text.trim());
+                  final amountError = _validateInstitutePaymentAmount(
+                    amount,
+                    reservation,
+                  );
+                  if (amountError != null) {
+                    setDialogState(() => validationMessage = amountError);
+                    return;
+                  }
+                  if (method == 'bankTransfer' && receiptBytes == null) {
+                    setDialogState(
+                      () => validationMessage = 'أرفق صورة سند التحويل',
+                    );
+                    return;
+                  }
+                  Navigator.pop(dialogContext, {
+                    'amount': amount!,
+                    'method': method,
+                    'receiptBytes': receiptBytes,
+                    'receiptName': receiptName,
+                    'receiptContentType': receiptContentType,
+                  });
+                },
+                child: const Text('تسجيل الدفعة'),
+              ),
             ],
+          ),
+        );
+      },
+    );
+    amountController.dispose();
+    if (result == null || !mounted) return;
+
+    final method = result['method']! as String;
+    final amount = result['amount']! as double;
+    final success = method == 'cash'
+        ? await controller.recordInPersonBalancePayment(
+            reservation.id,
+            amount: amount,
           )
-
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final success = await controller.recordInPersonBalancePayment(
-      reservation.id,
-    );
+        : await controller.recordInPersonTransferPayment(
+            reservationId: reservation.id,
+            amount: amount,
+            fileBytes: result['receiptBytes']! as List<int>,
+            fileName: result['receiptName']! as String,
+            contentType: result['receiptContentType']! as String,
+          );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           success
-              ? 'تم تسجيل استلام المتبقي وإكمال سداد الحجز'
-              : 'تعذر تسجيل الاستلام: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
+              ? 'تم تسجيل الدفعة بنجاح'
+              : 'تعذر تسجيل الدفعة: ${controller.errorMessage ?? 'حاول مرة أخرى'}',
         ),
       ),
     );
   }
+
+  String? _validateInstitutePaymentAmount(
+    double? amount,
+    ReservationModel reservation,
+  ) {
+    if (amount == null ||
+        !amount.isFinite ||
+        amount <= 0 ||
+        amount > reservation.remainingAmount) {
+      return 'أدخل مبلغًا صحيحًا لا يتجاوز المتبقي';
+    }
+    const epsilon = 0.005;
+    if (reservation.balancePaymentPolicy == 'fullRemainder' &&
+        (amount - reservation.remainingAmount).abs() >= epsilon) {
+      return 'يجب سداد كامل المبلغ المتبقي';
+    }
+    if (reservation.balancePaymentPolicy == 'installments' &&
+        amount + epsilon < reservation.minimumInstallmentAmount &&
+        (amount - reservation.remainingAmount).abs() >= epsilon) {
+      return 'المبلغ أقل من الحد الأدنى للقسط';
+    }
+    return null;
+  }
+
+  String _paymentRecordStatus(String status) => switch (status) {
+    'pending' => 'قيد المراجعة',
+    'approved' => 'معتمدة',
+    'rejected' => 'مرفوضة',
+    _ => status,
+  };
 
   Future<void> _rejectBalancePayment(
     InstituteReservationController controller,

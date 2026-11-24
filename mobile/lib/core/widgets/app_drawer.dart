@@ -43,12 +43,14 @@ class AppDrawer extends StatelessWidget {
         ),
         _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
         _DrawerItem(icon: Icons.person_outline, title: 'الملف الشخصي'),
+        _DrawerItem(icon: Icons.notifications_outlined, title: 'الإشعارات'),
         _DrawerItem(icon: Icons.settings_outlined, title: 'الإعدادات'),
       ],
       'admin' => [
         _DrawerItem(icon: Icons.business_outlined, title: 'إدارة المعاهد'),
         _DrawerItem(icon: Icons.people_outline, title: 'إدارة المستخدمين'),
         _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
+        _DrawerItem(icon: Icons.notifications_outlined, title: 'الإشعارات'),
         _DrawerItem(icon: Icons.settings_outlined, title: 'إعدادات المنصة'),
       ],
       _ => <_DrawerItem>[],
@@ -105,7 +107,9 @@ class AppDrawer extends StatelessWidget {
                 title: Text(item.title),
                 onTap: () {
                   Navigator.pop(context);
-                  if (role == 'student' && item.title == 'الملف الشخصي') {
+                  if (item.title == 'الإشعارات') {
+                    context.push('/notifications');
+                  } else if (role == 'student' && item.title == 'الملف الشخصي') {
                     context.push('/student_profile');
                   } else if (role == 'student' && item.title == 'الإعدادات') {
                     context.push('/student_phone_settings');

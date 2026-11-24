@@ -7,6 +7,7 @@ import type {
   InstituteDashboard,
   InstituteSettings,
   Reservation,
+  AppNotification,
 } from "../types";
 
 interface LoginResponse {
@@ -189,6 +190,25 @@ export const reservationsApi = {
     requestData<ReceiptResponse>(
       `/api/institutes/me/reservations/payments/${paymentId}/receipt`,
     ),
+};
+
+export const notificationsApi = {
+  getAll: async () => {
+    const response = await request<{
+      data: AppNotification[];
+      unreadCount: number;
+    }>("/api/notifications");
+    return response;
+  },
+  markRead: (recipientId: string) =>
+    request<{ success: boolean }>(
+      `/api/notifications/${recipientId}/read`,
+      { method: "PATCH" },
+    ),
+  markAllRead: () =>
+    request<{ success: boolean }>("/api/notifications/read-all", {
+      method: "PATCH",
+    }),
 };
 
 function createCourseFormData(input: CourseInput, image?: File) {

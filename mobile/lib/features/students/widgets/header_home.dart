@@ -8,6 +8,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/search.dart';
 import '../../../core/utils/saudi_date.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../notifications/controllers/notification_controller.dart';
 
 class HeaderHome extends StatelessWidget {
   const HeaderHome({
@@ -93,7 +94,7 @@ class HeaderHome extends StatelessWidget {
                     ),
                   ),
 
-                  _buildNotificationButton(),
+                  _buildNotificationButton(context),
                 ],
               ),
             ],
@@ -129,16 +130,17 @@ class HeaderHome extends StatelessWidget {
   //   );
   // }
 
-  Widget _buildNotificationButton() {
+  Widget _buildNotificationButton(BuildContext context) {
+    final unreadCount = context.watch<NotificationController>().unreadCount;
     return IconButton(
       onPressed: () {
-        // فتح الإشعارات لاحقاً
+        context.push('/notifications');
       },
       icon: Stack(
         clipBehavior: Clip.none,
         children: [
           const Icon(Icons.notifications_outlined, color: Colors.white),
-          Positioned(
+          if (unreadCount > 0) Positioned(
             top: -4,
             right: -4,
             child: Container(
@@ -150,7 +152,7 @@ class HeaderHome extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Text(
-                '5',
+                unreadCount > 99 ? '99+' : unreadCount.toString(),
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white,
                   fontSize: 9,

@@ -84,6 +84,10 @@ instituteReservationRouter.get("/", (req, res) =>
   reservationController.getInstituteReservations(req, res),
 );
 
+instituteReservationRouter.get("/:reservationId", (req, res) =>
+  reservationController.getInstituteReservationById(req, res),
+);
+
 // البحث عن اسم طالب سابق ضمن تسجيلات المعهد حسب رقم الهاتف.
 instituteReservationRouter.get("/student-lookup", (req, res) =>
   reservationController.lookupStudentByPhone(req, res),

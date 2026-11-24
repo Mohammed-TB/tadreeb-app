@@ -799,6 +799,50 @@ private async reserveSeat(
     });
   }
 
+  async getInstituteReservationById(ownerId: string, reservationId: string) {
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      throw new Error("Invalid reservation ID");
+    }
+
+    const owner = await User.findById(ownerId);
+    if (
+      !owner ||
+      owner.role !== UserRole.INSTITUTE_OWNER ||
+      !owner.instituteId
+    ) {
+      throw new Error("Institute owner not found");
+    }
+
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      instituteId: owner.instituteId,
+    })
+      .populate("courseId", "title price depositAmount")
+      .populate("studentId", "name email phone")
+      .select(
+        "+receiptPublicId +receiptFormat +receiptUrl +balanceReceiptPublicId +balanceReceiptFormat",
+      );
+
+    if (!reservation) throw new Error("Reservation not found");
+
+    const paymentHistory = await this.getPaymentHistory([reservation._id]);
+    const data = reservation.toObject();
+    const hasReceipt = Boolean(data.receiptPublicId || data.receiptUrl);
+    const hasBalanceReceipt = Boolean(data.balanceReceiptPublicId);
+    delete data.receiptPublicId;
+    delete data.receiptFormat;
+    delete data.receiptUrl;
+    delete data.balanceReceiptPublicId;
+    delete data.balanceReceiptFormat;
+
+    return {
+      ...data,
+      hasReceipt,
+      hasBalanceReceipt,
+      payments: paymentHistory.get(reservation.id) ?? [],
+    };
+  }
+
   private async getPaymentHistory(
     reservationIds: mongoose.Types.ObjectId[],
   ): Promise<Map<string, Record<string, unknown>[]>> {

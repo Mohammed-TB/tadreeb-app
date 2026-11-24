@@ -42,6 +42,8 @@ import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/student_phone_settings_screen.dart';
+import '../features/notifications/screens/notifications_screen.dart';
+import '../features/notifications/controllers/notification_controller.dart';
 import '../features/students/screens/student_profile_screen.dart';
 
 import '../features/onboarding/screens/onboarding_screen.dart';
@@ -106,6 +108,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         GoRoute(
           path: '/student_profile',
           builder: (context, state) => const StudentProfileScreen(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
         ),
         GoRoute(
           path: '/institute_payment_settings',
@@ -364,6 +370,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (_activeUserId == user.id) return;
     _activeUserId = user.id;
     unawaited(_realtimeService.connect(role: user.role.name));
+    unawaited(context.read<NotificationController>().fetch());
   }
 
   void _showRealtimeNotice(RealtimeEvent event) {
@@ -478,6 +485,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return null;
       }
       return '/login?reason=auth_required';
+    }
+
+    if (location == '/notifications' && user == null) {
+      return '/login';
     }
 
     final requiredRole = switch (location) {

@@ -154,6 +154,19 @@ export interface Reservation {
   payments: PaymentRecord[];
 }
 
+export interface AppNotification {
+  id: string;
+  notificationId: string;
+  type: string;
+  title: string;
+  body: string;
+  entityType: "course" | "reservation";
+  entityId: string;
+  action: "openCourseDetails" | "openReservationDetails";
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface ApiEnvelope<T> {
   success: boolean;
   message?: string;

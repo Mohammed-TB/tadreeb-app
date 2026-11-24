@@ -261,6 +261,22 @@ class ReservationController {
     }
   }
 
+  async getInstituteReservationById(req: Request, res: Response) {
+    try {
+      const reservationId = Array.isArray(req.params.reservationId)
+        ? req.params.reservationId[0]
+        : req.params.reservationId;
+      const reservation =
+        await reservationService.getInstituteReservationById(
+          req.user!.userId,
+          reservationId,
+        );
+      return res.status(200).json({ success: true, data: reservation });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
   async lookupStudentByPhone(req: Request, res: Response) {
     try {
       const phone =

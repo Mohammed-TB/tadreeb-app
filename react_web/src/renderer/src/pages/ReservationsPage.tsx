@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Banknote,
@@ -41,6 +42,7 @@ function getSaudiDayStart() {
 
 export function ReservationsPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,6 +66,17 @@ export function ReservationsPage() {
     queryFn: instituteApi.getSettings,
   });
   const selected = reservations.data?.find((item) => item._id === selectedId) ?? null;
+
+  useEffect(() => {
+    const reservationId = searchParams.get("reservationId");
+    if (!reservationId) return;
+    if (reservations.data?.some((item) => item._id === reservationId)) {
+      setSelectedId(reservationId);
+      const next = new URLSearchParams(searchParams);
+      next.delete("reservationId");
+      setSearchParams(next, { replace: true });
+    }
+  }, [reservations.data, searchParams, setSearchParams]);
 
   const refreshReservationData = async () => {
     await Promise.all([

@@ -46,6 +46,39 @@ function registerSessionHandlers() {
   });
 }
 
+async function loadRenderer(
+  window: BrowserWindow,
+  developmentUrl?: string,
+) {
+  if (developmentUrl) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    try {
+      const response = await fetch(developmentUrl, {
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        await window.loadURL(developmentUrl);
+        return;
+      }
+      console.error(
+        `Electron renderer dev server returned HTTP ${response.status}; loading the built UI.`,
+      );
+    } catch (error) {
+      console.error(
+        "Electron renderer dev server is unavailable; loading the built UI.",
+        error,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  if (!window.isDestroyed()) {
+    await window.loadFile(join(currentDirectory, "../renderer/index.html"));
+  }
+}
+
 function createWindow() {
   const { x, y, width: workWidth, height: workHeight } =
     screen.getPrimaryDisplay().workArea;
@@ -72,10 +105,16 @@ function createWindow() {
     },
   });
 
+  const developmentUrl =
+    !app.isPackaged &&
+    process.env.NODE_ENV_ELECTRON_VITE === "development"
+      ? process.env.ELECTRON_RENDERER_URL
+      : undefined;
+
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event, url) => {
-    const developmentOrigin = process.env.ELECTRON_RENDERER_URL
-      ? new URL(process.env.ELECTRON_RENDERER_URL).origin
+    const developmentOrigin = developmentUrl
+      ? new URL(developmentUrl).origin
       : null;
     const isAllowed = developmentOrigin
       ? new URL(url).origin === developmentOrigin
@@ -83,11 +122,9 @@ function createWindow() {
     if (!isAllowed) event.preventDefault();
   });
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void window.loadFile(join(currentDirectory, "../renderer/index.html"));
-  }
+  void loadRenderer(window, developmentUrl).catch((error: unknown) => {
+    console.error("Failed to load the Tadreeb desktop renderer:", error);
+  });
 }
 
 app.whenReady().then(() => {

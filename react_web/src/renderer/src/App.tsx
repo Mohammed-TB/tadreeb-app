@@ -26,6 +26,11 @@ const ReservationsPage = lazy(() =>
     default: module.ReservationsPage,
   })),
 );
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
 
 function SessionLoading() {
   return (
@@ -92,6 +97,7 @@ export function App() {
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/reservations" element={<ReservationsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to={status === "authenticated" ? "/dashboard" : "/login"} replace />} />

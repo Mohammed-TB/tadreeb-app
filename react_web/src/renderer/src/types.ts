@@ -12,9 +12,19 @@ export interface AuthUser {
 export interface Institute {
   _id: string;
   name: string;
+  description?: string;
+  email?: string;
   address?: string;
   phone?: string;
   logo?: string;
+}
+
+export type BalancePaymentPolicy = "fullRemainder" | "installments";
+
+export interface InstituteSettings {
+  receiptResubmissionHours: number;
+  balancePaymentPolicy: BalancePaymentPolicy;
+  minimumInstallmentAmount: number;
 }
 
 export interface InstituteDashboard {
@@ -61,9 +71,12 @@ export type CourseStatus = "draft" | "published" | "closed" | "completed";
 export interface Course {
   _id: string;
   title: string;
+  description: string;
+  image?: string;
   category: string;
   price: number;
   depositAmount: number;
+  requiresEnglishName: boolean;
   capacity: number;
   enrolledCount: number;
   reservedCount: number;
@@ -71,6 +84,23 @@ export interface Course {
   endDate: string;
   status: CourseStatus;
   location: string;
+  whatWillLearn: string[];
+  features: string[];
+}
+
+export interface CourseInput {
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  depositAmount: number;
+  capacity: number;
+  startDate: string;
+  endDate: string;
+  location: string;
+  requiresEnglishName: boolean;
+  whatWillLearn: string[];
+  features: string[];
 }
 
 export type ReservationStatus =
@@ -85,7 +115,7 @@ export interface PaymentRecord {
   _id: string;
   amount: number;
   status?: string;
-  paymentMethod?: string;
+  method?: string;
   createdAt: string;
   hasReceipt?: boolean;
 }
@@ -111,8 +141,12 @@ export interface Reservation {
   paymentStatus: "unpaid" | "partial" | "paid";
   balancePaymentAmount: number;
   balancePaymentStatus: "none" | "pending" | "approved" | "rejected";
+  balancePaymentMethod?: "bankTransfer" | "inPerson";
+  balancePaymentPolicy?: BalancePaymentPolicy;
+  minimumInstallmentAmount?: number;
   balancePaymentRejectionReason?: string;
   rejectionReason?: string;
+  receiptResubmissionDeadline?: string;
   hasReceipt?: boolean;
   hasBalanceReceipt?: boolean;
   attendanceStatus?: "notMarked" | "attended" | "absent";

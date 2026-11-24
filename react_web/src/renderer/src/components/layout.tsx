@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   PanelRightClose,
+  Settings2,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -16,6 +17,7 @@ const navigation = [
   { to: "/courses", label: "الدورات", icon: BookOpenCheck },
   { to: "/reservations", label: "الحجوزات", icon: ClipboardList },
   { to: "/reports", label: "التقارير", icon: ChartNoAxesCombined },
+  { to: "/settings", label: "الإعدادات", icon: Settings2 },
 ];
 
 export function AppShell() {

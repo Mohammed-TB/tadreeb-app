@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:project_1/core/network/api_client.dart';
+import 'package:project_1/core/network/api_exception.dart';
 import 'package:project_1/core/network/token_storage_service.dart';
 
 void main() {
@@ -58,6 +59,33 @@ void main() {
       '/api/institutes/me/courses/course-1',
       fields: {'title': 'Updated course'},
       authenticated: false,
+    );
+  });
+
+  test('hides internal server details from user-facing errors', () async {
+    final client = MockClient((_) async {
+      return http.Response(
+        '{"message":"Green-API configuration is missing"}',
+        500,
+      );
+    });
+    addTearDown(client.close);
+
+    final apiClient = ApiClient(
+      tokenStorage: TokenStorageService(),
+      client: client,
+      baseUrl: 'https://api.example.test',
+    );
+
+    await expectLater(
+      apiClient.get('/api/notifications'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'حدث خطأ في الخادم. حاول مرة أخرى لاحقًا',
+        ),
+      ),
     );
   });
 }

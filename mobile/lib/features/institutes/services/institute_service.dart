@@ -195,7 +195,7 @@ class InstituteService {
   ApiException _translateInstituteError(ApiException error) {
     if (error.statusCode == 404) {
       return const ApiException(
-        'مسار المعاهد غير منشور على الخادم الحالي. انشر تحديث الـ Backend ثم أعد المحاولة.',
+        'تعذر تحميل قائمة المعاهد حاليًا. حاول مرة أخرى لاحقًا.',
         statusCode: 404,
       );
     }

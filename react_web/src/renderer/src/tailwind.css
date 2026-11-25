@@ -767,6 +767,62 @@
     @apply text-danger;
   }
 
+  .notification-menu {
+    @apply relative;
+  }
+
+  .notification-trigger {
+    @apply relative;
+  }
+
+  .notification-count {
+    @apply absolute -right-[5px] -top-[5px] grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent px-[3px] text-[10px] text-white;
+  }
+
+  .notification-popover {
+    @apply absolute left-0 top-[38px] z-50 max-h-[460px] w-[360px] overflow-y-auto rounded-xl border border-border bg-white p-2 shadow-xl;
+  }
+
+  .notification-popover-header {
+    @apply flex items-center justify-between border-b border-divider px-2 py-2;
+  }
+
+  .notification-popover-header strong {
+    @apply text-[13px] font-bold text-text-primary;
+  }
+
+  .notification-list {
+    @apply flex flex-col gap-1 pt-1;
+  }
+
+  .notification-item {
+    @apply flex w-full flex-col items-stretch rounded-lg border-0 bg-transparent px-3 py-2.5 text-right transition-colors;
+  }
+
+  .notification-item:hover {
+    @apply bg-field;
+  }
+
+  .notification-item.unread {
+    @apply bg-primary-light;
+  }
+
+  .notification-item.unread:hover {
+    @apply bg-primary-light;
+  }
+
+  .notification-item-title {
+    @apply block text-[13px] font-bold leading-5 text-text-primary;
+  }
+
+  .notification-item-body {
+    @apply mt-1 block text-[11px] font-normal leading-5 text-text-secondary;
+  }
+
+  .notification-empty {
+    @apply p-6 text-center text-xs text-text-secondary;
+  }
+
   .drawer-body {
     @apply flex flex-1 flex-col gap-[14px] overflow-auto px-5 pb-7 pt-[18px];
   }

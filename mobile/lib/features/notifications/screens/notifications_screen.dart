@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_typography.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../courses/controllers/reservation_controller.dart';
 import '../../courses/services/course_service.dart';
@@ -140,13 +141,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                       title: Text(
                         notification.title,
-                        style: TextStyle(
+                        style: AppTypography.titleSmall.copyWith(
                           fontWeight: notification.isRead
-                              ? FontWeight.normal
-                              : FontWeight.bold,
+                              ? FontWeight.w600
+                              : FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      subtitle: Text(notification.body),
+                      subtitle: Text(
+                        notification.body,
+                        style: AppTypography.bodySmall,
+                      ),
                       trailing: !notification.isRead
                           ? const Icon(Icons.circle,
                               size: 10, color: AppColors.primary)

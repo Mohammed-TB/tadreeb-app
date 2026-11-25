@@ -163,9 +163,11 @@ class ApiClient {
     } on TimeoutException {
       throw const ApiException('انتهت مهلة الاتصال بالخادم. حاول مجددًا');
     } on SocketException {
-      throw const ApiException('تعذر الاتصال بالخادم. تحقق من تشغيل Backend');
+      throw const ApiException(
+        'تعذر الاتصال بالخدمة حاليًا. حاول مرة أخرى لاحقًا',
+      );
     } on http.ClientException {
-      throw const ApiException('تعذر الاتصال بالخادم. تحقق من عنوان الخدمة');
+      throw const ApiException('حدثت مشكلة أثناء الاتصال. حاول مرة أخرى');
     } on FormatException {
       throw const ApiException('استجابة الخادم غير صالحة');
     }
@@ -265,9 +267,11 @@ class ApiClient {
     } on TimeoutException {
       throw const ApiException('انتهت مهلة الاتصال بالخادم. حاول مجددًا');
     } on SocketException {
-      throw const ApiException('تعذر الاتصال بالخادم. تحقق من تشغيل Backend');
+      throw const ApiException(
+        'تعذر الاتصال بالخدمة حاليًا. حاول مرة أخرى لاحقًا',
+      );
     } on http.ClientException {
-      throw const ApiException('تعذر الاتصال بالخادم. تحقق من عنوان الخدمة');
+      throw const ApiException('حدثت مشكلة أثناء الاتصال. حاول مرة أخرى');
     } on FormatException {
       throw const ApiException('استجابة الخادم غير صالحة');
     }
@@ -401,10 +405,6 @@ class ApiClient {
     }
 
     if (statusCode >= 500) {
-      if (message.contains('Failed to send WhatsApp verification code') ||
-          message.contains('configuration is missing')) {
-        return 'تعذر إرسال رسالة واتساب حاليًا. تحقق من إعدادات Green-API وحاول مجددًا';
-      }
       return 'حدث خطأ في الخادم. حاول مرة أخرى لاحقًا';
     }
 

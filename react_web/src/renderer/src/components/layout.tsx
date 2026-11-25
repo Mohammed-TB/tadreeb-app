@@ -116,32 +116,16 @@ export function AppShell() {
           <div className="topbar-meta">
             <span className="topbar-date">{today}</span>
             <span className="topbar-divider" />
-            <div style={{ position: "relative" }}>
+            <div className="notification-menu">
               <button
                 type="button"
-                className="icon-button"
+                className="icon-button notification-trigger"
                 aria-label="الإشعارات"
                 onClick={() => setNotificationsOpen((open) => !open)}
-                style={{ position: "relative" }}
               >
                 <Bell size={19} />
                 {(notificationsQuery.data?.unreadCount ?? 0) > 0 && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: -5,
-                      right: -5,
-                      minWidth: 17,
-                      height: 17,
-                      borderRadius: 9,
-                      background: "#e24a4a",
-                      color: "white",
-                      fontSize: 10,
-                      display: "grid",
-                      placeItems: "center",
-                      padding: "0 3px",
-                    }}
-                  >
+                  <span className="notification-count">
                     {(notificationsQuery.data?.unreadCount ?? 0) > 99
                       ? "99+"
                       : notificationsQuery.data?.unreadCount}
@@ -149,24 +133,8 @@ export function AppShell() {
                 )}
               </button>
               {notificationsOpen && (
-                <div
-                  className="notification-popover"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 38,
-                    width: 360,
-                    maxHeight: 460,
-                    overflowY: "auto",
-                    zIndex: 50,
-                    background: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    boxShadow: "0 12px 30px rgba(15,23,42,.15)",
-                    padding: 10,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px" }}>
+                <div className="notification-popover">
+                  <div className="notification-popover-header">
                     <strong>الإشعارات</strong>
                     <button
                       type="button"
@@ -177,41 +145,35 @@ export function AppShell() {
                     </button>
                   </div>
                   {(notificationsQuery.data?.data ?? []).length === 0 ? (
-                    <div style={{ padding: 24, textAlign: "center", color: "#64748b" }}>
+                    <div className="notification-empty">
                       لا توجد إشعارات
                     </div>
                   ) : (
-                    notificationsQuery.data?.data.map((notification) => (
-                      <button
-                        type="button"
-                        key={notification.id}
-                        onClick={() => {
-                          markRead.mutate(notification.id);
-                          setNotificationsOpen(false);
-                          if (notification.entityType === "reservation") {
-                            navigate(`/reservations?reservationId=${notification.entityId}`);
-                          } else if (notification.entityType === "course") {
-                            navigate(`/courses?courseId=${notification.entityId}`);
-                          }
-                        }}
-                        style={{
-                          width: "100%",
-                          border: 0,
-                          borderRadius: 8,
-                          background: notification.isRead ? "transparent" : "#eff6ff",
-                          textAlign: "right",
-                          padding: "10px 12px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <strong style={{ display: "block", color: "#0f172a" }}>
-                          {notification.title}
-                        </strong>
-                        <span style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-                          {notification.body}
-                        </span>
-                      </button>
-                    ))
+                    <div className="notification-list">
+                      {notificationsQuery.data?.data.map((notification) => (
+                        <button
+                          type="button"
+                          className={`notification-item${notification.isRead ? "" : " unread"}`}
+                          key={notification.id}
+                          onClick={() => {
+                            markRead.mutate(notification.id);
+                            setNotificationsOpen(false);
+                            if (notification.entityType === "reservation") {
+                              navigate(`/reservations?reservationId=${notification.entityId}`);
+                            } else if (notification.entityType === "course") {
+                              navigate(`/courses?courseId=${notification.entityId}`);
+                            }
+                          }}
+                        >
+                          <strong className="notification-item-title">
+                            {notification.title}
+                          </strong>
+                          <span className="notification-item-body">
+                            {notification.body}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}

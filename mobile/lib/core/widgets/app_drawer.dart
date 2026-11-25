@@ -36,7 +36,7 @@ class AppDrawer extends StatelessWidget {
         ),
       ],
       'instituteOwner' => [
-        _DrawerItem(icon: Icons.business_outlined, title: 'بيانات المعهد'),
+        // _DrawerItem(icon: Icons.business_outlined, title: 'بيانات المعهد'),
         _DrawerItem(
           icon: Icons.payments_outlined,
           title: 'إعدادات الحجز والدفع',
@@ -110,10 +110,10 @@ class AppDrawer extends StatelessWidget {
                   if (item.title == 'الإشعارات') {
                     context.push('/notifications');
                   } else if (role == 'instituteOwner' &&
-                      (item.title == 'بيانات المعهد' ||
-                          item.title == 'الإعدادات')) {
+                      item.title == 'الإعدادات') {
                     context.push('/institute_settings');
-                  } else if (role == 'student' && item.title == 'الملف الشخصي') {
+                  } else if (role == 'student' &&
+                      item.title == 'الملف الشخصي') {
                     context.push('/student_profile');
                   } else if (role == 'student' && item.title == 'الإعدادات') {
                     context.push('/student_phone_settings');
@@ -145,10 +145,13 @@ class AppDrawer extends StatelessWidget {
                 try {
                   await context.read<AuthController>().logout();
                 } catch (error) {
+                  debugPrint('Logout failed: $error');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تعذر تسجيل الخروج. حاول مرة أخرى.'),
+                      ),
+                    );
                   }
                 }
                 if (!context.mounted) return;

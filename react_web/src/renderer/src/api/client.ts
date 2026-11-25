@@ -1,6 +1,6 @@
 import type { ApiEnvelope } from "../types";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "")
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "")
   || "http://127.0.0.1:5000";
 
 export class ApiError extends Error {

@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/app_skeletons.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../services/institute_service.dart';
 
 class InstituteSettingsScreen extends StatefulWidget {
@@ -54,14 +55,22 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() {
-      _isLoading = true;
+      _isLoading = !_hasLoaded;
       _errorMessage = null;
     });
     try {
-      final institute = await context.read<InstituteService>().getMyInstitute();
+      final ownerUserId = context.read<AuthController>().currentUser?.id;
+      if (ownerUserId == null || ownerUserId.isEmpty) {
+        setState(() => _errorMessage = 'يرجى تسجيل الدخول مجددًا');
+        return;
+      }
+      final institute = await context.read<InstituteService>().getMyInstitute(
+        ownerUserId: ownerUserId,
+        forceRefresh: forceRefresh,
+      );
       if (!mounted) return;
       _nameController.text = institute.name;
       _descriptionController.text = institute.description ?? '';
@@ -71,14 +80,14 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> {
       _logoUrl = institute.imageUrl;
       setState(() {
         _hasLoaded = true;
-        _isLoading = false;
       });
     } on Exception catch (error) {
       if (!mounted) return;
       setState(() {
         _errorMessage = error.toString();
-        _isLoading = false;
       });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -169,9 +178,15 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> {
       _errorMessage = null;
     });
     try {
+      final ownerUserId = context.read<AuthController>().currentUser?.id;
+      if (ownerUserId == null || ownerUserId.isEmpty) {
+        setState(() => _errorMessage = 'يرجى تسجيل الدخول مجددًا');
+        return;
+      }
       final service = context.read<InstituteService>();
       if (_logoBytes != null && _logoName != null && _logoContentType != null) {
         final institute = await service.uploadMyInstituteLogo(
+          ownerUserId: ownerUserId,
           imageBytes: _logoBytes!,
           fileName: _logoName!,
           contentType: _logoContentType!,
@@ -183,6 +198,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> {
       }
 
       await service.updateMyInstitute(
+        ownerUserId: ownerUserId,
         name: name,
         description: _descriptionController.text.trim(),
         phone: phone,
@@ -207,7 +223,18 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('بيانات المعهد')),
+        appBar: AppBar(
+          title: const Text('بيانات المعهد'),
+          actions: [
+            IconButton(
+              tooltip: 'تحديث البيانات',
+              onPressed: _isLoading || _isSaving
+                  ? null
+                  : () => _load(forceRefresh: true),
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
         body: _isLoading
             ? const AppSkeletonForm(fieldCount: 6)
             : !_hasLoaded

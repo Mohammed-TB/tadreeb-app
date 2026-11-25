@@ -35,8 +35,19 @@ class InstitutePaymentSettingsService {
     : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+  InstitutePaymentSettings? _cachedSettings;
+  String? _cachedSettingsOwnerId;
 
-  Future<InstitutePaymentSettings> getSettings() async {
+  Future<InstitutePaymentSettings> getSettings({
+    required String ownerUserId,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _cachedSettingsOwnerId == ownerUserId &&
+        _cachedSettings != null) {
+      return _cachedSettings!;
+    }
+
     final response = await _apiClient.get(
       '/api/institutes/me/settings',
       authenticated: true,
@@ -45,10 +56,13 @@ class InstitutePaymentSettingsService {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر قراءة إعدادات الدفع');
     }
-    return InstitutePaymentSettings.fromJson(data);
+    final settings = InstitutePaymentSettings.fromJson(data);
+    _cacheSettings(ownerUserId, settings);
+    return settings;
   }
 
   Future<InstitutePaymentSettings> updateSettings({
+    required String ownerUserId,
     required int receiptResubmissionHours,
     required String policy,
     required double minimumInstallmentAmount,
@@ -66,6 +80,13 @@ class InstitutePaymentSettingsService {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر حفظ إعدادات الدفع');
     }
-    return InstitutePaymentSettings.fromJson(data);
+    final settings = InstitutePaymentSettings.fromJson(data);
+    _cacheSettings(ownerUserId, settings);
+    return settings;
+  }
+
+  void _cacheSettings(String ownerUserId, InstitutePaymentSettings settings) {
+    _cachedSettingsOwnerId = ownerUserId;
+    _cachedSettings = settings;
   }
 }

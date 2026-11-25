@@ -6,6 +6,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_skeletons.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../services/institute_payment_settings_service.dart';
 
 class InstitutePaymentSettingsScreen extends StatefulWidget {
@@ -39,11 +40,21 @@ class _InstitutePaymentSettingsScreenState
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = !_hasLoaded;
+      _errorMessage = null;
+    });
     try {
+      final ownerUserId = context.read<AuthController>().currentUser?.id;
+      if (ownerUserId == null || ownerUserId.isEmpty) {
+        setState(() => _errorMessage = 'يرجى تسجيل الدخول مجددًا');
+        return;
+      }
       final settings = await context
           .read<InstitutePaymentSettingsService>()
-          .getSettings();
+          .getSettings(ownerUserId: ownerUserId, forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() {
         _policy = settings.balancePaymentPolicy;
@@ -80,7 +91,13 @@ class _InstitutePaymentSettingsScreenState
       _errorMessage = null;
     });
     try {
+      final ownerUserId = context.read<AuthController>().currentUser?.id;
+      if (ownerUserId == null || ownerUserId.isEmpty) {
+        setState(() => _errorMessage = 'يرجى تسجيل الدخول مجددًا');
+        return;
+      }
       await context.read<InstitutePaymentSettingsService>().updateSettings(
+        ownerUserId: ownerUserId,
         receiptResubmissionHours: hours,
         policy: _policy,
         minimumInstallmentAmount: minimum ?? 1,
@@ -101,7 +118,18 @@ class _InstitutePaymentSettingsScreenState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('إعدادات الحجز والدفع')),
+        appBar: AppBar(
+          title: const Text('إعدادات الحجز والدفع'),
+          actions: [
+            IconButton(
+              tooltip: 'تحديث الإعدادات',
+              onPressed: _isLoading || _isSaving
+                  ? null
+                  : () => _load(forceRefresh: true),
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
         body: _isLoading
             ? const AppSkeletonForm(fieldCount: 3)
             : !_hasLoaded

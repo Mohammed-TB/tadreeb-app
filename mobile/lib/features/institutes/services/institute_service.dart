@@ -14,8 +14,19 @@ class InstituteService {
   final PublicApiCache? _publicCache;
 
   static const _instituteListTtl = Duration(minutes: 30);
+  InstituteModel? _cachedMyInstitute;
+  String? _cachedMyInstituteOwnerId;
 
-  Future<InstituteModel> getMyInstitute() async {
+  Future<InstituteModel> getMyInstitute({
+    required String ownerUserId,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _cachedMyInstituteOwnerId == ownerUserId &&
+        _cachedMyInstitute != null) {
+      return _cachedMyInstitute!;
+    }
+
     final response = await _apiClient.get(
       '/api/institutes/me',
       authenticated: true,
@@ -24,10 +35,13 @@ class InstituteService {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('بيانات المعهد غير صالحة');
     }
-    return InstituteModel.fromJson(data);
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
   }
 
   Future<InstituteModel> updateMyInstitute({
+    required String ownerUserId,
     required String name,
     required String description,
     required String phone,
@@ -49,10 +63,13 @@ class InstituteService {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر حفظ بيانات المعهد');
     }
-    return InstituteModel.fromJson(data);
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
   }
 
   Future<InstituteModel> uploadMyInstituteLogo({
+    required String ownerUserId,
     required Uint8List imageBytes,
     required String fileName,
     required String contentType,
@@ -70,7 +87,14 @@ class InstituteService {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر حفظ شعار المعهد');
     }
-    return InstituteModel.fromJson(data);
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
+  }
+
+  void _cacheMyInstitute(String ownerUserId, InstituteModel institute) {
+    _cachedMyInstituteOwnerId = ownerUserId;
+    _cachedMyInstitute = institute;
   }
 
   Future<InstitutesResponse> getInstitutes({

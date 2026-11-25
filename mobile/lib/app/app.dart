@@ -26,6 +26,8 @@ import '../features/students/screens/reservation_balance_payment_screen.dart';
 import '../features/students/models/student_reservation_model.dart';
 import '../features/institutes/routing/institute_shell.dart';
 import '../features/institutes/screens/add_institute_course_screen.dart';
+import '../features/institutes/screens/institute_payment_settings_screen.dart';
+import '../features/institutes/screens/institute_settings_screen.dart';
 import '../features/institutes/screens/institute_courses_screen.dart';
 import '../features/institutes/screens/institute_students_screen.dart';
 import '../features/institutes/screens/institute_dashboard_screen.dart';
@@ -41,6 +43,9 @@ import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/student_phone_settings_screen.dart';
+import '../features/notifications/screens/notifications_screen.dart';
+import '../features/notifications/controllers/notification_controller.dart';
+import '../features/students/screens/student_profile_screen.dart';
 
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -99,8 +104,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         GoRoute(
           path: '/student_phone_settings',
-          builder: (context, state) =>
-              const StudentPhoneSettingsScreen(),
+          builder: (context, state) => const StudentPhoneSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/student_profile',
+          builder: (context, state) => const StudentProfileScreen(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/institute_payment_settings',
+          builder: (context, state) => const InstitutePaymentSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/institute_settings',
+          builder: (context, state) => const InstituteSettingsScreen(),
         ),
 
         GoRoute(
@@ -355,6 +375,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (_activeUserId == user.id) return;
     _activeUserId = user.id;
     unawaited(_realtimeService.connect(role: user.role.name));
+    unawaited(context.read<NotificationController>().fetch());
   }
 
   void _showRealtimeNotice(RealtimeEvent event) {
@@ -471,6 +492,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return '/login?reason=auth_required';
     }
 
+    if (location == '/notifications' && user == null) {
+      return '/login';
+    }
+
     final requiredRole = switch (location) {
       '/home_screen' ||
       '/courses_screen' ||
@@ -488,7 +513,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       '/institute_courses' ||
       '/institute_students' ||
       '/institute_reservations' ||
-      '/institute_courses/add' => UserRole.instituteOwner,
+      '/institute_courses/add' ||
+      '/institute_payment_settings' ||
+      '/institute_settings' => UserRole.instituteOwner,
 
       '/admin_dashboard' ||
       '/admin_institutes' ||

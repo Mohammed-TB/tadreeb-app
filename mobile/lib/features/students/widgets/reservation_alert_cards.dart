@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/app_date_time_formatter.dart';
 import '../../../core/widgets/button.dart';
 import '../models/student_reservation_model.dart';
@@ -183,7 +184,7 @@ class ReservationPendingPaymentAlert extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'قم بتحويل مبلغ ${reservation.amountToPay} ريال لحساب المعهد وارفع صورة السند لحجز مقعدك.',
+                      'قم بتحويل مبلغ ${CurrencyFormatter.format(reservation.amountToPay)} لحساب المعهد وارفع صورة السند لحجز مقعدك.',
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),

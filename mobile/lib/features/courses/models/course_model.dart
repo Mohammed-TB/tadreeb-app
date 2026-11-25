@@ -23,6 +23,7 @@ class CourseModel {
 
   final double price;
   final double depositAmount;
+  final bool requiresEnglishName;
 
   final int capacity;
   final int enrolledCount;
@@ -49,6 +50,7 @@ class CourseModel {
     required this.category,
     required this.price,
     required this.depositAmount,
+    this.requiresEnglishName = false,
     required this.capacity,
     this.enrolledCount = 0,
     this.reservedCount = 0,
@@ -90,6 +92,7 @@ class CourseModel {
 
       price: _toDouble(json['price']),
       depositAmount: _toDouble(json['depositAmount']),
+      requiresEnglishName: json['requiresEnglishName'] == true,
 
       capacity: _toInt(json['capacity']),
       enrolledCount: _toInt(json['enrolledCount']),
@@ -127,6 +130,7 @@ class CourseModel {
       'category': category,
       'price': price,
       'depositAmount': depositAmount,
+      'requiresEnglishName': requiresEnglishName,
       'capacity': capacity,
       'startDate': SaudiDate.toApiDate(startDate),
       'endDate': SaudiDate.toApiDate(endDate),
@@ -144,6 +148,7 @@ class CourseModel {
     String? category,
     double? price,
     double? depositAmount,
+    bool? requiresEnglishName,
     int? capacity,
     int? enrolledCount,
     int? reservedCount,
@@ -165,6 +170,8 @@ class CourseModel {
       category: category ?? this.category,
       price: price ?? this.price,
       depositAmount: depositAmount ?? this.depositAmount,
+      requiresEnglishName:
+          requiresEnglishName ?? this.requiresEnglishName,
       capacity: capacity ?? this.capacity,
       enrolledCount: enrolledCount ?? this.enrolledCount,
       reservedCount: reservedCount ?? this.reservedCount,

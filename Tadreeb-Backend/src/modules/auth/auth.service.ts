@@ -3,12 +3,15 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
+import mongoose from "mongoose";
 
 import User, {
   AuthProvider,
   UserRole,
   UserStatus,
 } from "../users/user.model";
+import Student from "../students/student.model";
+import studentService from "../students/student.service";
 import { isValidE164Phone } from "../../shared/phone-number";
 import greenApiPhoneVerificationService from "./green-api-phone-verification.service";
 import Reservation from "../reservations/models/reservation.model";
@@ -211,15 +214,35 @@ class AuthService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // إنشاء حساب طالب جديد.
-    const user = await User.create({
-      name,
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: UserRole.STUDENT,
-      status: UserStatus.ACTIVE,
-      authProvider: AuthProvider.LOCAL,
-      isPhoneVerified: false,
-    });
+    const session = await mongoose.startSession();
+    let user: Awaited<ReturnType<typeof User.create>>[number] | undefined;
+    try {
+      await session.withTransaction(async () => {
+        const users = await User.create(
+          [{
+            name,
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: UserRole.STUDENT,
+            status: UserStatus.ACTIVE,
+            authProvider: AuthProvider.LOCAL,
+            isPhoneVerified: false,
+          }],
+          { session },
+        );
+        user = users[0];
+        await Student.create(
+          [{ userId: user._id, name: user.name }],
+          { session },
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (!user) {
+      throw new Error("Student registration transaction returned no user");
+    }
 
     // إصدار Token بعد نجاح التسجيل.
     const token = generateToken(user.id, user.role);
@@ -256,6 +279,10 @@ class AuthService {
     // منع الحسابات غير النشطة من تسجيل الدخول.
     if (user.status !== UserStatus.ACTIVE) {
       throw new Error("Your account is not active");
+    }
+
+    if (user.role === UserRole.STUDENT) {
+      await studentService.ensureProfile(user._id, user.name);
     }
 
     // إصدار JWT بعد نجاح المصادقة.
@@ -332,14 +359,33 @@ class AuthService {
 
     // إنشاء حساب طالب جديد إذا لم يكن البريد مسجلًا.
     if (!user) {
-      user = await User.create({
-        name,
-        email,
-        googleId,
-        role: UserRole.STUDENT,
-        status: UserStatus.ACTIVE,
-        authProvider: AuthProvider.GOOGLE,
-      });
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          const users = await User.create(
+            [{
+              name,
+              email,
+              googleId,
+              role: UserRole.STUDENT,
+              status: UserStatus.ACTIVE,
+              authProvider: AuthProvider.GOOGLE,
+            }],
+            { session },
+          );
+          user = users[0];
+          await Student.create(
+            [{ userId: user._id, name: user.name }],
+            { session },
+          );
+        });
+      } finally {
+        await session.endSession();
+      }
+    }
+
+    if (!user) {
+      throw new Error("Google login transaction returned no user");
     }
 
     // منع الحسابات المعلقة أو الموقوفة من الدخول.
@@ -351,6 +397,8 @@ class AuthService {
     if (user.role !== UserRole.STUDENT) {
       throw new Error("Google login is only available for students");
     }
+
+    await studentService.ensureProfile(user._id, user.name);
 
     // إصدار JWT الخاص بتطبيق Tadreeb.
     const token = generateToken(user.id, user.role);

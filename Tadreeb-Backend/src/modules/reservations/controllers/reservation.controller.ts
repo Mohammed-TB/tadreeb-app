@@ -39,17 +39,25 @@ class ReservationController {
   async createOnline(req: Request, res: Response) {
     try {
       console.log("🔥 BACKEND: createOnline reached");
-      const { courseId, studentName, studentPhone, paymentOption } = req.body;
+      const {
+        courseId,
+        studentName,
+        studentPhone,
+        studentEnglishName,
+        paymentAmount,
+      } = req.body;
 
       if (
         typeof courseId !== "string" ||
         typeof studentName !== "string" ||
         typeof studentPhone !== "string" ||
-        !paymentOption
+        typeof paymentAmount !== "number" ||
+        typeof studentEnglishName !== "undefined" &&
+          typeof studentEnglishName !== "string"
       ) {
         return res.status(400).json({
           success: false,
-          message: "Course ID, student name, phone, and payment option are required",
+          message: "Course ID, student name, phone, and payment amount are required",
         });
       }
 
@@ -59,7 +67,8 @@ class ReservationController {
           courseId,
           studentName,
           studentPhone,
-          paymentOption,
+          paymentAmount,
+          studentEnglishName,
         );
 
       return res.status(201).json({
@@ -79,17 +88,24 @@ class ReservationController {
         courseId,
         studentName,
         studentPhone,
-        paymentOption,
+        studentEnglishName,
+        paymentAmount,
+        paymentMethod,
       } = req.body;
 
       if (
         typeof courseId !== "string" ||
         typeof studentName !== "string" ||
-        typeof studentPhone !== "string"
+        typeof studentPhone !== "string" ||
+        typeof paymentAmount !== "string" ||
+        !Number.isFinite(Number(paymentAmount)) ||
+        (paymentMethod !== "cash" && paymentMethod !== "bankTransfer") ||
+        (studentEnglishName !== undefined &&
+          typeof studentEnglishName !== "string")
       ) {
         return res.status(400).json({
           success: false,
-          message: "Please provide valid student details",
+          message: "Please provide valid student details and payment data",
         });
       }
 
@@ -100,13 +116,47 @@ class ReservationController {
             courseId,
             studentName,
             studentPhone,
-            paymentOption,
+            studentEnglishName,
+            paymentAmount: Number(paymentAmount),
+            paymentMethod,
+            receiptBuffer: req.file?.buffer,
           },
         );
 
       return res.status(201).json({
         success: true,
         message: "In-person registration created successfully",
+        data: reservation,
+      });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
+  async resubmitInPersonReceipt(req: Request, res: Response) {
+    try {
+      const reservationId = req.params.reservationId;
+      if (typeof reservationId !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reservation ID",
+        });
+      }
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a receipt image",
+        });
+      }
+
+      const reservation = await reservationService.resubmitInPersonReceipt(
+        req.user!.userId,
+        reservationId,
+        req.file.buffer,
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Transfer receipt resubmitted and awaiting review",
         data: reservation,
       });
     } catch (error) {
@@ -211,6 +261,22 @@ class ReservationController {
     }
   }
 
+  async getInstituteReservationById(req: Request, res: Response) {
+    try {
+      const reservationId = Array.isArray(req.params.reservationId)
+        ? req.params.reservationId[0]
+        : req.params.reservationId;
+      const reservation =
+        await reservationService.getInstituteReservationById(
+          req.user!.userId,
+          reservationId,
+        );
+      return res.status(200).json({ success: true, data: reservation });
+    } catch (error) {
+      return this.handleError(res, error);
+    }
+  }
+
   async lookupStudentByPhone(req: Request, res: Response) {
     try {
       const phone =
@@ -290,9 +356,19 @@ class ReservationController {
         });
       }
 
+      const amount =
+        typeof req.body.amount === "string" ? Number(req.body.amount) : NaN;
+      if (!Number.isFinite(amount)) {
+        return res.status(400).json({
+          success: false,
+          message: "A valid payment amount is required",
+        });
+      }
+
       const reservation = await reservationService.uploadBalancePaymentReceipt(
         req.user!.userId,
         reservationId,
+        amount,
         req.file.buffer,
       );
 
@@ -371,9 +447,19 @@ class ReservationController {
         });
       }
 
+      const amount =
+        typeof req.body?.amount === "number" ? req.body.amount : NaN;
+      if (!Number.isFinite(amount)) {
+        return res.status(400).json({
+          success: false,
+          message: "A valid payment amount is required",
+        });
+      }
+
       const reservation = await reservationService.recordInPersonBalancePayment(
         req.user!.userId,
         reservationId,
+        amount,
       );
       return res.status(200).json({
         success: true,
@@ -382,6 +468,41 @@ class ReservationController {
       });
     } catch (error) {
       return this.handleError(res, error);
+    }
+  }
+
+  async recordInPersonTransferPayment(req: Request, res: Response) {
+      try {
+        const reservationId = req.params.reservationId;
+        const amount =
+          typeof req.body.amount === "string" ? Number(req.body.amount) : NaN;
+        if (typeof reservationId !== "string" || !Number.isFinite(amount)) {
+          return res.status(400).json({
+            success: false,
+            message: "Reservation ID and valid payment amount are required",
+          });
+        }
+        if (!req.file) {
+          return res.status(400).json({
+            success: false,
+            message: "Please select a receipt image",
+          });
+        }
+
+        const reservation =
+          await reservationService.recordInPersonBankTransferPayment(
+            req.user!.userId,
+            reservationId,
+            amount,
+            req.file.buffer,
+          );
+        return res.status(200).json({
+          success: true,
+          message: "Transfer receipt submitted and awaiting institute review",
+          data: reservation,
+        });
+      } catch (error) {
+        return this.handleError(res, error);
     }
   }
 
@@ -433,6 +554,27 @@ async getBalancePaymentReceiptUrl(req: Request, res: Response) {
       success: true,
       data: result,
     });
+  } catch (error) {
+    return this.handleError(res, error);
+  }
+}
+
+async getPaymentReceiptUrl(req: Request, res: Response) {
+  try {
+    const paymentId = req.params.paymentId;
+    if (typeof paymentId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment ID",
+      });
+    }
+
+    const result = await reservationService.getPaymentReceiptAccessUrl(
+      req.user!.userId,
+      req.user!.role,
+      paymentId,
+    );
+    return res.status(200).json({ success: true, data: result });
   } catch (error) {
     return this.handleError(res, error);
   }

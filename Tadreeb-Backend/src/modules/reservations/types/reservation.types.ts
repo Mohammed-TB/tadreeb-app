@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { BalancePaymentPolicy } from "../../institutes/types/institute.types";
 
 export enum BookingType {
   ONLINE = "online",
@@ -53,6 +54,7 @@ export interface IReservation {
   // بيانات الطالب تحفظ حتى لو لم يمتلك حسابًا.
   studentName: string;
   studentPhone: string;
+  studentEnglishName?: string;
 
   bookingType: BookingType;
   createdBy: mongoose.Types.ObjectId;
@@ -62,6 +64,8 @@ export interface IReservation {
   amountToPay: number;
   amountPaid: number;
   paymentStatus: PaymentStatus;
+  balancePaymentPolicy: BalancePaymentPolicy;
+  minimumInstallmentAmount: number;
 
   receiptPublicId?: string;
   receiptFormat?: string;

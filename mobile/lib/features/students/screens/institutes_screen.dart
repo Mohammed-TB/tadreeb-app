@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../favorites/controllers/favorite_controller.dart';
 import '../../institutes/controllers/institute_controller.dart';
 import '../../institutes/models/institute_model.dart';
@@ -169,12 +170,12 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
     if (controller.isLoading && controller.institutes.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(
-            height: 300,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
+        children: const [
+          AppSkeletonList(
+            itemCount: 3,
+            padding: EdgeInsets.all(AppSpacing.md),
+            leadingSize: 86,
+            textLines: 2,
           ),
         ],
       );
@@ -241,9 +242,11 @@ class _InstitutesScreenState extends State<InstitutesScreen> {
         if (index == institutes.length) {
           if (controller.isLoadingMore) {
             return const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+              padding: EdgeInsets.only(bottom: AppSpacing.cardGap),
+              child: AppSkeletonCard(
+                leadingSize: 56,
+                textLines: 1,
+                showTrailing: false,
               ),
             );
           }

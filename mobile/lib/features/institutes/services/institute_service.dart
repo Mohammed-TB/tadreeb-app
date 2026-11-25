@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/cache/public_data_cache.dart';
@@ -12,6 +14,88 @@ class InstituteService {
   final PublicApiCache? _publicCache;
 
   static const _instituteListTtl = Duration(minutes: 30);
+  InstituteModel? _cachedMyInstitute;
+  String? _cachedMyInstituteOwnerId;
+
+  Future<InstituteModel> getMyInstitute({
+    required String ownerUserId,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh &&
+        _cachedMyInstituteOwnerId == ownerUserId &&
+        _cachedMyInstitute != null) {
+      return _cachedMyInstitute!;
+    }
+
+    final response = await _apiClient.get(
+      '/api/institutes/me',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('بيانات المعهد غير صالحة');
+    }
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
+  }
+
+  Future<InstituteModel> updateMyInstitute({
+    required String ownerUserId,
+    required String name,
+    required String description,
+    required String phone,
+    required String email,
+    required String address,
+  }) async {
+    final response = await _apiClient.put(
+      '/api/institutes/me',
+      authenticated: true,
+      body: {
+        'name': name,
+        'description': description,
+        'phone': phone,
+        'email': email,
+        'address': address,
+      },
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر حفظ بيانات المعهد');
+    }
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
+  }
+
+  Future<InstituteModel> uploadMyInstituteLogo({
+    required String ownerUserId,
+    required Uint8List imageBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final response = await _apiClient.postMultipart(
+      '/api/institutes/me/logo',
+      authenticated: true,
+      fields: const {},
+      fileBytes: imageBytes,
+      fileField: 'logo',
+      fileName: fileName,
+      contentType: contentType,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر حفظ شعار المعهد');
+    }
+    final institute = InstituteModel.fromJson(data);
+    _cacheMyInstitute(ownerUserId, institute);
+    return institute;
+  }
+
+  void _cacheMyInstitute(String ownerUserId, InstituteModel institute) {
+    _cachedMyInstituteOwnerId = ownerUserId;
+    _cachedMyInstitute = institute;
+  }
 
   Future<InstitutesResponse> getInstitutes({
     String? search,
@@ -135,7 +219,7 @@ class InstituteService {
   ApiException _translateInstituteError(ApiException error) {
     if (error.statusCode == 404) {
       return const ApiException(
-        'مسار المعاهد غير منشور على الخادم الحالي. انشر تحديث الـ Backend ثم أعد المحاولة.',
+        'تعذر تحميل قائمة المعاهد حاليًا. حاول مرة أخرى لاحقًا.',
         statusCode: 404,
       );
     }

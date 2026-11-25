@@ -257,7 +257,7 @@ class InstituteReservationController extends ChangeNotifier {
     }
   }
 
-  Future<bool> _reviewBalancePayment(
+  Future<bool> _reviewReservationChange(
     String reservationId,
     Future<ReservationModel> Function() review,
   ) async {
@@ -289,7 +289,7 @@ class InstituteReservationController extends ChangeNotifier {
   }
 
   Future<bool> approveBalancePayment(String reservationId) =>
-      _reviewBalancePayment(
+      _reviewReservationChange(
         reservationId,
         () => _reservationService.approveBalancePayment(reservationId),
       );
@@ -297,23 +297,75 @@ class InstituteReservationController extends ChangeNotifier {
   Future<bool> rejectBalancePayment(
     String reservationId, {
     required String reason,
-  }) => _reviewBalancePayment(
+  }) => _reviewReservationChange(
     reservationId,
     () =>
         _reservationService.rejectBalancePayment(reservationId, reason: reason),
   );
 
-  Future<bool> recordInPersonBalancePayment(String reservationId) =>
-      _reviewBalancePayment(
-        reservationId,
-        () => _reservationService.recordInPersonBalancePayment(reservationId),
-      );
+  Future<bool> recordInPersonBalancePayment(
+    String reservationId, {
+    required double amount,
+  }) => _reviewReservationChange(
+    reservationId,
+    () => _reservationService.recordInPersonBalancePayment(
+      reservationId,
+      amount: amount,
+    ),
+  );
+
+  Future<bool> recordInPersonTransferPayment({
+    required String reservationId,
+    required double amount,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) => _reviewReservationChange(
+    reservationId,
+    () => _reservationService.recordInPersonTransferPayment(
+      reservationId: reservationId,
+      amount: amount,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      contentType: contentType,
+    ),
+  );
+
+  Future<bool> resubmitInPersonReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) => _reviewReservationChange(
+    reservationId,
+    () => _reservationService.resubmitInPersonReceipt(
+      reservationId: reservationId,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      contentType: contentType,
+    ),
+  );
+
+  Future<String?> getPaymentReceiptUrl(String paymentId) async {
+    try {
+      return await _reservationService.getPaymentReceiptUrl(paymentId);
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
 
   Future<bool> createInPersonReservation({
     required String courseId,
     required String studentName,
     required String studentPhone,
-    required String paymentOption,
+    required double paymentAmount,
+    required String paymentMethod,
+    String? studentEnglishName,
+    List<int>? receiptBytes,
+    String? receiptName,
+    String? receiptContentType,
   }) async {
     const operationId = 'in-person-registration';
     if (_processingIds.contains(operationId)) return false;
@@ -327,7 +379,12 @@ class InstituteReservationController extends ChangeNotifier {
         courseId: courseId,
         studentName: studentName,
         studentPhone: studentPhone,
-        paymentOption: paymentOption,
+        paymentAmount: paymentAmount,
+        paymentMethod: paymentMethod,
+        studentEnglishName: studentEnglishName,
+        receiptBytes: receiptBytes,
+        receiptName: receiptName,
+        receiptContentType: receiptContentType,
       );
       await fetchReservations();
       _dataChangeBus?.notifyChanged(

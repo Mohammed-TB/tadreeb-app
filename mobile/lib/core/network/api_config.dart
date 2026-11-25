@@ -4,8 +4,5 @@ class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://tadreeb-backend.onrender.com',
-    // defaultValue: 'http://127.0.0.1:5000',
-
-    
   );
 }

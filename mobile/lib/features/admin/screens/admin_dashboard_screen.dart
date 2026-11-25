@@ -9,6 +9,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/state/app_data_change_bus.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../models/admin_dashboard_stats.dart';
 import '../services/admin_dashboard_service.dart';
@@ -112,12 +113,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               },
             )
           else if (!snapshot.hasData)
-            const SizedBox(
-              height: 320,
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            )
+            const AppSkeletonDashboard()
           else
             _buildDashboardSections(snapshot.data!),
         ],

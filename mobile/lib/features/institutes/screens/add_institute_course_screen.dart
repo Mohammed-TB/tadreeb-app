@@ -55,6 +55,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
   bool _isPickingImage = false;
   bool _isSubmitting = false;
   bool _isImageRemoved = false;
+  bool _requiresEnglishName = false;
   List<String> _whatWillLearn = [];
   List<String> _features = [];
 
@@ -83,6 +84,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
     _endDate = course.endDate;
     _whatWillLearn = List.of(course.whatWillLearn);
     _features = List.of(course.features);
+    _requiresEnglishName = course.requiresEnglishName;
   }
 
   @override
@@ -287,6 +289,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
           category: category,
           price: price,
           depositAmount: depositAmount,
+          requiresEnglishName: _requiresEnglishName,
           capacity: capacity,
           startDate: _startDate,
           endDate: _endDate,
@@ -305,6 +308,7 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
           category: category,
           price: price,
           depositAmount: depositAmount,
+          requiresEnglishName: _requiresEnglishName,
           capacity: capacity,
           startDate: _startDate,
           endDate: _endDate,
@@ -410,6 +414,9 @@ class _AddInstituteCourseScreenState extends State<AddInstituteCourseScreen>
               priceController: _priceController,
               depositController: _depositController,
               validateAmount: _validateAmount,
+              requiresEnglishName: _requiresEnglishName,
+              onRequiresEnglishNameChanged: (value) =>
+                  setState(() => _requiresEnglishName = value),
             ),
           ],
         ),

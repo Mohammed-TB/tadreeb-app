@@ -7,12 +7,12 @@ import 'package:provider/provider.dart';
 import 'app/app.dart';
 
 import 'core/cache/public_data_cache.dart';
-import 'core/network/api_client.dart';
 import 'core/network/token_storage_service.dart';
 import 'core/realtime/realtime_service.dart';
 import 'core/state/app_data_change_bus.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/students/services/student_profile_service.dart';
 
 import 'features/courses/controllers/course_controller.dart';
 import 'features/courses/services/course_service.dart';
@@ -26,10 +26,14 @@ import 'features/institutes/controllers/institute_controller.dart';
 import 'features/institutes/controllers/institute_dashboard_controller.dart';
 import 'features/institutes/services/institute_dashboard_service.dart';
 import 'features/institutes/services/institute_service.dart';
+import 'features/institutes/services/institute_payment_settings_service.dart';
 
 import 'features/reservations/controllers/institute_reservation_controller.dart';
 import 'features/reservations/services/reservation_service.dart'
     as institute_res;
+import 'core/network/api_client.dart';
+import 'features/notifications/services/notification_service.dart';
+import 'features/notifications/controllers/notification_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +66,10 @@ Future<void> main() async {
             apiClient: context.read<ApiClient>(),
             tokenStorage: context.read<TokenStorageService>(),
           ),
+        ),
+        Provider<StudentProfileService>(
+          create: (context) =>
+              StudentProfileService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider(
           create: (context) {
@@ -122,6 +130,11 @@ Future<void> main() async {
             publicCache: context.read<PublicApiCache>(),
           ),
         ),
+        Provider<InstitutePaymentSettingsService>(
+          create: (context) => InstitutePaymentSettingsService(
+            apiClient: context.read<ApiClient>(),
+          ),
+        ),
         ChangeNotifierProvider<InstituteController>(
           create: (context) => InstituteController(
             context.read<InstituteService>(),
@@ -146,11 +159,10 @@ Future<void> main() async {
               AdminInstituteService(apiClient: context.read<ApiClient>()),
         ),
         ChangeNotifierProvider<AdminInstituteController>(
-          create: (context) =>
-              AdminInstituteController(
-                context.read<AdminInstituteService>(),
-                dataChangeBus: context.read<AppDataChangeBus>(),
-              ),
+          create: (context) => AdminInstituteController(
+            context.read<AdminInstituteService>(),
+            dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
         ),
 
         // Institute Owner Reservations
@@ -164,6 +176,16 @@ Future<void> main() async {
             context.read<institute_res.ReservationService>(),
             realtimeService: context.read<RealtimeService>(),
             dataChangeBus: context.read<AppDataChangeBus>(),
+          ),
+        ),
+        Provider<NotificationService>(
+          create: (context) =>
+              NotificationService(apiClient: context.read<ApiClient>()),
+        ),
+        ChangeNotifierProvider<NotificationController>(
+          create: (context) => NotificationController(
+            context.read<NotificationService>(),
+            realtimeService: context.read<RealtimeService>(),
           ),
         ),
       ],

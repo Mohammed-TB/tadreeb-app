@@ -15,6 +15,8 @@ import {
 } from "./modules/reservations/routes/reservation.routes";
 import favoriteRoutes from "./modules/favorites/routes/favorite.routes";
 import adminRoutes from "./modules/admin/admin.routes";
+import studentRoutes from "./modules/students/student.routes";
+import notificationRoutes from "./modules/notifications/notification.routes";
 
 
 // إنشاء تطبيق Express الرئيسي.
@@ -30,6 +32,8 @@ app.use(cors());
 app.use(express.json());
 // تسجيل جميع مسارات المصادقة تحت /api/auth.
 app.use("/api/auth", authRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 // تسجيل مسارات إدارة المعاهد، المحمية بصلاحية المدير.

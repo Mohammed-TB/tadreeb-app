@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../../core/widgets/button.dart';
 import '../controllers/admin_institute_controller.dart';
 import '../models/admin_institute_model.dart';
@@ -95,9 +96,8 @@ class _AdminInstitutesScreenState extends State<AdminInstitutesScreen> {
               ),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => institutesController.loadInstitutes(
-                    forceRefresh: true,
-                  ),
+                  onRefresh: () =>
+                      institutesController.loadInstitutes(forceRefresh: true),
                   color: AppColors.primary,
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -110,13 +110,10 @@ class _AdminInstitutesScreenState extends State<AdminInstitutesScreen> {
                     children: [
                       if (institutesController.isLoading &&
                           institutesController.institutes.isEmpty)
-                        const SizedBox(
-                          height: 240,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-                          ),
+                        const AppSkeletonList(
+                          itemCount: 4,
+                          leadingSize: 64,
+                          textLines: 2,
                         )
                       else if (institutesController.errorMessage != null &&
                           institutesController.institutes.isEmpty)
@@ -202,5 +199,4 @@ class _AdminInstitutesScreenState extends State<AdminInstitutesScreen> {
       ),
     );
   }
-
 }

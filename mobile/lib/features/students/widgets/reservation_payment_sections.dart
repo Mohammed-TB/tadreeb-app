@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/button.dart';
 import '../models/student_reservation_model.dart';
 import 'reservation_details_components.dart';
@@ -179,7 +180,7 @@ class ReservationPaymentSection extends StatelessWidget {
       children: [
         ReservationDataRow(
           label: 'إجمالي رسوم الدورة:',
-          value: '${reservation.totalAmount} ريال',
+          value: CurrencyFormatter.format(reservation.totalAmount),
         ),
         ReservationDataRow(
           label: 'نوع السداد المختار:',
@@ -187,17 +188,17 @@ class ReservationPaymentSection extends StatelessWidget {
         ),
         ReservationDataRow(
           label: 'المبلغ المطلوب سداده:',
-          value: '${reservation.amountToPay} ريال',
+          value: CurrencyFormatter.format(reservation.amountToPay),
           isHighlight: true,
           highlightColor: AppColors.primary,
         ),
         ReservationDataRow(
           label: 'المبلغ المدفوع فعلياً:',
-          value: '${reservation.amountPaid} ريال',
+          value: CurrencyFormatter.format(reservation.amountPaid),
         ),
         ReservationDataRow(
           label: 'المبلغ المتبقي:',
-          value: '${reservation.remainingAmount} ريال',
+          value: CurrencyFormatter.format(reservation.remainingAmount),
           isHighlight: reservation.remainingAmount > 0,
           highlightColor: AppColors.accentDark,
         ),

@@ -9,6 +9,7 @@ import {
   ReservationStatus,
   AttendanceStatus,
 } from "../types/reservation.types";
+import { BalancePaymentPolicy } from "../../institutes/types/institute.types";
 
 const reservationSchema = new Schema<IReservation>(
   {
@@ -44,6 +45,12 @@ const reservationSchema = new Schema<IReservation>(
       type: String,
       required: true,
       trim: true,
+    },
+
+    studentEnglishName: {
+      type: String,
+      trim: true,
+      maxlength: 150,
     },
 
     bookingType: {
@@ -87,6 +94,20 @@ const reservationSchema = new Schema<IReservation>(
       type: String,
       enum: Object.values(PaymentStatus),
       default: PaymentStatus.UNPAID,
+    },
+
+    balancePaymentPolicy: {
+      type: String,
+      enum: Object.values(BalancePaymentPolicy),
+      default: BalancePaymentPolicy.FULL_REMAINDER,
+      required: true,
+    },
+
+    minimumInstallmentAmount: {
+      type: Number,
+      min: 0,
+      default: 1,
+      required: true,
     },
 receiptPublicId: {
   type: String,

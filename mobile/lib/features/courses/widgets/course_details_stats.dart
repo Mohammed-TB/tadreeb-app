@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:project_1/app/theme/app_colors.dart';
 import 'package:project_1/app/theme/app_spacing.dart';
 import 'package:project_1/app/theme/app_typography.dart';
+import 'package:project_1/core/utils/currency_formatter.dart';
 import 'package:project_1/features/courses/models/course_model.dart';
 
 class CourseDetailsStats extends StatelessWidget {
@@ -20,14 +21,17 @@ class CourseDetailsStats extends StatelessWidget {
               child: _StatItem(
                 icon: Icons.payments_outlined,
                 title: 'السعر',
-                value: '${course.price.toStringAsFixed(0)} ريال',
+                value: CurrencyFormatter.format(course.price, decimalDigits: 0),
               ),
             ),
             Expanded(
               child: _StatItem(
                 icon: Icons.account_balance_wallet_outlined,
                 title: 'العربون',
-                value: '${course.depositAmount.toStringAsFixed(0)} ريال',
+                value: CurrencyFormatter.format(
+                  course.depositAmount,
+                  decimalDigits: 0,
+                ),
               ),
             ),
           ],
@@ -39,7 +43,8 @@ class CourseDetailsStats extends StatelessWidget {
               child: _StatItem(
                 icon: Icons.people_outline,
                 title: 'المقاعد',
-                value: '${course.enrolledCount + course.reservedCount}/${course.capacity}',
+                value:
+                    '${course.enrolledCount + course.reservedCount}/${course.capacity}',
               ),
             ),
             Expanded(

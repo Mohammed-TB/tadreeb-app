@@ -36,19 +36,21 @@ class AppDrawer extends StatelessWidget {
         ),
       ],
       'instituteOwner' => [
-        _DrawerItem(icon: Icons.business_outlined, title: 'بيانات المعهد'),
+        // _DrawerItem(icon: Icons.business_outlined, title: 'بيانات المعهد'),
         _DrawerItem(
           icon: Icons.payments_outlined,
           title: 'إعدادات الحجز والدفع',
         ),
         _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
         _DrawerItem(icon: Icons.person_outline, title: 'الملف الشخصي'),
+        _DrawerItem(icon: Icons.notifications_outlined, title: 'الإشعارات'),
         _DrawerItem(icon: Icons.settings_outlined, title: 'الإعدادات'),
       ],
       'admin' => [
         _DrawerItem(icon: Icons.business_outlined, title: 'إدارة المعاهد'),
         _DrawerItem(icon: Icons.people_outline, title: 'إدارة المستخدمين'),
         _DrawerItem(icon: Icons.bar_chart_outlined, title: 'التقارير'),
+        _DrawerItem(icon: Icons.notifications_outlined, title: 'الإشعارات'),
         _DrawerItem(icon: Icons.settings_outlined, title: 'إعدادات المنصة'),
       ],
       _ => <_DrawerItem>[],
@@ -105,8 +107,19 @@ class AppDrawer extends StatelessWidget {
                 title: Text(item.title),
                 onTap: () {
                   Navigator.pop(context);
-                  if (role == 'student' && item.title == 'الإعدادات') {
+                  if (item.title == 'الإشعارات') {
+                    context.push('/notifications');
+                  } else if (role == 'instituteOwner' &&
+                      item.title == 'الإعدادات') {
+                    context.push('/institute_settings');
+                  } else if (role == 'student' &&
+                      item.title == 'الملف الشخصي') {
+                    context.push('/student_profile');
+                  } else if (role == 'student' && item.title == 'الإعدادات') {
                     context.push('/student_phone_settings');
+                  } else if (role == 'instituteOwner' &&
+                      item.title == 'إعدادات الحجز والدفع') {
+                    context.push('/institute_payment_settings');
                   } else {
                     _showComingSoon(context);
                   }
@@ -132,10 +145,13 @@ class AppDrawer extends StatelessWidget {
                 try {
                   await context.read<AuthController>().logout();
                 } catch (error) {
+                  debugPrint('Logout failed: $error');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تعذر تسجيل الخروج. حاول مرة أخرى.'),
+                      ),
+                    );
                   }
                 }
                 if (!context.mounted) return;

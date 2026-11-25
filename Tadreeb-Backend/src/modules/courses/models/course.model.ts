@@ -51,6 +51,12 @@ const courseSchema = new Schema<ICourse>(
       },
     },
 
+    requiresEnglishName: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+
     // السعة الكلية للمقاعد.
     capacity: {
       type: Number,

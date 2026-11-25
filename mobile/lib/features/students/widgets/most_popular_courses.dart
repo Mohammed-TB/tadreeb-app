@@ -8,6 +8,7 @@ import 'package:project_1/features/institutes/models/institute_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/widgets/app_skeletons.dart';
 
 import '../../courses/controllers/course_controller.dart';
 import '../../courses/models/course_model.dart';
@@ -95,11 +96,11 @@ class _MostPopularCoursesState extends State<MostPopularCourses> {
     List<InstituteModel> institutes,
   ) {
     if (controller.isLoading && courses.isEmpty) {
-      return const SizedBox(
-        height: 180,
-        child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
+      return const AppSkeletonList(
+        itemCount: 1,
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        leadingSize: 104,
+        textLines: 2,
       );
     }
 

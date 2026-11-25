@@ -11,6 +11,7 @@ import User, {
 
 
 import {
+  BalancePaymentPolicy,
   CreateInstituteWithOwnerInput,
   UpdateInstituteInput ,
   UpdateInstituteSettingsInput
@@ -303,14 +304,25 @@ async updateMyInstituteSettings(
 ) {
   const hours = input.receiptResubmissionHours;
 
-  // التحقق من أن المهلة عدد صحيح بين 1 و72 ساعة.
-  if (
-    !Number.isInteger(hours) ||
-    hours === undefined ||
-    hours < 1 ||
-    hours > 72
-  ) {
+  if (hours !== undefined &&
+    (!Number.isInteger(hours) || hours < 1 || hours > 72)) {
     throw new Error("Receipt resubmission hours must be between 1 and 72");
+  }
+
+  if (
+    input.balancePaymentPolicy !== undefined &&
+    !Object.values(BalancePaymentPolicy).includes(input.balancePaymentPolicy)
+  ) {
+    throw new Error("Invalid balance payment policy");
+  }
+
+  const minimumInstallmentAmount = input.minimumInstallmentAmount;
+  if (
+    minimumInstallmentAmount !== undefined &&
+    (!Number.isFinite(minimumInstallmentAmount) ||
+      minimumInstallmentAmount <= 0)
+  ) {
+    throw new Error("Minimum installment amount must be greater than zero");
   }
 
   const owner = await User.findById(userId).select("role instituteId");
@@ -323,16 +335,51 @@ async updateMyInstituteSettings(
     throw new Error("No institute is linked to this account");
   }
 
+  const currentInstitute = await Institute.findOne({
+    _id: owner.instituteId,
+    ownerId: owner._id,
+  }).select("settings");
+
+  if (!currentInstitute) {
+    throw new Error("Institute not found");
+  }
+
+  const nextPolicy =
+    input.balancePaymentPolicy ??
+    currentInstitute.settings.balancePaymentPolicy ??
+    BalancePaymentPolicy.FULL_REMAINDER;
+  const nextMinimum =
+    minimumInstallmentAmount ??
+    currentInstitute.settings.minimumInstallmentAmount ??
+    1;
+  if (
+    nextPolicy === BalancePaymentPolicy.INSTALLMENTS &&
+    nextMinimum <= 0
+  ) {
+    throw new Error("Minimum installment amount must be greater than zero");
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (hours !== undefined) {
+    updates["settings.receiptResubmissionHours"] = hours;
+  }
+  if (input.balancePaymentPolicy !== undefined) {
+    updates["settings.balancePaymentPolicy"] = input.balancePaymentPolicy;
+  }
+  if (minimumInstallmentAmount !== undefined) {
+    updates["settings.minimumInstallmentAmount"] =
+      minimumInstallmentAmount;
+  }
+  if (Object.keys(updates).length === 0) {
+    throw new Error("At least one institute setting must be provided");
+  }
+
   const institute = await Institute.findOneAndUpdate(
     {
       _id: owner.instituteId,
       ownerId: owner._id,
     },
-    {
-      $set: {
-        "settings.receiptResubmissionHours": hours,
-      },
-    },
+    { $set: updates },
     {
       new: true,
       runValidators: true,

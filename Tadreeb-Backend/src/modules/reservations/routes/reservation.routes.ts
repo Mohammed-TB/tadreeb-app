@@ -49,6 +49,10 @@ studentReservationRouter.get(
   "/:reservationId/receipt",
   (req, res) => reservationController.getReceiptUrl(req, res),
 );
+studentReservationRouter.get(
+  "/payments/:paymentId/receipt",
+  (req, res) => reservationController.getPaymentReceiptUrl(req, res),
+);
 
 // =====================================================
 // مسارات صاحب المعهد.
@@ -61,8 +65,18 @@ instituteReservationRouter.use(
 );
 
 // تسجيل طالب حضورياً.
-instituteReservationRouter.post("/in-person", (req, res) =>
-  reservationController.createInPerson(req, res),
+instituteReservationRouter.post(
+  "/in-person",
+  upload.single("receipt"),
+  validateReceiptImage,
+  (req, res) => reservationController.createInPerson(req, res),
+);
+
+instituteReservationRouter.post(
+  "/:reservationId/receipt/resubmit",
+  upload.single("receipt"),
+  validateReceiptImage,
+  (req, res) => reservationController.resubmitInPersonReceipt(req, res),
 );
 
 // عرض حجوزات المعهد.
@@ -75,10 +89,18 @@ instituteReservationRouter.get("/student-lookup", (req, res) =>
   reservationController.lookupStudentByPhone(req, res),
 );
 
+instituteReservationRouter.get("/:reservationId", (req, res) =>
+  reservationController.getInstituteReservationById(req, res),
+);
+
 // عرض سند حجز تابع للمعهد فقط.
 instituteReservationRouter.get(
   "/:reservationId/receipt",
   (req, res) => reservationController.getReceiptUrl(req, res),
+);
+instituteReservationRouter.get(
+  "/payments/:paymentId/receipt",
+  (req, res) => reservationController.getPaymentReceiptUrl(req, res),
 );
 
 instituteReservationRouter.get(
@@ -99,6 +121,13 @@ instituteReservationRouter.patch(
 instituteReservationRouter.patch(
   "/:reservationId/balance-payment/in-person",
   (req, res) => reservationController.recordInPersonBalancePayment(req, res),
+);
+
+instituteReservationRouter.post(
+  "/:reservationId/balance-payment/transfer",
+  upload.single("receipt"),
+  validateReceiptImage,
+  (req, res) => reservationController.recordInPersonTransferPayment(req, res),
 );
 
 // الموافقة على السند.

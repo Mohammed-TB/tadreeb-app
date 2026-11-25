@@ -9,11 +9,13 @@ flutter pub get
 flutter run
 ```
 
+
+
 Authentication uses the Tadreeb backend. Course, institute, and booking data
 remain demo data in memory; booking and payment actions are not submitted to
 the server.
 
-## Demo accounts
+## Demo accounts 
 
 Create a student account through the app or use credentials for an account
 already registered in the backend. Institute-owner access requires a backend
@@ -22,11 +24,11 @@ service.
 
 ## Backend and Google Sign-In setup
 
-The Android emulator uses `http://10.0.2.2:5000` by default. Override the API
-origin when running on another device or environment:
+The app uses the production API by default. For local development with an
+Android emulator, override the API origin:
 
 ```shell
-flutter run --dart-define=API_BASE_URL=http://localhost:5000
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
 ```
 
 For Google Sign-In, provide the Web OAuth Client ID (the public client ID, not
@@ -335,7 +337,7 @@ lib/
 - `lib/core/network/api_client.dart` يوحد طلبات `http`، المهلات، ترويسة Bearer، وتحويل أخطاء HTTP/الشبكة إلى رسائل عربية.
 - `lib/core/network/token_storage_service.dart` يحفظ JWT باستخدام `flutter_secure_storage`؛ لا يستخدم `SharedPreferences` لحفظه.
 - `AuthService` يربط `POST /api/auth/register` و`POST /api/auth/login` و`POST /api/auth/google` و`GET /api/auth/me`.
-- `API_BASE_URL` قابل للتهيئة؛ القيمة الافتراضية للمحاكي هي `http://10.0.2.2:5000`.
+- `API_BASE_URL` قابل للتهيئة؛ القيمة الافتراضية هي `https://tadreeb-backend.onrender.com`، ويمكن ضبطها إلى `http://10.0.2.2:5000` للمحاكي المحلي.
 - Google Sign-In يستخدم API المكتبة 7.x؛ يلزم توفير `GOOGLE_SERVER_CLIENT_ID` كـ`--dart-define`.
 - لا يوجد مسار Logout في Backend؛ الخروج الحالي محلي بحذف JWT والبيانات المحفوظة في الذاكرة.
 - اختيار السند يستخدم `image_picker`، ثم يحفظ مسار الملف المحلي. لا توجد عملية multipart أو رفع شبكة.

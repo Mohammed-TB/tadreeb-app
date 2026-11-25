@@ -48,6 +48,44 @@ void main() {
     expect(reservation(balancePaymentStatus: 'rejected').canPayBalance, isTrue);
   });
 
+  test('allows a new installment after an earlier installment is approved', () {
+    expect(
+      reservation(
+        balancePaymentStatus: 'approved',
+        amountPaid: 400,
+      ).canPayBalance,
+      isTrue,
+    );
+  });
+
+  test('parses payment history including rejected attempts and receipts', () {
+    final result = StudentReservationModel.fromJson({
+      '_id': 'reservation-1',
+      'courseId': {'_id': 'course-1', 'title': 'دورة اختبار'},
+      'totalAmount': 1000,
+      'amountToPay': 250,
+      'amountPaid': 250,
+      'paymentStatus': 'partial',
+      'status': 'confirmed',
+      'payments': [
+        {
+          '_id': 'payment-1',
+          'amount': 100,
+          'method': 'bankTransfer',
+          'status': 'rejected',
+          'hasReceipt': true,
+          'createdAt': '2026-03-10T12:00:00.000Z',
+          'rejectionReason': 'السند غير واضح',
+        },
+      ],
+    });
+
+    expect(result.payments, hasLength(1));
+    expect(result.payments.single.status, 'rejected');
+    expect(result.payments.single.hasReceipt, isTrue);
+    expect(result.payments.single.rejectionReason, 'السند غير واضح');
+  });
+
   test('keeps the balance receipt visible after institute review', () {
     final result = ReservationModel.fromJson({
       '_id': 'reservation-1',

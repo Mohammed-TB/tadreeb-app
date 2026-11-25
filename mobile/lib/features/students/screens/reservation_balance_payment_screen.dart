@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/button.dart';
 import '../../courses/controllers/reservation_controller.dart';
 import '../models/student_reservation_model.dart';
@@ -23,8 +24,52 @@ class ReservationBalancePaymentScreen extends StatefulWidget {
 class _ReservationBalancePaymentScreenState
     extends State<ReservationBalancePaymentScreen> {
   final ImagePicker _picker = ImagePicker();
+  late final TextEditingController _amountController;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.reservation.remainingAmount.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  String? _validateAmount() {
+    final amount = double.tryParse(_amountController.text.trim());
+    final remaining = widget.reservation.remainingAmount;
+    const epsilon = 0.0000001;
+    if (amount == null ||
+        !amount.isFinite ||
+        amount <= 0 ||
+        amount > remaining + epsilon) {
+      return 'أدخل مبلغًا لا يتجاوز المتبقي';
+    }
+    if (widget.reservation.balancePaymentPolicy == 'fullRemainder' &&
+        (amount - remaining).abs() > epsilon) {
+      return 'يجب سداد كامل المبلغ المتبقي';
+    }
+    if (widget.reservation.balancePaymentPolicy == 'installments' &&
+        amount + epsilon < widget.reservation.minimumInstallmentAmount &&
+        (amount - remaining).abs() > epsilon) {
+      return 'المبلغ أقل من الحد الأدنى للقسط';
+    }
+    return null;
+  }
 
   Future<void> _pickAndUploadReceipt(ImageSource source) async {
+    final amountError = _validateAmount();
+    if (amountError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(amountError)));
+      return;
+    }
     final controller = context.read<ReservationController>();
     try {
       final picked = await _picker.pickImage(source: source, imageQuality: 85);
@@ -35,6 +80,7 @@ class _ReservationBalancePaymentScreenState
       final contentType = extension == 'png' ? 'image/png' : 'image/jpeg';
       final success = await controller.uploadBalancePaymentReceipt(
         reservationId: widget.reservation.id,
+        amount: double.parse(_amountController.text.trim()),
         fileBytes: bytes,
         fileName: picked.name,
         contentType: contentType,
@@ -109,11 +155,12 @@ class _ReservationBalancePaymentScreenState
         appBar: AppBar(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          title:  Text('إكمال سداد الرسوم',style:TextStyle(
-            color: AppColors.surface
-          ),),
+          title: Text(
+            'إكمال سداد الرسوم',
+            style: TextStyle(color: AppColors.surface),
+          ),
           centerTitle: true,
-                    leading: IconButton(
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
             onPressed: () => context.pop(),
           ),
@@ -153,11 +200,27 @@ class _ReservationBalancePaymentScreenState
                       ),
                       const Divider(height: AppSpacing.lg),
                       _AmountRow(
-                        label: 'المبلغ المطلوب الآن',
+                        label: 'المتبقي',
                         amount: widget.reservation.remainingAmount,
                         isHighlighted: true,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'مبلغ هذه الدفعة',
+                    suffixText: AppCurrency.current.symbol,
+                    helperText:
+                        widget.reservation.balancePaymentPolicy ==
+                            'installments'
+                        ? 'الحد الأدنى ${CurrencyFormatter.format(widget.reservation.minimumInstallmentAmount)}، ويسمح بأقل من ذلك لإكمال المتبقي.'
+                        : 'يجب دفع كامل المبلغ المتبقي.',
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -167,8 +230,8 @@ class _ReservationBalancePaymentScreenState
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child:  Text(
-                    'حوّل المبلغ المتبقي إلى حساب المعهد، ثم أرفق صورة واضحة لإشعار التحويل. سيبقى تسجيلك مؤكدًا أثناء مراجعة الدفعة.',
+                  child: Text(
+                    'حوّل المبلغ إلى حساب المعهد، ثم أرفق صورة واضحة لإشعار التحويل. سيبقى تسجيلك مؤكدًا أثناء مراجعة الدفعة.',
                     style: AppTypography.bodyMedium,
                   ),
                 ),
@@ -230,7 +293,10 @@ class _AmountRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: style),
-          Text('${amount.toStringAsFixed(2)} ريال', style: style),
+          Text(
+            CurrencyFormatter.format(amount, decimalDigits: 2),
+            style: style,
+          ),
         ],
       ),
     );

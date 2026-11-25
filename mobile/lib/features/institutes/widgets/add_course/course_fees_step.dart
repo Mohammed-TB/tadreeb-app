@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import 'course_form_components.dart';
 
 /// الخطوة الثالثة: الرسوم والدفع (سعر الدورة، مبلغ العربون، وملاحظات المراجعة)
@@ -11,12 +12,16 @@ class CourseFeesStep extends StatelessWidget {
     required this.priceController,
     required this.depositController,
     required this.validateAmount,
+    required this.requiresEnglishName,
+    required this.onRequiresEnglishNameChanged,
   });
 
   final GlobalKey<FormState> formKey;
   final TextEditingController priceController;
   final TextEditingController depositController;
   final String? Function(String?) validateAmount;
+  final bool requiresEnglishName;
+  final ValueChanged<bool> onRequiresEnglishNameChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +49,7 @@ class CourseFeesStep extends StatelessWidget {
                   decimal: true,
                 ),
                 validator: validateAmount,
+                suffixText: AppCurrency.current.symbol,
               ),
               const SizedBox(height: AppSpacing.md),
               CourseFormTextField(
@@ -55,11 +61,19 @@ class CourseFeesStep extends StatelessWidget {
                   decimal: true,
                 ),
                 validator: validateAmount,
+                suffixText: AppCurrency.current.symbol,
               ),
               const SizedBox(height: AppSpacing.sm),
               const CourseFormInfoBanner(
                 icon: Icons.info_outline,
                 message: 'يجب ألا يتجاوز العربون السعر الكامل للدورة.',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('الاسم الإنجليزي مطلوب للتسجيل'),
+                value: requiresEnglishName,
+                onChanged: onRequiresEnglishNameChanged,
               ),
             ],
           ),

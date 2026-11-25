@@ -84,16 +84,16 @@ void main() {
   ) async {
     await pumpSheet(tester);
 
-    expect(find.text('1500 ريال'), findsOneWidget);
+    expect(find.text('1,500 ر.ي'), findsOneWidget);
     expect(find.text('المبلغ المدفوع'), findsNothing);
 
     final paymentDropdown = find.byType(DropdownButtonFormField<String>).last;
     await tester.tap(paymentDropdown);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('عربون · 300 ريال').last);
+    await tester.tap(find.text('عربون · 300 ر.ي').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('300 ريال'), findsOneWidget);
+    expect(find.text('300 ر.ي'), findsOneWidget);
   });
 
   testWidgets('fills a previous student name after entering their phone', (

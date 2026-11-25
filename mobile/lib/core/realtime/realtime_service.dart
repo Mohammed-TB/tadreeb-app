@@ -19,6 +19,7 @@ class RealtimeService {
     : _tokenStorage = tokenStorage;
 
   static const _eventNames = [
+    'notificationCreated',
     'coursePublished',
     'courseUpdated',
     'courseUnpublished',

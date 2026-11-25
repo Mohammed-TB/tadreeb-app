@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_1/features/institutes/widgets/courses/institute_courses_list_section.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 void main() {
   Widget buildSection({
     required bool hasActiveFilters,
     required VoidCallback onClearFilters,
     required VoidCallback onAddCourse,
+    bool isLoading = false,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: InstituteCoursesListSection(
           courses: const [],
-          isLoading: false,
+          isLoading: isLoading,
           errorMessage: null,
           hasActiveFilters: hasActiveFilters,
           onRetry: () {},
@@ -27,6 +29,25 @@ void main() {
       ),
     );
   }
+
+  testWidgets('shows course-card skeletons while the API request is pending', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildSection(
+        hasActiveFilters: false,
+        onClearFilters: () {},
+        onAddCourse: () {},
+        isLoading: true,
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate((widget) => widget is Skeletonizer),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
 
   testWidgets('shows an empty-results action that clears active filters', (
     tester,

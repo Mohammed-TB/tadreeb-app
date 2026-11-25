@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../models/reservation_model.dart';
 
 class ReservationCard extends StatelessWidget {
@@ -101,7 +102,7 @@ class ReservationCard extends StatelessWidget {
                     ] else if (reservation.canRecordInPersonBalancePayment) ...[
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        'متبقي ${reservation.remainingAmount.toStringAsFixed(2)} ر.س · اضغط لتسجيل الاستلام',
+                        'متبقي ${CurrencyFormatter.format(reservation.remainingAmount, decimalDigits: 2)} · اضغط لتسجيل الاستلام',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.warning,
                           fontWeight: FontWeight.bold,

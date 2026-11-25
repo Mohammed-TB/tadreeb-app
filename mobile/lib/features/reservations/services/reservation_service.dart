@@ -116,17 +116,77 @@ class ReservationService {
   }
 
   Future<ReservationModel> recordInPersonBalancePayment(
-    String reservationId,
-  ) async {
+    String reservationId, {
+    required double amount,
+  }) async {
     final response = await _apiClient.patch(
       '/api/institutes/me/reservations/$reservationId/balance-payment/in-person',
       authenticated: true,
+      body: {'amount': amount},
     );
     final data = response['data'];
     if (data is! Map<String, dynamic>) {
       throw const FormatException('تعذر تسجيل استلام المبلغ المتبقي');
     }
     return ReservationModel.fromJson(data);
+  }
+
+  Future<ReservationModel> recordInPersonTransferPayment({
+    required String reservationId,
+    required double amount,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final response = await _apiClient.postMultipart(
+      '/api/institutes/me/reservations/$reservationId/balance-payment/transfer',
+      authenticated: true,
+      fields: {'amount': amount.toString()},
+      fileBytes: fileBytes,
+      fileField: 'receipt',
+      fileName: fileName,
+      contentType: contentType,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر تسجيل دفعة التحويل');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
+  Future<ReservationModel> resubmitInPersonReceipt({
+    required String reservationId,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final response = await _apiClient.postMultipart(
+      '/api/institutes/me/reservations/$reservationId/receipt/resubmit',
+      authenticated: true,
+      fields: {},
+      fileBytes: fileBytes,
+      fileField: 'receipt',
+      fileName: fileName,
+      contentType: contentType,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر إعادة إرسال سند التحويل');
+    }
+    return ReservationModel.fromJson(data);
+  }
+
+  Future<String?> getPaymentReceiptUrl(String paymentId) async {
+    final response = await _apiClient.get(
+      '/api/institutes/me/reservations/payments/$paymentId/receipt',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return data['receiptUrl']?.toString() ?? data['url']?.toString();
+    }
+    if (data is String) return data;
+    return response['url']?.toString();
   }
 
   Future<String?> getBalancePaymentReceiptUrl(String reservationId) async {
@@ -147,17 +207,29 @@ class ReservationService {
     required String courseId,
     required String studentName,
     required String studentPhone,
-    required String paymentOption, // full | deposit
+    required double paymentAmount,
+    required String paymentMethod,
+    String? studentEnglishName,
+    List<int>? receiptBytes,
+    String? receiptName,
+    String? receiptContentType,
   }) async {
-    final response = await _apiClient.post(
+    final response = await _apiClient.postMultipart(
       '/api/institutes/me/reservations/in-person',
       authenticated: true,
-      body: {
+      fields: {
         'courseId': courseId,
         'studentName': studentName,
         'studentPhone': studentPhone,
-        'paymentOption': paymentOption,
+        'paymentAmount': paymentAmount.toString(),
+        'paymentMethod': paymentMethod,
+        if (studentEnglishName != null)
+          'studentEnglishName': studentEnglishName,
       },
+      fileBytes: receiptBytes,
+      fileField: receiptBytes == null ? null : 'receipt',
+      fileName: receiptName,
+      contentType: receiptContentType,
     );
     final data = response['data'];
     if (data is! Map<String, dynamic>) {

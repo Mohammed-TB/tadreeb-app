@@ -11,6 +11,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/state/app_data_change_bus.dart';
+import '../../../core/widgets/app_skeletons.dart';
 import '../../../core/widgets/button.dart';
 import '../models/admin_user_model.dart';
 import '../services/admin_user_service.dart';
@@ -185,8 +186,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       textDirection: ui.TextDirection.rtl,
       child: Column(
         children: [
-          AdminDashboardHeader(                title: 'المستخدمون',
-),
+          AdminDashboardHeader(title: 'المستخدمون'),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => _loadFirstPage(refresh: true),
@@ -207,11 +207,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _buildListHeading(),
         if (_errorMessage != null && _users.isNotEmpty) _buildInlineError(),
         if (_isLoading && _users.isEmpty)
-          const SizedBox(
-            height: 280,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
+          const AppSkeletonList(
+            itemCount: 4,
+            circularLeading: true,
+            leadingSize: 52,
+            textLines: 2,
           )
         else if (_errorMessage != null && _users.isEmpty)
           AdminDashboardError(message: _errorMessage!, onRetry: _loadFirstPage)
@@ -224,9 +224,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ],
           if (_isLoadingMore)
             const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+              padding: EdgeInsets.only(bottom: AppSpacing.cardGap),
+              child: AppSkeletonCard(
+                leadingSize: 52,
+                circularLeading: true,
+                textLines: 1,
+                showTrailing: false,
               ),
             )
           else if (_page < _totalPages)

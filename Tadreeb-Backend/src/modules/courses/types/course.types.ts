@@ -17,6 +17,7 @@ export interface CreateCourseInput {
   category: string;
   price: number;
   depositAmount: number;
+  requiresEnglishName?: boolean;
   capacity: number;
   startDate: Date | string;
   endDate: Date | string;
@@ -37,6 +38,7 @@ export interface UpdateCourseInput {
   category?: string;
   price?: number;
   depositAmount?: number;
+  requiresEnglishName?: boolean;
   capacity?: number;
   startDate?: Date | string;
   endDate?: Date | string;
@@ -53,6 +55,7 @@ export interface ICourse {
   category: string;
   price: number;
   depositAmount: number;
+  requiresEnglishName: boolean;
   capacity: number;
   enrolledCount: number;
   startDate: Date;

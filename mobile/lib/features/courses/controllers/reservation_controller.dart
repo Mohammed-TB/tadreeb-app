@@ -176,7 +176,8 @@ class ReservationController extends ChangeNotifier {
     required String courseId,
     required String studentName,
     required String studentPhone,
-    required String paymentOption,
+    required double paymentAmount,
+    String? studentEnglishName,
   }) async {
     if (_isCreatingReservation) return false;
 
@@ -192,7 +193,8 @@ class ReservationController extends ChangeNotifier {
         courseId: courseId,
         studentName: studentName,
         studentPhone: studentPhone,
-        paymentOption: paymentOption,
+        paymentAmount: paymentAmount,
+        studentEnglishName: studentEnglishName,
       );
       debugPrint('========== CREATE REGISTRATION SUCCESS ==========');
       _reservationId = id;
@@ -257,6 +259,7 @@ class ReservationController extends ChangeNotifier {
 
   Future<bool> uploadBalancePaymentReceipt({
     required String reservationId,
+    required double amount,
     required List<int> fileBytes,
     required String fileName,
     required String contentType,
@@ -272,6 +275,7 @@ class ReservationController extends ChangeNotifier {
     try {
       await _reservationService.uploadBalancePaymentReceipt(
         reservationId: reservationId,
+        amount: amount,
         fileBytes: fileBytes,
         fileName: fileName,
         contentType: contentType,

@@ -6,6 +6,7 @@ import authenticate, {
 } from "../../../middlewares/auth.middleware";
 
 import { UserRole } from "../../users/user.model";
+import upload, { validateImageContent } from "../../../middlewares/upload.middleware";
 
 // Router خاص بإدارة المعاهد من الأدمن.
 const router = Router();
@@ -50,6 +51,15 @@ instituteOwnerRouter.put(
   authenticate,
   authorizeRoles(UserRole.INSTITUTE_OWNER),
   (req, res) => instituteController.updateMyInstitute(req, res)
+);
+
+instituteOwnerRouter.post(
+  "/me/logo",
+  authenticate,
+  authorizeRoles(UserRole.INSTITUTE_OWNER),
+  upload.single("logo"),
+  validateImageContent,
+  (req, res) => instituteController.uploadMyInstituteLogo(req, res)
 );
 
 // عرض إعدادات المعهد.

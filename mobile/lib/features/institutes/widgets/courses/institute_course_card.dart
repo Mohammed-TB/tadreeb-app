@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../courses/models/course_model.dart';
 
 /// بطاقة دورة تفاعلية أنيقة متطابقة مع نظام تصميم لوحة تحكم المعهد
@@ -396,7 +397,10 @@ class InstituteCourseCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${course.price.toStringAsFixed(0)} ر.ي',
+                              CurrencyFormatter.format(
+                                course.price,
+                                decimalDigits: 0,
+                              ),
                               style: AppTypography.titleMedium.copyWith(
                                 color: AppColors.primaryDark,
                                 fontWeight: FontWeight.bold,
@@ -404,7 +408,7 @@ class InstituteCourseCard extends StatelessWidget {
                             ),
                             if (course.depositAmount > 0)
                               Text(
-                                'العربون: ${course.depositAmount.toStringAsFixed(0)} ر.ي',
+                                'العربون: ${CurrencyFormatter.format(course.depositAmount, decimalDigits: 0)}',
                                 style: AppTypography.labelSmall.copyWith(
                                   color: AppColors.textHint,
                                 ),

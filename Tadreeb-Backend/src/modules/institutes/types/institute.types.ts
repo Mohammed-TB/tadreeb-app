@@ -61,9 +61,18 @@ export interface UpdateInstituteInput {
 export interface InstituteSettings {
   // المدة المسموحة لإعادة رفع سند الدفع بالساعات.
   receiptResubmissionHours: number;
+  balancePaymentPolicy: BalancePaymentPolicy;
+  minimumInstallmentAmount: number;
+}
+
+export enum BalancePaymentPolicy {
+  FULL_REMAINDER = "fullRemainder",
+  INSTALLMENTS = "installments",
 }
 
 // البيانات المسموح بتعديلها من إعدادات المعهد.
 export interface UpdateInstituteSettingsInput {
   receiptResubmissionHours?: number;
+  balancePaymentPolicy?: BalancePaymentPolicy;
+  minimumInstallmentAmount?: number;
 }

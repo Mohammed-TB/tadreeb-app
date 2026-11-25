@@ -378,7 +378,6 @@ private async reserveSeat(
           _id: input.courseId,
           instituteId: owner.instituteId,
           status: "published",
-          startDate: { $gt: new Date() },
           endDate: { $gte: getSaudiDayStart() },
         } as any).session(session);
 

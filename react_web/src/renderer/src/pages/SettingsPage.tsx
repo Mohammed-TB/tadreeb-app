@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Settings2, X } from "lucide-react";
 import { instituteApi } from "../api/services";
@@ -23,7 +23,16 @@ export function SettingsPage() {
   });
 
   const saveInstitute = useMutation({
-    mutationFn: instituteApi.update,
+    mutationFn: async ({
+      input,
+      logoFile,
+    }: {
+      input: Partial<Institute>;
+      logoFile: File | null;
+    }) => {
+      if (logoFile) await instituteApi.uploadLogo(logoFile);
+      return instituteApi.update(input);
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["institute"] }),
@@ -31,7 +40,10 @@ export function SettingsPage() {
       ]);
       setFeedback("تم حفظ بيانات المعهد.");
     },
-    onError: (error) => setFeedback(error.message),
+    onError: async (error) => {
+      await queryClient.invalidateQueries({ queryKey: ["institute"] });
+      setFeedback(error.message);
+    },
   });
 
   const saveSettings = useMutation({
@@ -69,9 +81,9 @@ export function SettingsPage() {
         <InstituteProfileForm
           institute={institute.data}
           isSaving={saveInstitute.isPending}
-          onSave={(input) => {
+          onSave={(input, logoFile) => {
             setFeedback("");
-            saveInstitute.mutate(input);
+            saveInstitute.mutate({ input, logoFile });
           }}
         />
       )}
@@ -103,15 +115,29 @@ function InstituteProfileForm({
 }: {
   institute: Institute;
   isSaving: boolean;
-  onSave(input: Partial<Institute>): void;
+  onSave(input: Partial<Institute>, logoFile: File | null): void;
 }) {
   const [name, setName] = useState(institute.name);
   const [description, setDescription] = useState(institute.description ?? "");
   const [phone, setPhone] = useState(institute.phone ?? "");
   const [email, setEmail] = useState(institute.email ?? "");
   const [address, setAddress] = useState(institute.address ?? "");
-  const [logo, setLogo] = useState(institute.logo ?? "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState(institute.logo);
+  const [logoPreviewFailed, setLogoPreviewFailed] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLogoPreviewFailed(false);
+    if (!logoFile) {
+      setLogoPreview(institute.logo);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(logoFile);
+    setLogoPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [institute.logo, logoFile]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -136,8 +162,22 @@ function InstituteProfileForm({
       phone: phone.trim(),
       email: email.trim(),
       address: trimmedAddress,
-      logo: logo.trim(),
-    });
+    }, logoFile);
+  };
+
+  const selectLogo = (file: File | undefined) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("اختر صورة بصيغة JPG أو PNG أو WEBP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("يجب ألا يتجاوز حجم الصورة 5 ميجابايت.");
+      return;
+    }
+    setError("");
+    setLogoPreviewFailed(false);
+    setLogoFile(file);
   };
 
   return (
@@ -175,11 +215,34 @@ function InstituteProfileForm({
             وصف المعهد
             <textarea className="form-control" maxLength={2000} onChange={(event) => setDescription(event.target.value)} rows={3} value={description} />
           </label>
-          <label className="form-field form-field-wide">
-            رابط الشعار
-            <input className="form-control latin-number" onChange={(event) => setLogo(event.target.value)} placeholder="https://..." type="url" value={logo} />
-            <span className="form-help">تغيير الشعار متاح عبر رابط الصورة؛ لا يوجد مسار رفع ملفات ضمن الـ API الحالي.</span>
-          </label>
+          <div className="form-field form-field-wide">
+            <label htmlFor="institute-logo">شعار المعهد</label>
+            <div className="flex items-center gap-4 rounded-xl border border-border bg-white p-3">
+              <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-field">
+                {logoPreview && !logoPreviewFailed ? (
+                  <img
+                    alt="معاينة شعار المعهد"
+                    className="h-full w-full object-contain"
+                    onError={() => setLogoPreviewFailed(true)}
+                    src={logoPreview}
+                  />
+                ) : (
+                  <Settings2 aria-hidden="true" className="text-text-hint" size={28} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <input
+                  accept="image/jpeg,image/png,image/webp"
+                  className="form-control"
+                  disabled={isSaving}
+                  id="institute-logo"
+                  onChange={(event) => selectLogo(event.target.files?.[0])}
+                  type="file"
+                />
+                <span className="form-help">JPG أو PNG أو WEBP • حتى 5 ميجابايت</span>
+              </div>
+            </div>
+          </div>
         </div>
         {error && <div className="form-error" role="alert">{error}</div>}
         <div className="form-actions">

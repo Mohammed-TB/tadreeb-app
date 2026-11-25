@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/cache/public_data_cache.dart';
@@ -12,6 +14,64 @@ class InstituteService {
   final PublicApiCache? _publicCache;
 
   static const _instituteListTtl = Duration(minutes: 30);
+
+  Future<InstituteModel> getMyInstitute() async {
+    final response = await _apiClient.get(
+      '/api/institutes/me',
+      authenticated: true,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('بيانات المعهد غير صالحة');
+    }
+    return InstituteModel.fromJson(data);
+  }
+
+  Future<InstituteModel> updateMyInstitute({
+    required String name,
+    required String description,
+    required String phone,
+    required String email,
+    required String address,
+  }) async {
+    final response = await _apiClient.put(
+      '/api/institutes/me',
+      authenticated: true,
+      body: {
+        'name': name,
+        'description': description,
+        'phone': phone,
+        'email': email,
+        'address': address,
+      },
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر حفظ بيانات المعهد');
+    }
+    return InstituteModel.fromJson(data);
+  }
+
+  Future<InstituteModel> uploadMyInstituteLogo({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final response = await _apiClient.postMultipart(
+      '/api/institutes/me/logo',
+      authenticated: true,
+      fields: const {},
+      fileBytes: imageBytes,
+      fileField: 'logo',
+      fileName: fileName,
+      contentType: contentType,
+    );
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('تعذر حفظ شعار المعهد');
+    }
+    return InstituteModel.fromJson(data);
+  }
 
   Future<InstitutesResponse> getInstitutes({
     String? search,

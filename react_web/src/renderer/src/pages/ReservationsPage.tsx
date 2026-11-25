@@ -21,6 +21,7 @@ import {
   SkeletonRows,
   StatusBadge,
 } from "../components/ui";
+import { getInPersonCourseOptions } from "./in-person-course-options";
 import type { Course, InstituteSettings, Reservation } from "../types";
 
 const statusOptions = [
@@ -32,13 +33,6 @@ const statusOptions = [
   { value: "cancelled", label: "ملغي" },
   { value: "expired", label: "منتهي" },
 ];
-
-function getSaudiDayStart() {
-  const saudiOffsetMs = 3 * 60 * 60 * 1000;
-  const saudiNow = new Date(Date.now() + saudiOffsetMs);
-  saudiNow.setUTCHours(0, 0, 0, 0);
-  return new Date(saudiNow.getTime() - saudiOffsetMs);
-}
 
 export function ReservationsPage() {
   const queryClient = useQueryClient();
@@ -618,13 +612,7 @@ function CreateInPersonDialog({
     onError: (reason) => setError(reason.message),
   });
 
-  const courseOptions = courses.filter((course) => {
-    return (
-      course.status === "published" &&
-      new Date(course.startDate) > new Date() &&
-      new Date(course.endDate) >= getSaudiDayStart()
-    );
-  });
+  const courseOptions = getInPersonCourseOptions(courses);
   const availableCourses = courseOptions.filter((course) => {
     const seatsTaken = (course.enrolledCount ?? 0) + (course.reservedCount ?? 0);
     return seatsTaken < course.capacity;

@@ -47,6 +47,14 @@ export const instituteApi = {
       method: "PUT",
       body: input,
     }),
+  uploadLogo: (file: File) => {
+    const body = new FormData();
+    body.append("logo", file);
+    return requestData<Institute>("/api/institutes/me/logo", {
+      method: "POST",
+      body,
+    });
+  },
   getSettings: () =>
     requestData<InstituteSettings>("/api/institutes/me/settings"),
   updateSettings: (input: Partial<InstituteSettings>) =>

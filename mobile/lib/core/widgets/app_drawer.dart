@@ -109,6 +109,10 @@ class AppDrawer extends StatelessWidget {
                   Navigator.pop(context);
                   if (item.title == 'الإشعارات') {
                     context.push('/notifications');
+                  } else if (role == 'instituteOwner' &&
+                      (item.title == 'بيانات المعهد' ||
+                          item.title == 'الإعدادات')) {
+                    context.push('/institute_settings');
                   } else if (role == 'student' && item.title == 'الملف الشخصي') {
                     context.push('/student_profile');
                   } else if (role == 'student' && item.title == 'الإعدادات') {

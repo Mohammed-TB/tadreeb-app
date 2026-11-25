@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/app_skeletons.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../notifications/controllers/notification_controller.dart';
 import '../controllers/institute_dashboard_controller.dart';
 import '../widgets/institute_dashboard_activity.dart';
 import '../widgets/institute_dashboard_analytics.dart';
@@ -26,6 +28,7 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<InstituteDashboardController>().fetchDashboard();
+        context.read<NotificationController>().fetch();
       }
     });
   }
@@ -115,6 +118,8 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
   }
 
   Widget _buildHeader(String? ownerName, String? instituteName) {
+    final unreadCount =
+        context.watch<NotificationController>().unreadCount;
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.primary,
@@ -160,6 +165,41 @@ class _InstituteDashboardScreenState extends State<InstituteDashboardScreen> {
                         color: AppColors.textOnPrimary.withValues(alpha: 0.8),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'الإشعارات',
+                color: AppColors.textOnPrimary,
+                onPressed: () => context.push('/notifications'),
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: -7,
+                        right: -7,
+                        child: Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: AppTypography.labelSmall.copyWith(
+                              color: Colors.white,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

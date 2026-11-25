@@ -27,6 +27,7 @@ import '../features/students/models/student_reservation_model.dart';
 import '../features/institutes/routing/institute_shell.dart';
 import '../features/institutes/screens/add_institute_course_screen.dart';
 import '../features/institutes/screens/institute_payment_settings_screen.dart';
+import '../features/institutes/screens/institute_settings_screen.dart';
 import '../features/institutes/screens/institute_courses_screen.dart';
 import '../features/institutes/screens/institute_students_screen.dart';
 import '../features/institutes/screens/institute_dashboard_screen.dart';
@@ -116,6 +117,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         GoRoute(
           path: '/institute_payment_settings',
           builder: (context, state) => const InstitutePaymentSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/institute_settings',
+          builder: (context, state) => const InstituteSettingsScreen(),
         ),
 
         GoRoute(
@@ -509,7 +514,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       '/institute_students' ||
       '/institute_reservations' ||
       '/institute_courses/add' ||
-      '/institute_payment_settings' => UserRole.instituteOwner,
+      '/institute_payment_settings' ||
+      '/institute_settings' => UserRole.instituteOwner,
 
       '/admin_dashboard' ||
       '/admin_institutes' ||

@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import instituteService from "../services/institute.service";
 import instituteDashboardService from "../services/institute-dashboard.service";
+import instituteLogoService from "../../admin/institute-logo.service";
 
 // Controller مسؤول عن استقبال طلبات إدارة المعاهد.
 class InstituteController {
@@ -186,6 +187,59 @@ async updateMyInstitute(req: Request, res: Response): Promise<void> {
     res.status(statusCode).json({
       success: false,
       message,
+    });
+  }
+}
+
+async uploadMyInstituteLogo(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({
+      success: false,
+      message: "Institute logo image is required",
+    });
+    return;
+  }
+
+  let uploadedLogo: { url: string; publicId: string } | undefined;
+
+  try {
+    uploadedLogo = await instituteLogoService.upload(req.file.buffer);
+    const institute = await instituteService.updateMyInstitute(
+      req.user.userId,
+      { logo: uploadedLogo.url },
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Institute logo updated successfully",
+      data: institute,
+    });
+  } catch (error) {
+    if (uploadedLogo) {
+      try {
+        await instituteLogoService.delete(uploadedLogo.publicId);
+      } catch (cleanupError) {
+        console.error("Failed to clean up uploaded institute logo:", cleanupError);
+      }
+    }
+
+    const message = error instanceof Error ? error.message : "Institute logo update failed";
+    const notFound = message === "Institute not found" ||
+      message === "Institute owner not found" ||
+      message === "No institute is linked to this account";
+    if (!notFound) console.error("Institute logo update error:", error);
+
+    res.status(notFound ? 404 : 500).json({
+      success: false,
+      message: notFound ? message : "حدث خطأ أثناء تحديث شعار المعهد",
     });
   }
 }

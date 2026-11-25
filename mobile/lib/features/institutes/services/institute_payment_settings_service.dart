@@ -2,21 +2,28 @@ import '../../../core/network/api_client.dart';
 
 class InstitutePaymentSettings {
   const InstitutePaymentSettings({
+    required this.receiptResubmissionHours,
     required this.balancePaymentPolicy,
     required this.minimumInstallmentAmount,
   });
 
+  final int receiptResubmissionHours;
   final String balancePaymentPolicy;
   final double minimumInstallmentAmount;
 
   factory InstitutePaymentSettings.fromJson(Map<String, dynamic> json) {
     final policy = json['balancePaymentPolicy']?.toString();
     final minimum = json['minimumInstallmentAmount'];
+    final hours = json['receiptResubmissionHours'];
     if ((policy != 'fullRemainder' && policy != 'installments') ||
-        minimum is! num) {
+        minimum is! num ||
+        hours is! num ||
+        !hours.isFinite ||
+        hours.toInt() != hours) {
       throw const FormatException('إعدادات الدفعات غير صالحة');
     }
     return InstitutePaymentSettings(
+      receiptResubmissionHours: hours.toInt(),
       balancePaymentPolicy: policy!,
       minimumInstallmentAmount: minimum.toDouble(),
     );
@@ -42,6 +49,7 @@ class InstitutePaymentSettingsService {
   }
 
   Future<InstitutePaymentSettings> updateSettings({
+    required int receiptResubmissionHours,
     required String policy,
     required double minimumInstallmentAmount,
   }) async {
@@ -49,9 +57,9 @@ class InstitutePaymentSettingsService {
       '/api/institutes/me/settings',
       authenticated: true,
       body: {
+        'receiptResubmissionHours': receiptResubmissionHours,
         'balancePaymentPolicy': policy,
-        if (policy == 'installments')
-          'minimumInstallmentAmount': minimumInstallmentAmount,
+        'minimumInstallmentAmount': minimumInstallmentAmount,
       },
     );
     final data = response['data'];

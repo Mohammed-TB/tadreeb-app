@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import {
   Bell,
   BookOpenCheck,
@@ -13,6 +14,7 @@ import {
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { dashboardApi, instituteApi, notificationsApi } from "../api/services";
+import { apiBaseUrl } from "../api/client";
 
 const navigation = [
   { to: "/dashboard", label: "الرئيسية", icon: LayoutDashboard },
@@ -27,6 +29,43 @@ export function AppShell() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let socket: ReturnType<typeof io> | undefined;
+
+    void window.desktop.getAccessToken().then((token) => {
+      if (cancelled || !token) return;
+
+      socket = io(apiBaseUrl, {
+        auth: { token },
+        autoConnect: false,
+        reconnection: true,
+        transports: ["websocket"],
+      });
+
+      socket.on("registrationCreated", () => {
+        void queryClient.invalidateQueries({ queryKey: ["reservations"] });
+        void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        void queryClient.invalidateQueries({ queryKey: ["courses"] });
+      });
+      socket.on("notificationCreated", () => {
+        void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      });
+      socket.on("connect_error", (error) => {
+        console.error("[Realtime] Socket connection failed:", error.message);
+      });
+      socket.connect();
+    }).catch((error: unknown) => {
+      console.error("[Realtime] Failed to read access token:", error);
+    });
+
+    return () => {
+      cancelled = true;
+      socket?.disconnect();
+    };
+  }, [queryClient, user?.id]);
+
   const notificationsQuery = useQuery({
     queryKey: ["notifications"],
     queryFn: notificationsApi.getAll,
